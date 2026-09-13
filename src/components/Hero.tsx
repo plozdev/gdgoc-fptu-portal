@@ -1,6 +1,21 @@
-import React, { useState } from 'react';
-import { ArrowRight, BookOpen, Sparkles, Terminal, Code2, Trophy, Cpu, CheckCircle2, ChevronRight, Flame } from 'lucide-react';
+import React from 'react';
+import {
+  ArrowRight,
+  BookOpen,
+  Sparkles,
+  Trophy,
+  CheckCircle2,
+  ChevronRight,
+  Flame,
+  Award,
+  Users,
+  Compass,
+  QrCode,
+  Layers,
+  Cpu
+} from 'lucide-react';
 import { CHAPTER_INFO } from '../data/gdgData';
+import { GdgBracketsGlyph } from './GdgLogo';
 
 interface HeroProps {
   onOpenJoinModal: () => void;
@@ -8,64 +23,6 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook }) => {
-  const [activeCodeTab, setActiveCodeTab] = useState<'ai' | 'cloud' | 'web' | 'research'>('ai');
-
-  const codeSnippets = {
-    ai: `// GDG on Campus FPTU HCMC: Ban AI & GenAI Lab
-import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI();
-// Top 1 GDGoC AI Riser Vietnam 2026!
-const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-export async function runCampusRAG(prompt: string) {
-  const response = await model.generateContent({
-    contents: prompt,
-    systemInstruction: "GDGoC FPTU HCMC: Take Target Together!"
-  });
-  return response.text;
-}`,
-    cloud: `// Ban Cloud: Quản trị hạ tầng GCP & Cloud Run
-apiVersion: serving.knative.dev/v1
-kind: Service
-metadata:
-  name: gdgoc-fptu-portal
-  labels:
-    campus: fptu-hcmc
-    campaign: cloud-skills-boost-2026
-spec:
-  template:
-    spec:
-      containers:
-      - image: gcr.io/gdgoc-fptu/portal:v2.0
-        env:
-        - name: TERM
-          value: "Fall-2026"`,
-    web: `// Ban Web Development: Event & Check-in Portal
-import { useState } from 'react';
-
-export function RegistrationPortal() {
-  const [candidate, setCandidate] = useState({
-    batch: "Gen K22",
-    campus: "FPT University HCMC",
-    status: "READY_TO_BUILD"
-  });
-
-  return <DigitalPass candidate={candidate} />;
-}`,
-    research: `// Ban Research: Nghiên cứu khoa học cùng Giảng viên
-\\documentclass[conference]{IEEEtran}
-\\title{Advancing Multimodal AI in Higher Education}
-\\author{GDGoC FPT University HCMC Research Group}
-
-\\begin{document}
-\\maketitle
-\\begin{abstract}
-Student-led academic study with FPTU faculty advisors.
-\\end{abstract}
-\\end{document}`
-  };
-
   return (
     <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-24 overflow-hidden bg-dot-pattern">
       {/* Decorative Background Accents */}
@@ -79,25 +36,23 @@ Student-led academic study with FPTU faculty advisors.
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
           
           {/* Left Column: Typography & CTAs */}
-          <div className="lg:col-span-7 flex flex-col items-start space-y-5 text-left">
+          <div className="lg:col-span-7 flex flex-col items-start space-y-6 text-left">
             
-            {/* National Achievement Badge */}
-            <div className="inline-flex flex-wrap items-center gap-2 px-3.5 py-1.5 bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-full brutal-shadow-sm">
-              <span className="flex items-center gap-1 font-mono-code text-xs font-bold text-[#EA4335]">
-                <Trophy className="w-3.5 h-3.5 text-[#FBBC04]" />
-                Top 1 GDGoC AI Riser Vietnam 2026
+            {/* Unified Sleek Status Pill */}
+            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-full brutal-shadow-sm text-xs font-mono-code">
+              <span className="flex items-center gap-1.5 font-bold text-[#34A853]">
+                <span className="w-2 h-2 rounded-full bg-[#34A853] animate-ping" />
+                Tuyển Sinh Gen K22
               </span>
-              <span className="text-[#1E1E1E]/30 font-mono-code hidden sm:inline">|</span>
-              <span className="font-mono-code text-[11px] font-bold text-[#4285F4]">
-                "The GDGoC Impact Maker"
-              </span>
+              <span className="text-[#1E1E1E]/30 font-bold">•</span>
+              <span className="font-bold text-[#4285F4]">Fall 2026</span>
             </div>
 
             {/* Slogan & Main Heading */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2 font-mono-code text-xs sm:text-sm font-bold tracking-wider text-[#1E1E1E]/70 uppercase">
+              <div className="flex items-center gap-2 font-mono-code text-xs sm:text-sm font-bold tracking-wider text-[#1E1E1E]/90 uppercase">
                 <span className="text-[#EA4335] font-extrabold">{'{'}</span>
-                <span>GDG on Campus FPT University HCMC • Kỳ Fall 2026</span>
+                <span>GDG on Campus FPT University HCMC • Fall 2026</span>
                 <span className="text-[#4285F4] font-extrabold">{'}'}</span>
               </div>
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-[#1E1E1E] tracking-tight leading-[1.08]">
@@ -105,141 +60,211 @@ Student-led academic study with FPTU faculty advisors.
                 <span className="relative inline-block mt-1">
                   <span className="relative z-10 text-[#4285F4]">Together</span>
                   {/* Flat Color Block Underline */}
-                  <span className="absolute left-0 bottom-1.5 sm:bottom-2.5 w-full h-3.5 sm:h-5 bg-[#FFE7A5] -z-10 rounded-sm -rotate-1 border border-[#1E1E1E]/20" />
+                  <span className="absolute left-0 bottom-1.5 sm:bottom-2.5 w-full h-3.5 sm:h-5 bg-[#FFE7A5] -z-10 rounded-sm -rotate-1 border-[1.5px] border-[#1E1E1E]/40" />
                 </span>
                 <span className="text-[#EA4335]">.</span>
               </h1>
             </div>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-[#1E1E1E]/80 font-normal leading-relaxed max-w-2xl">
-              Cộng đồng sinh viên đam mê công nghệ tại <span className="font-semibold text-[#1E1E1E]">Đại học FPT TP.HCM</span>. Mở đợt tuyển quân chính thức <span className="font-bold text-[#EA4335]">Gen K22</span> & Khung tuyển chọn Trưởng ban (Lead Roles) kỳ Fall 2026 trên 2 Khối: <strong>Khối Tech</strong> (AI, Cloud, Web, Research) và <strong>Khối Non-Tech</strong> (Media, HR & Event).
+            <p className="text-base sm:text-lg text-[#1E1E1E]/90 font-medium leading-relaxed max-w-2xl">
+              Cộng đồng công nghệ sinh viên hàng đầu tại <strong className="text-[#1E1E1E]">Đại học FPT TP.HCM</strong>. Nơi bạn làm chủ công nghệ mới nhất từ Google, kết nối chuyên gia GDE và cùng đồng đội tạo nên những sản phẩm thực tế có sức ảnh hưởng.
             </p>
 
-            {/* Action Buttons (Strictly matching User Prompt #5) */}
+            {/* Hero Value Strip */}
+            <div className="w-full max-w-2xl grid grid-cols-3 gap-3 pt-1">
+              <div className="p-3 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono-code text-[11px] font-extrabold text-[#EA4335] uppercase">Đợt Tuyển</span>
+                  <Flame className="w-3.5 h-3.5 text-[#EA4335]" />
+                </div>
+                <span className="font-extrabold text-base text-[#1E1E1E]">Gen K22</span>
+                <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Mọi chuyên ngành</span>
+              </div>
+
+              <div className="p-3 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono-code text-[11px] font-extrabold text-[#4285F4] uppercase">Quy Mô</span>
+                  <Layers className="w-3.5 h-3.5 text-[#4285F4]" />
+                </div>
+                <span className="font-extrabold text-base text-[#1E1E1E]">2 Khối • 6 Ban</span>
+                <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Tech & Non-Tech</span>
+              </div>
+
+              <div className="p-3 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono-code text-[11px] font-extrabold text-[#34A853] uppercase">Hệ Sinh Thái</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[#34A853]" />
+                </div>
+                <span className="font-extrabold text-base text-[#1E1E1E]">Google Devs</span>
+                <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Cloud, AI & Mentors</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto">
               <button
                 onClick={onOpenJoinModal}
                 id="hero-join-community-btn"
-                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-2 border-[#1E1E1E] brutal-shadow brutal-shadow-hover cursor-pointer"
+                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow brutal-shadow-hover cursor-pointer whitespace-nowrap"
               >
-                <span>Ứng Tuyển Thành Viên K22</span>
+                <span>Gia Nhập Gen K22 Ngay</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
 
               <button
-                onClick={onOpenJdHandbook ? onOpenJdHandbook : () => {
+                onClick={() => {
                   const el = document.getElementById('departments');
                   el?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                id="hero-jd-handbook-btn"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#FFFFFF] hover:bg-[#FFE7A5] text-[#1E1E1E] font-bold text-base rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover cursor-pointer"
+                id="hero-scroll-departments-btn"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[#FFFFFF] hover:bg-[#FFE7A5] text-[#1E1E1E] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover cursor-pointer whitespace-nowrap"
               >
-                <BookOpen className="w-4 h-4 text-[#FBBC04]" />
-                <span>Xem Sổ Tay JD Tuyển Sinh</span>
+                <BookOpen className="w-4 h-4 text-[#4285F4]" />
+                <span>Khám Phá 6 Ban Chuyên Môn</span>
               </button>
-            </div>
-
-            {/* Quick Status Bar */}
-            <div className="pt-1 flex flex-wrap items-center gap-4 text-xs font-mono-code text-[#1E1E1E]/75">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#34A853] animate-ping" />
-                <span className="font-bold text-[#34A853]">Đang mở đơn tuyển sinh K22</span>
-              </div>
-              <span>•</span>
-              <div>6 Ban Chuyên Môn</div>
-              <span>•</span>
-              <div className="text-[#4285F4] font-semibold">Cơ hội Lead Roles nội bộ</div>
             </div>
 
           </div>
 
-          {/* Right Column: Neo-brutalist Interactive Terminal Frame */}
-          <div className="lg:col-span-5">
-            <div className="relative bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-[28px] brutal-shadow overflow-hidden">
+          {/* Right Column (Request #3: Thay thế cửa sổ terminal code bằng Digital Admission Pass & Bento Chapter Showcase) */}
+          <div className="lg:col-span-5 space-y-4">
+            
+            {/* Card 1: Official Gen K22 Digital Admission Pass */}
+            <div className="relative bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow overflow-hidden p-6">
               
-              {/* Window Title Bar */}
-              <div className="bg-[#F0F0F0] border-b-2 border-[#1E1E1E] px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#EA4335] border border-[#1E1E1E]" />
-                  <div className="w-3 h-3 rounded-full bg-[#FBBC04] border border-[#1E1E1E]" />
-                  <div className="w-3 h-3 rounded-full bg-[#34A853] border border-[#1E1E1E]" />
-                  <span className="ml-2 font-mono-code text-xs font-bold text-[#1E1E1E]">
-                    gdgoc-fptu-hcmc.fall2026.ts
+              {/* Google 4-Color Top Accent Strip */}
+              <div className="absolute top-0 left-0 right-0 h-2 flex">
+                <div className="flex-1 bg-[#EA4335]" />
+                <div className="flex-1 bg-[#FBBC04]" />
+                <div className="flex-1 bg-[#34A853]" />
+                <div className="flex-1 bg-[#4285F4]" />
+              </div>
+
+              {/* Pass Header */}
+              <div className="flex items-center justify-between pt-2 pb-4 border-b-2 border-[#1E1E1E]/15">
+                <div className="flex items-center gap-2.5">
+                  <GdgBracketsGlyph size={32} />
+                  <div>
+                    <span className="font-extrabold text-sm text-[#1E1E1E] block leading-tight">
+                      GDG on Campus FPTU
+                    </span>
+                    <span className="font-mono-code text-[11px] font-bold text-[#4285F4]">
+                      OFFICIAL ADMISSION PASS
+                    </span>
+                  </div>
+                </div>
+
+                <span className="px-2.5 py-1 bg-[#CCF6C5] border-2 border-[#1E1E1E] rounded-full text-[10px] font-mono-code font-extrabold text-[#1E1E1E] flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-[#34A853] animate-ping" />
+                  ONLINE
+                </span>
+              </div>
+
+              {/* Pass Ticket Body */}
+              <div className="py-4 space-y-3 font-mono-code">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#1E1E1E]/60 uppercase">ĐỐI TƯỢNG:</span>
+                  <span className="font-extrabold text-[#1E1E1E] bg-[#FFE7A5] px-2 py-0.5 rounded border border-[#1E1E1E]">
+                    Tân Sinh Viên Gen K22
                   </span>
                 </div>
 
-                <div className="px-2 py-0.5 bg-[#C3ECF6] border border-[#1E1E1E] rounded text-[10px] font-mono-code font-bold">
-                  FALL 2026
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#1E1E1E]/60 uppercase">HỌC KỲ:</span>
+                  <span className="font-bold text-[#1E1E1E]">Fall 2026 • Campus HCMC</span>
+                </div>
+
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#1E1E1E]/60 uppercase">ĐẶC QUYỀN:</span>
+                  <span className="font-bold text-[#4285F4]">Google Cloud Boost & Codelab</span>
+                </div>
+
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#1E1E1E]/60 uppercase">TIẾP NHẬN:</span>
+                  <span className="font-bold text-[#34A853]">Phỏng vấn cuốn chiếu</span>
                 </div>
               </div>
 
-              {/* Code Tab Switcher */}
-              <div className="flex border-b-2 border-[#1E1E1E] bg-[#FFFFFF] overflow-x-auto text-xs font-mono-code">
-                <button
-                  onClick={() => setActiveCodeTab('ai')}
-                  className={`px-3 py-2 border-r-2 border-[#1E1E1E] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    activeCodeTab === 'ai' ? 'bg-[#FFE7A5] text-[#1E1E1E]' : 'bg-[#FFFFFF] text-[#1E1E1E]/60 hover:bg-[#F0F0F0]'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#FBBC04]" />
-                  <span>Ban AI</span>
-                </button>
-                <button
-                  onClick={() => setActiveCodeTab('cloud')}
-                  className={`px-3 py-2 border-r-2 border-[#1E1E1E] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    activeCodeTab === 'cloud' ? 'bg-[#C3ECF6] text-[#1E1E1E]' : 'bg-[#FFFFFF] text-[#1E1E1E]/60 hover:bg-[#F0F0F0]'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#4285F4]" />
-                  <span>Ban Cloud</span>
-                </button>
-                <button
-                  onClick={() => setActiveCodeTab('web')}
-                  className={`px-3 py-2 border-r-2 border-[#1E1E1E] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    activeCodeTab === 'web' ? 'bg-[#CCF6C5] text-[#1E1E1E]' : 'bg-[#FFFFFF] text-[#1E1E1E]/60 hover:bg-[#F0F0F0]'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#34A853]" />
-                  <span>Ban Web</span>
-                </button>
-                <button
-                  onClick={() => setActiveCodeTab('research')}
-                  className={`px-3 py-2 font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    activeCodeTab === 'research' ? 'bg-[#F8D8D8] text-[#1E1E1E]' : 'bg-[#FFFFFF] text-[#1E1E1E]/60 hover:bg-[#F0F0F0]'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#EA4335]" />
-                  <span>Research</span>
-                </button>
-              </div>
-
-              {/* Code Display Area */}
-              <div className="p-5 bg-[#1E1E1E] text-[#F0F0F0] font-mono-code text-xs leading-relaxed overflow-x-auto min-h-[220px]">
-                <pre className="text-[12px] leading-5 text-[#C3ECF6]">
-                  <code>{codeSnippets[activeCodeTab]}</code>
-                </pre>
-              </div>
-
-              {/* Live Status Bar */}
-              <div className="bg-[#FFFFFF] border-t-2 border-[#1E1E1E] px-4 py-2.5 flex items-center justify-between text-xs font-mono-code">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#34A853]" />
-                  <span className="text-[#1E1E1E] font-bold">2 Khối Chuyên Môn • 6 Ban</span>
+              {/* Simulated Barcode & Pass ID */}
+              <div className="pt-3 border-t-2 border-dashed border-[#1E1E1E]/20 flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="h-6 flex items-center gap-1 opacity-70">
+                    {[3, 1, 4, 2, 5, 2, 3, 1, 4, 3, 2, 4, 1, 3, 2, 5, 1, 4].map((w, i) => (
+                      <div
+                        key={i}
+                        className="bg-[#1E1E1E] h-full rounded-[1px]"
+                        style={{ width: `${w}px` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-mono-code font-bold text-[#1E1E1E]/70 block">
+                    ID: GDGOC-FPTU-K22-ADMIT
+                  </span>
                 </div>
+
                 <button
-                  onClick={() => {
-                    const el = document.getElementById('departments');
-                    el?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="text-[#4285F4] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  onClick={onOpenJoinModal}
+                  className="px-4 py-2 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-mono-code text-xs font-bold rounded-xl border-2 border-[#1E1E1E] transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>Khám phá các ban</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span>Nộp Đơn</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
             </div>
+
+            {/* Bottom 2 Bento Mini-Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              
+              {/* Bento Card A: Official Award Showcase */}
+              <div className="p-4 bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-[24px] brutal-shadow-sm flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="w-9 h-9 rounded-xl bg-[#FFFFFF] border-2 border-[#1E1E1E] flex items-center justify-center text-[#EA4335] shadow-xs">
+                    <Award className="w-5 h-5 text-[#EA4335]" />
+                  </div>
+                  <span className="font-mono-code text-[10px] font-extrabold px-2 py-0.5 bg-[#FFFFFF] border border-[#1E1E1E] rounded-full text-[#EA4335]">
+                    AI Riser 2026
+                  </span>
+                </div>
+
+                <div>
+                  <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E] leading-tight">
+                    "The GDGoC Impact Maker"
+                  </h4>
+                  <p className="text-[11px] font-mono-code text-[#1E1E1E]/80 font-medium">
+                    Google Developer Ecosystem
+                  </p>
+                </div>
+              </div>
+
+              {/* Bento Card B: 2 Khối Ban Chuyên Môn */}
+              <div
+                onClick={() => {
+                  const el = document.getElementById('departments');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="p-4 bg-[#FFFFFF] hover:bg-[#C3ECF6] border-[2.5px] border-[#1E1E1E] rounded-[24px] brutal-shadow-sm transition-colors flex flex-col justify-between space-y-2 cursor-pointer group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono-code text-[10px] font-extrabold px-2 py-0.5 bg-[#CCF6C5] border border-[#1E1E1E] rounded-full text-[#1E1E1E]">
+                    2 KHỐI • 6 BAN
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-[#1E1E1E] group-hover:translate-x-0.5 transition-transform" />
+                </div>
+
+                <div>
+                  <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E] leading-tight">
+                    Khối Tech & Non-Tech
+                  </h4>
+                  <p className="text-[11px] font-mono-code text-[#4285F4] font-bold">
+                    Xem chi tiết & JD ➔
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
           </div>
 
         </div>

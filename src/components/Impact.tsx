@@ -36,9 +36,9 @@ export const Impact: React.FC = () => {
 
   const summerHighlights = [
     {
-      title: "Top 1 GDGoC AI Riser Vietnam 2026",
-      desc: "Vinh dự được Google Developer Ecosystem trao tặng danh hiệu 'The GDGoC Impact Maker' cho chuỗi hoạt động lan tỏa GenAI và Gemini API xuất sắc nhất toàn quốc.",
-      tag: "NATIONAL CHAMPION",
+      title: '"The GDGoC Impact Maker" trong AI Riser Vietnam 2026',
+      desc: "Vinh dự được Google Developer Ecosystem trao tặng danh hiệu xuất sắc nhất cho chuỗi hoạt động lan tỏa GenAI và Gemini API.",
+      tag: "AWARD RECOGNITION",
       color: "#EA4335"
     },
     {
@@ -62,26 +62,26 @@ export const Impact: React.FC = () => {
   ];
 
   return (
-    <section id="impact" className="py-20 sm:py-28 bg-[#FFFFFF] border-t-2 border-[#1E1E1E] relative">
+    <section id="impact" className="py-20 sm:py-28 bg-[#FFFFFF] relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-14 gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#CCF6C5] border-2 border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#1E1E1E]">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#CCF6C5] border-[2.5px] border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#1E1E1E]">
               <span>{'//'} 03. IMPACT & REACH</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight">
               Dấu Ấn Thực Tế Kỳ Summer 2026
             </h2>
-            <p className="text-base sm:text-lg text-[#1E1E1E]/75 max-w-2xl">
+            <p className="text-base sm:text-lg text-[#1E1E1E]/85 max-w-2xl">
               Tổng kết số liệu thực tế đã đạt được trong kỳ Summer 2026 của <strong>GDG on Campus FPT University HCMC</strong> trước thềm học kỳ Fall 2026.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 font-mono-code text-xs text-[#1E1E1E] bg-[#FFE7A5] px-3.5 py-2 rounded-xl border-2 border-[#1E1E1E] brutal-shadow-sm">
-            <Trophy className="w-4 h-4 text-[#EA4335]" />
-            <span className="font-bold">THE GDGOC IMPACT MAKER</span>
+          <div className="flex items-center gap-2 font-mono-code text-xs text-[#1E1E1E] bg-[#FFE7A5] px-3.5 py-2 rounded-xl border-[2.5px] border-[#1E1E1E] brutal-shadow-sm">
+            <Award className="w-4 h-4 text-[#EA4335]" />
+            <span className="font-extrabold">"THE GDGOC IMPACT MAKER" 2026</span>
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export const Impact: React.FC = () => {
           {STATS_DATA.map((stat, idx) => (
             <div
               key={stat.label}
-              className="bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-2xl p-6 brutal-shadow-sm brutal-shadow-hover flex flex-col justify-between transition-all"
+              className="bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] p-6 brutal-shadow-sm brutal-shadow-hover flex flex-col justify-between transition-all"
               style={{
                 borderBottomWidth: '8px',
                 borderBottomColor: stat.accentColor,
@@ -98,11 +98,11 @@ export const Impact: React.FC = () => {
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono-code text-[11px] font-bold text-[#1E1E1E]/50 uppercase">
+                  <span className="font-mono-code text-[11px] font-bold text-[#1E1E1E]/80 uppercase">
                     SUMMER 2026 // 0{idx + 1}
                   </span>
                   <div
-                    className="w-3.5 h-3.5 rounded-full border border-[#1E1E1E]"
+                    className="w-3.5 h-3.5 rounded-full border-2 border-[#1E1E1E]"
                     style={{ backgroundColor: stat.accentColor }}
                   />
                 </div>
@@ -110,7 +110,7 @@ export const Impact: React.FC = () => {
                 {/* Animated Stat Value */}
                 <div className="font-mono-code text-4xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight mb-2">
                   {idx === 3 ? (
-                    <span>Top 1</span>
+                    <span className="text-2xl sm:text-3xl">Impact Maker</span>
                   ) : (
                     <span>
                       {counts[idx]?.toLocaleString()}
@@ -123,14 +123,14 @@ export const Impact: React.FC = () => {
                   {stat.label}
                 </div>
 
-                <p className="text-xs sm:text-sm text-[#1E1E1E]/75 leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#1E1E1E]/85 leading-relaxed font-normal">
                   {stat.description}
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#1E1E1E]/10 flex items-center justify-between text-[11px] font-mono-code">
-                <span className="text-[#1E1E1E]/60">Verified</span>
-                <span className="font-bold" style={{ color: stat.accentColor }}>
+              <div className="mt-4 pt-3 border-t border-[#1E1E1E]/15 flex items-center justify-between text-[11px] font-mono-code">
+                <span className="text-[#1E1E1E]/80 font-semibold">Verified</span>
+                <span className="font-extrabold" style={{ color: stat.accentColor }}>
                   FPTU HCMC
                 </span>
               </div>
@@ -138,45 +138,12 @@ export const Impact: React.FC = () => {
           ))}
         </div>
 
-        {/* Featured Award Showcase Banner */}
-        <div className="bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-[28px] p-6 sm:p-10 brutal-shadow mb-12 relative overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            <div className="lg:col-span-8 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#EA4335]">
-                <Sparkles className="w-3.5 h-3.5 text-[#FBBC04]" />
-                <span>CHỨNG NHẬN DANH DỰ TOÀN QUỐC</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1E1E1E] leading-snug">
-                Top 1 GDGoC AI Riser Vietnam 2026 — "The GDGoC Impact Maker"
-              </h3>
-              <p className="text-sm sm:text-base text-[#1E1E1E]/85 leading-relaxed">
-                Thành quả rực rỡ ghi nhận nỗ lực bền bỉ của tập thể GDGoC FPTU HCMC trong chiến dịch lan tỏa công nghệ Trí tuệ nhân tạo (GenAI, Gemini API, Vertex AI). Đây chính là bước đệm vững vàng để thế hệ thành viên Gen K22 tiếp nối và tỏa sáng trong kỳ Fall 2026!
-              </p>
-            </div>
-
-            <div className="lg:col-span-4 flex flex-col items-center justify-center p-6 bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-2xl brutal-shadow-sm text-center space-y-2">
-              <div className="w-16 h-16 rounded-full bg-[#EA4335] border-2 border-[#1E1E1E] flex items-center justify-center text-[#FFFFFF] mx-auto">
-                <Trophy className="w-8 h-8 text-[#FBBC04]" />
-              </div>
-              <span className="font-mono-code text-xs font-bold text-[#EA4335]">
-                GOOGLE DEVELOPER GROUPS
-              </span>
-              <h4 className="font-extrabold text-base text-[#1E1E1E]">
-                The GDGoC Impact Maker
-              </h4>
-              <p className="text-[11px] font-mono-code text-[#1E1E1E]/70">
-                Awarded to GDGoC FPTU HCMC
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Detailed Milestones List */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {summerHighlights.map((hl, i) => (
             <div
               key={i}
-              className="p-5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-2xl flex items-start gap-4"
+              className="p-5 bg-[#F0F0F0] border-[2.5px] border-[#1E1E1E] rounded-[24px] flex items-start gap-4"
             >
               <div
                 className="w-10 h-10 rounded-xl border-2 border-[#1E1E1E] flex items-center justify-center font-mono-code font-bold shrink-0 shadow-sm"
@@ -193,7 +160,7 @@ export const Impact: React.FC = () => {
                 <h4 className="font-extrabold text-base text-[#1E1E1E]">
                   {hl.title}
                 </h4>
-                <p className="text-xs text-[#1E1E1E]/80 leading-relaxed">
+                <p className="text-xs text-[#1E1E1E]/85 leading-relaxed font-normal">
                   {hl.desc}
                 </p>
               </div>

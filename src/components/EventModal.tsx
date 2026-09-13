@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check, Star } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check, Star, ExternalLink } from 'lucide-react';
 import { EventItem } from '../types';
 
 interface EventModalProps {
@@ -21,11 +21,17 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E1E1E]/60 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E1E1E]/60 backdrop-blur-sm animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[90vh] flex flex-col overflow-hidden"
+      >
         
         {/* Modal Top Bar */}
-        <div className="sticky top-0 bg-[#FFFFFF] border-b-2 border-[#1E1E1E] px-6 py-4 flex items-center justify-between z-10">
+        <div className="bg-[#FFFFFF] border-b-2 border-[#1E1E1E] px-6 py-4 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center gap-2">
             <span
               className="px-2.5 py-0.5 text-xs font-mono-code font-bold rounded border border-[#1E1E1E]"
@@ -47,8 +53,8 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
           {!isRsvpDone ? (
             <>
               {/* Event Title & Summary */}
@@ -117,11 +123,32 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
                 </div>
               )}
 
-              {/* RSVP Form */}
+              {/* Bevy Official Platform Integration Link */}
+              <div className="p-4 bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="space-y-0.5 text-center sm:text-left">
+                  <span className="font-mono-code text-[11px] font-extrabold text-[#EA4335] uppercase">
+                    Cổng Sự Kiện Chính Thức
+                  </span>
+                  <p className="font-extrabold text-xs sm:text-sm text-[#1E1E1E]">
+                    Google Developer Groups on Campus (Bevy Platform)
+                  </p>
+                </div>
+                <a
+                  href={event.bevyUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-[#FFFFFF] hover:bg-[#1E1E1E] hover:text-[#FFFFFF] text-[#1E1E1E] font-bold text-xs font-mono-code rounded-xl border-2 border-[#1E1E1E] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <span>RSVP Trên Bevy</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Quick RSVP Form */}
               <form onSubmit={handleRsvp} className="pt-2 space-y-3 border-t-2 border-[#1E1E1E]/10">
                 <div className="space-y-1">
                   <h4 className="font-extrabold text-base text-[#1E1E1E]">
-                    Đăng Ký Tham Dự Miễn Phí (RSVP)
+                    Đăng Ký Nhanh Tại Đây (Nhận Vé QR Điện Tử)
                   </h4>
                   <p className="text-xs text-[#1E1E1E]/70">
                     Dành cho tất cả sinh viên FPT University và cộng đồng công nghệ. Ban Tổ Chức sẽ gửi vé check-in điện tử qua email.

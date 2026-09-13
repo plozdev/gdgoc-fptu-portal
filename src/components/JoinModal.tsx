@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle2, Sparkles, User, Mail, GraduationCap, Code, ArrowRight, Download, Share2, Briefcase, Trophy, Flame } from 'lucide-react';
+import { X, CheckCircle2, Sparkles, User, Mail, GraduationCap, Code, ArrowRight, Download, Share2, Award, Flame, Layers } from 'lucide-react';
 import { GdgBracketsGlyph } from './GdgLogo';
 import { CHAPTER_INFO, DEPARTMENTS_DATA } from '../data/gdgData';
 import { RegistrationFormData } from '../types';
@@ -8,14 +8,12 @@ interface JoinModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultDepartment?: string;
-  isLeadRole?: boolean;
 }
 
 export const JoinModal: React.FC<JoinModalProps> = ({
   isOpen,
   onClose,
   defaultDepartment,
-  isLeadRole = false,
 }) => {
   const [formData, setFormData] = useState<RegistrationFormData>({
     fullName: '',
@@ -24,8 +22,8 @@ export const JoinModal: React.FC<JoinModalProps> = ({
     cohort: 'K22 (Tân Sinh Viên)',
     major: 'Kỹ Thuật Phần Mềm (SE)',
     division: 'TECH',
-    departmentOfInterest: defaultDepartment || 'AI (Artificial Intelligence)',
-    isApplyingForLead: isLeadRole,
+    departmentOfInterest: defaultDepartment || 'AI',
+    isApplyingForLead: false,
     portfolioUrl: '',
     motivation: '',
   });
@@ -35,17 +33,14 @@ export const JoinModal: React.FC<JoinModalProps> = ({
 
   useEffect(() => {
     if (defaultDepartment) {
-      const found = DEPARTMENTS_DATA.find((d) => d.name === defaultDepartment);
+      const found = DEPARTMENTS_DATA.find((d) => d.name === defaultDepartment || d.id === defaultDepartment);
       setFormData((prev) => ({
         ...prev,
-        departmentOfInterest: defaultDepartment,
+        departmentOfInterest: found ? found.name : defaultDepartment,
         division: found ? found.division : 'TECH',
       }));
     }
-    if (isLeadRole !== undefined) {
-      setFormData((prev) => ({ ...prev, isApplyingForLead: isLeadRole }));
-    }
-  }, [defaultDepartment, isLeadRole, isOpen]);
+  }, [defaultDepartment, isOpen]);
 
   if (!isOpen) return null;
 
@@ -64,68 +59,60 @@ export const JoinModal: React.FC<JoinModalProps> = ({
   const availableDepts = DEPARTMENTS_DATA.filter((d) => d.division === formData.division);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E1E1E]/60 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-xl bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E1E1E]/65 backdrop-blur-sm animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[92vh] flex flex-col overflow-hidden"
+      >
         
-        {/* Header Bar */}
-        <div className="sticky top-0 bg-[#FFFFFF] border-b-2 border-[#1E1E1E] px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-2.5">
-            <GdgBracketsGlyph size={28} />
+        {/* Sticky Header Bar */}
+        <div className="bg-[#FFFFFF] border-b-2 border-[#1E1E1E] px-6 py-4 flex items-center justify-between shrink-0 z-10">
+          <div className="flex items-center gap-3">
+            <GdgBracketsGlyph size={32} />
             <div>
-              <span className="font-extrabold text-sm text-[#1E1E1E] block leading-none">
+              <span className="font-extrabold text-sm sm:text-base text-[#1E1E1E] block leading-tight">
                 GDG on Campus FPT University HCMC
               </span>
               <span className="font-mono-code text-[11px] text-[#4285F4] font-bold">
-                Cổng Tuyển Sinh Gen K22 & Lead Roles Fall 2026
+                Cổng Tuyển Sinh Thế Hệ Gen K22 • Fall 2026
               </span>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border-2 border-[#1E1E1E] hover:bg-[#F0F0F0] transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl border-2 border-[#1E1E1E] hover:bg-[#FFE7A5] transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5 text-[#1E1E1E]" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6">
+        {/* Modal Scrollable Body */}
+        <div className="p-6 sm:p-7 overflow-y-auto custom-scrollbar flex-1">
           {!isSuccess ? (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#FFE7A5] border border-[#1E1E1E] rounded-md font-mono-code text-[11px] font-bold text-[#1E1E1E]">
-                  <Trophy className="w-3 h-3 text-[#EA4335]" />
-                  <span>Top 1 GDGoC AI Riser Vietnam 2026</span>
+              
+              {/* Form Title */}
+              <div className="space-y-1 pb-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#CCF6C5] border-[1.5px] border-[#1E1E1E] rounded-full font-mono-code text-xs font-bold text-[#1E1E1E]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#34A853]" />
+                  <span>Đăng Ký Gia Nhập Thành Viên Gen K22</span>
                 </div>
-                <h3 className="text-2xl font-extrabold text-[#1E1E1E]">
-                  {formData.isApplyingForLead ? 'Ứng Tuyển Trưởng Ban (Lead Role)' : 'Ứng Tuyển Thành Viên Gen K22'}
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1E1E1E] tracking-tight">
+                  Thông Tin Ứng Viên
                 </h3>
-                <p className="text-xs text-[#1E1E1E]/75">
-                  Điền đầy đủ thông tin để nhận Thẻ Ứng Viên Điện Tử và lịch phỏng vấn chính thức tại campus FPTU HCMC.
+                <p className="text-xs sm:text-sm text-[#1E1E1E]/80">
+                  Hoàn thiện các thông tin dưới đây để nhận Thẻ Ứng Viên Điện Tử và lịch phỏng vấn trực tiếp tại Campus FPTU HCMC.
                 </p>
-              </div>
-
-              {/* Lead Role toggle check */}
-              <div className="p-3 bg-[#C3ECF6] border-2 border-[#1E1E1E] rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-[#4285F4]" />
-                  <span className="text-xs font-bold text-[#1E1E1E]">
-                    Ứng tuyển vị trí Trưởng Ban (Lead Role)
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={formData.isApplyingForLead}
-                  onChange={(e) => setFormData({ ...formData, isApplyingForLead: e.target.checked })}
-                  className="w-4 h-4 accent-[#4285F4] rounded cursor-pointer"
-                />
               </div>
 
               {/* Full Name */}
               <div>
-                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
+                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
                   Họ và Tên Đầy Đủ *
                 </label>
                 <input
@@ -134,14 +121,14 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                   placeholder="Ví dụ: Nguyễn Văn An"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none font-medium"
                 />
               </div>
 
               {/* Student ID & Cohort */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
+                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
                     Mã Số Sinh Viên (MSSV) *
                   </label>
                   <input
@@ -150,31 +137,31 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                     placeholder="VD: SE200123"
                     value={formData.studentId}
                     onChange={(e) => setFormData({ ...formData, studentId: e.target.value.toUpperCase() })}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none uppercase"
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none uppercase font-bold"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
+                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
                     Khóa Sinh Viên *
                   </label>
                   <select
                     value={formData.cohort}
                     onChange={(e) => setFormData({ ...formData, cohort: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none font-semibold cursor-pointer"
                   >
-                    <option value="K22 (Tân Sinh Viên)">K22 (Tân Sinh Viên)</option>
-                    <option value="K21">K21</option>
-                    <option value="K20">K20</option>
+                    <option value="K22 (Tân Sinh Viên)">K22 (Tân Sinh Viên - Ưu tiên xét tuyển)</option>
+                    <option value="K21">K21 (Năm 2)</option>
+                    <option value="K20">K20 (Năm 3)</option>
                     <option value="K19">K19</option>
-                    <option value="Khác">Khác / Cựu SV</option>
                   </select>
                 </div>
               </div>
 
-              {/* FPT University Email */}
+              {/* Email */}
               <div>
-                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
-                  Email Trường (@fpt.edu.vn) hoặc Cá Nhân *
+                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
+                  Email FPT / Email Liên Hệ *
                 </label>
                 <input
                   type="email"
@@ -182,19 +169,19 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                   placeholder="annvse200123@fpt.edu.vn"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none font-medium"
                 />
               </div>
 
-              {/* Major */}
+              {/* Major Selection */}
               <div>
-                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
-                  Chuyên Ngành Đang Theo Học *
+                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
+                  Chuyên Ngành Học Tại FPTU *
                 </label>
                 <select
                   value={formData.major}
                   onChange={(e) => setFormData({ ...formData, major: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none font-semibold cursor-pointer"
                 >
                   <option value="Kỹ Thuật Phần Mềm (SE)">Kỹ Thuật Phần Mềm (Software Engineering - SE)</option>
                   <option value="Trí Tuệ Nhân Tạo (AI)">Trí Tuệ Nhân Tạo (Artificial Intelligence - AI)</option>
@@ -207,9 +194,9 @@ export const JoinModal: React.FC<JoinModalProps> = ({
               </div>
 
               {/* Division & Department Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-2xl">
                 <div>
-                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
+                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
                     1. Khối Chuyên Môn *
                   </label>
                   <select
@@ -223,21 +210,21 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                         departmentOfInterest: defaultForDiv,
                       });
                     }}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none font-bold"
+                    className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:ring-2 focus:ring-[#4285F4] outline-none font-bold cursor-pointer"
                   >
-                    <option value="TECH">KHỐI TECH (Kỹ Thuật)</option>
-                    <option value="NON-TECH">KHỐI NON-TECH (Truyền Thông & Sự Kiện)</option>
+                    <option value="TECH">Khối Tech (Kỹ Thuật - 4 Ban)</option>
+                    <option value="NON-TECH">Khối Non-Tech (Vận Hành - 2 Ban)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
+                  <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
                     2. Ban Nguyện Vọng *
                   </label>
                   <select
                     value={formData.departmentOfInterest}
                     onChange={(e) => setFormData({ ...formData, departmentOfInterest: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                    className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:ring-2 focus:ring-[#4285F4] outline-none font-bold cursor-pointer text-[#4285F4]"
                   >
                     {availableDepts.map((d) => (
                       <option key={d.id} value={d.name}>
@@ -250,121 +237,131 @@ export const JoinModal: React.FC<JoinModalProps> = ({
 
               {/* Portfolio Link / CV */}
               <div>
-                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
-                  Link GitHub / Portfolio / Behance / CV (Nếu có)
+                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
+                  Link GitHub / Portfolio / CV (Nếu có)
                 </label>
                 <input
                   type="url"
-                  placeholder="https://github.com/... hoặc link Google Drive"
+                  placeholder="https://github.com/... hoặc link Google Drive chia sẻ quyền xem"
                   value={formData.portfolioUrl}
                   onChange={(e) => setFormData({ ...formData, portfolioUrl: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
                 />
               </div>
 
               {/* Motivation */}
               <div>
-                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1">
-                  Định hướng & Lý do bạn muốn đồng hành cùng GDGoC FPTU?
+                <label className="block text-xs font-mono-code font-bold text-[#1E1E1E] mb-1.5">
+                  Lý do & Mục tiêu của bạn khi gia nhập GDGoC FPTU?
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Ví dụ: Nghiên cứu GenAI & Gemini API, làm chủ GCP, tổ chức Google I/O Extended, phát triển bản thân..."
+                  placeholder="Ví dụ: Mong muốn học hỏi AI, Gemini API, Cloud Run, kết nối bạn bè cùng chí hướng và tạo ra sản phẩm thực tế..."
                   value={formData.motivation}
                   onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none leading-relaxed font-normal"
                 />
               </div>
 
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                className="w-full py-3.5 px-6 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-extrabold text-sm rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Nộp Hồ Sơ & Xuất Thẻ Ứng Viên Gen K22</span>
-              </button>
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3.5 px-6 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-extrabold text-sm sm:text-base rounded-full border-2 border-[#1E1E1E] brutal-shadow brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Nộp Hồ Sơ & Xuất Thẻ Ứng Viên Gen K22</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
             </form>
           ) : (
-            /* Digital Candidate Pass */
-            <div className="space-y-6">
+            /* Digital Candidate Pass (Success State) */
+            <div className="space-y-6 animate-fadeIn py-2">
               <div className="text-center space-y-1">
-                <div className="w-12 h-12 rounded-full bg-[#CCF6C5] border-2 border-[#1E1E1E] mx-auto flex items-center justify-center text-[#34A853] mb-2">
-                  <CheckCircle2 className="w-7 h-7" />
+                <div className="w-14 h-14 rounded-2xl bg-[#CCF6C5] border-2 border-[#1E1E1E] mx-auto flex items-center justify-center text-[#34A853] mb-3 brutal-shadow-sm">
+                  <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-extrabold text-[#1E1E1E]">
-                  Nộp Đơn Tuyển Dụng Thành Công!
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1E1E1E]">
+                  Nộp Đơn Tuyển Sinh Thành Công!
                 </h3>
-                <p className="text-xs text-[#1E1E1E]/75">
-                  Hồ sơ của bạn đã được chuyển đến Ban Chủ Nhiệm GDGoC FPT University HCMC.
+                <p className="text-xs sm:text-sm text-[#1E1E1E]/80 max-w-md mx-auto">
+                  Hồ sơ ứng tuyển Gen K22 của bạn đã được tiếp nhận chính thức bởi Ban Chủ Nhiệm GDGoC FPT University HCMC.
                 </p>
               </div>
 
-              {/* Visual Pass Card */}
-              <div className="relative bg-[#FFFFFF] border-2 border-[#1E1E1E] rounded-3xl p-6 brutal-shadow overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-[#EA4335] via-[#FBBC04] via-[#34A853] to-[#4285F4]" />
+              {/* Visual Digital Pass Card */}
+              <div className="relative bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] p-6 brutal-shadow overflow-hidden">
+                {/* 4-color top stripe */}
+                <div className="absolute top-0 left-0 right-0 h-2.5 flex">
+                  <div className="flex-1 bg-[#EA4335]" />
+                  <div className="flex-1 bg-[#FBBC04]" />
+                  <div className="flex-1 bg-[#34A853]" />
+                  <div className="flex-1 bg-[#4285F4]" />
+                </div>
 
                 <div className="pt-2 flex items-start justify-between border-b-2 border-[#1E1E1E] pb-4 mb-4">
                   <div>
-                    <span className="font-mono-code text-[10px] font-bold text-[#EA4335] uppercase bg-[#FFE7A5] px-2 py-0.5 rounded border border-[#1E1E1E]">
-                      {formData.isApplyingForLead ? 'LEAD CANDIDATE PASS' : 'GEN K22 CANDIDATE PASS'}
+                    <span className="font-mono-code text-[10px] font-extrabold text-[#1E1E1E] uppercase bg-[#FFE7A5] px-2.5 py-0.5 rounded border border-[#1E1E1E] inline-block mb-1">
+                      OFFICIAL CANDIDATE PASS • GEN K22
                     </span>
-                    <h4 className="font-extrabold text-xl text-[#1E1E1E] mt-1">
-                      {formData.fullName || 'Thành viên K22'}
+                    <h4 className="font-extrabold text-xl sm:text-2xl text-[#1E1E1E]">
+                      {formData.fullName || 'Thành viên Gen K22'}
                     </h4>
-                    <p className="font-mono-code text-xs text-[#4285F4] font-bold">
+                    <p className="font-mono-code text-xs text-[#4285F4] font-bold mt-0.5">
                       MSSV: {formData.studentId || 'SE200000'} • {formData.cohort}
                     </p>
                   </div>
-                  <GdgBracketsGlyph size={36} />
+                  <GdgBracketsGlyph size={40} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs font-mono-code mb-4">
-                  <div>
-                    <span className="text-[#1E1E1E]/60 block text-[10px]">KHỐI CHUYÊN MÔN</span>
-                    <span className="font-bold text-[#1E1E1E]">KHỐI {formData.division}</span>
+                <div className="grid grid-cols-2 gap-4 text-xs font-mono-code mb-4">
+                  <div className="p-2.5 bg-[#F0F0F0] rounded-xl border border-[#1E1E1E]">
+                    <span className="text-[#1E1E1E]/60 block text-[10px] font-bold">KHỐI CHUYÊN MÔN</span>
+                    <span className="font-extrabold text-[#1E1E1E] text-sm">KHỐI {formData.division}</span>
                   </div>
-                  <div>
-                    <span className="text-[#1E1E1E]/60 block text-[10px]">BAN ỨNG TUYỂN</span>
-                    <span className="font-bold text-[#4285F4]">{formData.departmentOfInterest}</span>
+                  <div className="p-2.5 bg-[#C3ECF6] rounded-xl border border-[#1E1E1E]">
+                    <span className="text-[#1E1E1E]/60 block text-[10px] font-bold">BAN NGUYỆN VỌNG</span>
+                    <span className="font-extrabold text-[#1E1E1E] text-sm">{formData.departmentOfInterest}</span>
                   </div>
-                  <div>
-                    <span className="text-[#1E1E1E]/60 block text-[10px]">MÃ ỨNG VIÊN</span>
-                    <span className="font-bold text-[#1E1E1E]">{candidateId}</span>
+                  <div className="p-2.5 bg-[#FFE7A5] rounded-xl border border-[#1E1E1E]">
+                    <span className="text-[#1E1E1E]/60 block text-[10px] font-bold">MÃ ỨNG VIÊN</span>
+                    <span className="font-extrabold text-[#1E1E1E] text-sm">{candidateId}</span>
                   </div>
-                  <div>
-                    <span className="text-[#1E1E1E]/60 block text-[10px]">TRẠNG THÁI</span>
-                    <span className="font-bold text-[#34A853]">ĐÃ TIẾP NHẬN HỒ SƠ</span>
+                  <div className="p-2.5 bg-[#CCF6C5] rounded-xl border border-[#1E1E1E]">
+                    <span className="text-[#1E1E1E]/60 block text-[10px] font-bold">TRẠNG THÁI</span>
+                    <span className="font-extrabold text-[#34A853] text-sm">ĐÃ TIẾP NHẬN</span>
                   </div>
                 </div>
 
                 {/* Slogan and Location */}
-                <div className="pt-3 border-t-2 border-[#1E1E1E] flex items-center justify-between">
-                  <div className="font-mono-code text-[10px] font-bold text-[#1E1E1E]/70">
+                <div className="pt-3 border-t-2 border-dashed border-[#1E1E1E]/30 flex items-center justify-between font-mono-code text-[11px]">
+                  <span className="font-bold text-[#1E1E1E]/75">
                     "{CHAPTER_INFO.slogan}"
-                  </div>
-                  <div className="font-mono-code text-[10px] bg-[#F0F0F0] px-2 py-0.5 rounded border border-[#1E1E1E]/30 font-bold">
+                  </span>
+                  <span className="font-bold text-[#4285F4]">
                     FPTU HCMC • Fall 2026
-                  </div>
+                  </span>
                 </div>
               </div>
 
-              {/* Instructions */}
-              <div className="p-3.5 bg-[#F0F0F0] border border-[#1E1E1E] rounded-xl text-xs space-y-1 text-[#1E1E1E]/80">
-                <span className="font-bold text-[#1E1E1E] block font-mono-code">Các bước tiếp theo:</span>
-                <div>1. Kiểm tra hòm thư <strong>{formData.email}</strong> để nhận thư xác nhận và link tham gia group kết nối.</div>
-                <div>2. Ban Nhân sự sẽ gửi lịch phỏng vấn trực tiếp tại Alpha Building (FPTU HCMC).</div>
+              {/* Next steps guidance */}
+              <div className="p-4 bg-[#F8F9FA] border-2 border-[#1E1E1E] rounded-2xl text-xs space-y-1.5 text-[#1E1E1E]/90">
+                <span className="font-bold text-[#1E1E1E] block font-mono-code uppercase text-[11px]">
+                  📌 Các bước tiếp theo:
+                </span>
+                <p>1. Kiểm tra hòm thư <strong>{formData.email}</strong> để nhận thư xác nhận hồ sơ và link group trao đổi.</p>
+                <p>2. Ban Nhân Sự sẽ liên hệ để thông báo lịch hẹn phỏng vấn trực tiếp tại Alpha Building (ĐH FPT TP.HCM).</p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={handleReset}
-                  className="flex-1 py-3 bg-[#4285F4] text-[#FFFFFF] font-bold text-sm rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm cursor-pointer"
-                >
-                  Hoàn Tất & Quay Lại Trang Chủ
-                </button>
-              </div>
+              {/* Action */}
+              <button
+                onClick={handleReset}
+                className="w-full py-3.5 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-sm rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm cursor-pointer"
+              >
+                Hoàn Tất & Quay Lại Trang Chủ
+              </button>
             </div>
           )}
         </div>

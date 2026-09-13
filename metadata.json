@@ -1,0 +1,6 @@
+{
+  "name": "GDG on Campus FPT University HCMC",
+  "description": "Cổng thông tin tuyển sinh Gen K22 và Khung tuyển chọn Trưởng ban Fall 2026 - Google Developer Groups on Campus FPT University HCMC. Top 1 GDGoC AI Riser Vietnam 2026.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,516 @@
+import { Department, LeadRole, EventItem, StatMilestone } from '../types';
+
+export const CHAPTER_INFO = {
+  name: "Google Developer Groups on Campus FPT University HCMC",
+  shortName: "GDG on Campus FPTU HCMC",
+  acronym: "GDGoC FPTU HCMC",
+  term: "Kỳ Fall 2026",
+  recruitmentBatch: "Gen K22",
+  slogan: "Take Target Together",
+  hashtag: "#GDGOnCampus",
+  university: "FPT University HCMC",
+  campusLocation: "Đường D9, Khu Công Nghệ Cao, P. Long Thạnh Mỹ, TP. Thủ Đức, TP. Hồ Chí Minh",
+  email: "gdgoc.fptuhcmc@gmail.com",
+  establishedYear: 2021,
+  disclaimer: "Google Developer Groups on Campus is an independent group; our activities and the opinions expressed here should in no way be linked to Google, the corporation.",
+  summerAward: "Top 1 GDGoC AI Riser Vietnam 2026 ('The GDGoC Impact Maker')",
+};
+
+export const DEPARTMENTS_DATA: Department[] = [
+  // --- KHỐI TECH ---
+  {
+    id: "tech-ai",
+    name: "AI (Artificial Intelligence)",
+    vietnameseName: "Ban Trí Tuệ Nhân Tạo",
+    division: "TECH",
+    coreColor: "#FBBC04", // Google Yellow
+    pastelColor: "#FFE7A5",
+    halftoneColor: "#FFD427",
+    textColor: "#1E1E1E",
+    iconName: "BrainCircuit",
+    shortDesc: "Nghiên cứu GenAI, Gemini API, Vertex AI, RAG.",
+    skills: ["GenAI", "Gemini API", "Vertex AI", "RAG Pipeline", "Vector DBs", "Python", "LangChain"],
+    jd: {
+      overview: "Tập trung nghiên cứu và ứng dụng các công nghệ AI tiên phong của Google như mô hình Gemini 1.5/2.0 Flash/Pro, Vertex AI, và kỹ thuật Retrieval Augmented Generation (RAG).",
+      responsibilities: [
+        "Nghiên cứu sâu các API và công cụ AI mới nhất từ Google (Gemini API, Google AI Studio, Vertex AI).",
+        "Xây dựng các prototype ứng dụng GenAI và trợ lý ảo thông minh phục vụ cộng đồng sinh viên FPTU.",
+        "Thiết kế tài liệu thực hành, codelab và đứng lớp hướng dẫn chuỗi workshop Build & Share Series.",
+        "Tham gia thi đấu các giải đấu AI quốc gia và hỗ trợ dự án thi Google Solution Challenge."
+      ],
+      requirements: [
+        "Nắm vững lập trình Python cơ bản/nâng cao và tư duy thuật toán.",
+        "Hiểu biết hoặc có hứng thú đặc biệt với LLM, Prompt Engineering, API integration.",
+        "Tinh thần chủ động tìm hiểu tài liệu kỹ thuật tiếng Anh và chia sẻ kiến thức.",
+        "Ưu tiên sinh viên đã từng thử nghiệm với Google AI Studio hoặc các thư viện Machine Learning."
+      ],
+      benefits: [
+        "Tiếp cận tài nguyên Google AI & Gemini API credits phục vụ nghiên cứu và phát triển sản phẩm.",
+        "Được mentor trực tiếp bởi các anh/chị sinh viên đạt giải cao tại AI Riser Vietnam 2026.",
+        "Xây dựng portfolio dự án AI thực chiến để apply học bổng hoặc kỳ thực nghiệp OJT."
+      ]
+    }
+  },
+  {
+    id: "tech-cloud",
+    name: "Cloud",
+    vietnameseName: "Ban Điện Toán Đám Mây",
+    division: "TECH",
+    coreColor: "#4285F4", // Google Blue
+    pastelColor: "#C3ECF6",
+    halftoneColor: "#57CAFF",
+    textColor: "#1E1E1E",
+    iconName: "Cloud",
+    shortDesc: "Quản lý hạ tầng GCP, Docker, CI/CD, phong trào Google Cloud Skills Boost.",
+    skills: ["Google Cloud Platform (GCP)", "Docker", "CI/CD", "Cloud Run", "Cloud Skills Boost", "Kubernetes", "Microservices"],
+    jd: {
+      overview: "Phụ trách hạ tầng đám mây cho toàn bộ các sản phẩm kỹ thuật của GDGoC FPTU HCMC, đồng thời là đầu tàu lan tỏa văn hóa học tập Google Cloud Skills Boost trên toàn trường.",
+      responsibilities: [
+        "Quản lý, cấp phát và tối ưu hạ tầng máy chủ, cơ sở dữ liệu trên GCP (Cloud Run, Cloud SQL, Firestore).",
+        "Thiết lập và duy trì luồng tự động hóa CI/CD cho các website sự kiện và API nội bộ.",
+        "Tổ chức và điều phối giải đấu 'Google Cloud Skills Boost Challenge' cho sinh viên toàn trường FPTU.",
+        "Hướng dẫn thành viên đạt các chứng chỉ quốc tế của Google (Cloud Digital Leader, Associate Cloud Engineer)."
+      ],
+      requirements: [
+        "Hiểu kiến thức nền tảng về hệ điều hành Linux, Networking cơ bản và containerization (Docker).",
+        "Có kiến thức hoặc mong muốn làm chủ các dịch vụ cốt lõi của Google Cloud Platform.",
+        "Cẩn thận, tỉ mỉ với cấu hình bảo mật hạ tầng và chi phí tài nguyên cloud.",
+        "Sẵn sàng hỗ trợ các thành viên khác khi deploy sản phẩm lên production."
+      ],
+      benefits: [
+        "Nhận tài trợ tài khoản thực hành Google Cloud Skills Boost miễn phí không giới hạn credits.",
+        "Kinh nghiệm quản trị hệ thống cloud thực tế, làm đẹp CV kỹ sư DevOps/Cloud Engineer.",
+        "Cơ hội được đề cử nhận voucher thi chứng chỉ Google Cloud chính thức."
+      ]
+    }
+  },
+  {
+    id: "tech-web",
+    name: "Web Development",
+    vietnameseName: "Ban Phát Triển Web",
+    division: "TECH",
+    coreColor: "#34A853", // Google Green
+    pastelColor: "#CCF6C5",
+    halftoneColor: "#5CDB6D",
+    textColor: "#1E1E1E",
+    iconName: "Code2",
+    shortDesc: "Phát triển website sự kiện, landing page, Git workflow, Fullstack.",
+    skills: ["React / Next.js", "TypeScript", "Tailwind CSS", "Node.js / Express", "Git & GitHub Workflow", "RESTful API", "Fullstack"],
+    jd: {
+      overview: "Xây dựng các sản phẩm số của câu lạc bộ, từ landing page tuyển sinh, cổng đăng ký vé sự kiện Google I/O Extended, đến hệ thống check-in tự động cho hàng trăm sinh viên.",
+      responsibilities: [
+        "Phát triển giao diện web hiện đại (Responsive, Pixel-perfect, Neo-brutalism) theo chuẩn Google Brand.",
+        "Xây dựng hệ thống backend, RESTful API và cơ sở dữ liệu xử lý hàng trăm lượt truy cập đồng thời.",
+        "Tuân thủ chuẩn mực Git workflow (Branching, Pull Request review, Semantic commit).",
+        "Tham gia tối ưu hóa hiệu năng web (SEO, Core Web Vitals, accessibility)."
+      ],
+      requirements: [
+        "Nắm chắc HTML5, CSS3, JavaScript/TypeScript hiện đại.",
+        "Có kinh nghiệm làm việc với React (hoặc Next.js) và Tailwind CSS.",
+        "Sử dụng thành thạo Git/GitHub để phối hợp nhóm.",
+        "Có tinh thần thẩm mỹ cao, tôn trọng trải nghiệm người dùng và chất lượng mã nguồn."
+      ],
+      benefits: [
+        "Code sản phẩm thật được hàng nghìn sinh viên và khách mời sử dụng thực tế.",
+        "Luyện tập quy trình làm phần mềm chuẩn doanh nghiệp (Agile/Scrum, Code Review).",
+        "Chứng nhận đóng góp mã nguồn mở trong các repository chính thức của GDGoC."
+      ]
+    }
+  },
+  {
+    id: "tech-research",
+    name: "Research (Dự án bên trường)",
+    vietnameseName: "Ban Nghiên Cứu & Dự Án Học Thuật",
+    division: "TECH",
+    coreColor: "#EA4335", // Google Red
+    pastelColor: "#F8D8D8",
+    halftoneColor: "#FF7DAF",
+    textColor: "#1E1E1E",
+    iconName: "GraduationCap",
+    shortDesc: "Nghiên cứu khoa học, xử lý dữ liệu, viết bài báo học thuật cùng giảng viên.",
+    skills: ["Nghiên cứu khoa học", "Data Analysis", "Academic Paper Writing", "LaTeX", "Dự án Giảng viên FPTU", "AI / IoT / Systems"],
+    jd: {
+      overview: "Cầu nối trực tiếp giữa câu lạc bộ và các thầy cô giảng viên, phòng nghiên cứu tại Đại học FPT TP.HCM. Định hướng thực hiện các đề tài nghiên cứu khoa học sinh viên và xuất bản bài báo chuyên ngành.",
+      responsibilities: [
+        "Tham gia các đề tài nghiên cứu công nghệ chuyên sâu cùng giảng viên chuyên ngành tại trường.",
+        "Thu thập, tiền xử lý và phân tích tập dữ liệu lớn phục vụ thực nghiệm khoa học.",
+        "Soạn thảo nội dung bài báo khoa học bằng tiếng Anh chuẩn IEEE/ACM bằng công cụ LaTeX.",
+        "Đại diện tham gia các hội nghị nghiên cứu sinh viên (FPT Edu Research Festival, ResFes)."
+      ],
+      requirements: [
+        "Học lực khá/giỏi, đặc biệt yêu thích nghiên cứu hàn lâm và đọc các công bố khoa học (papers).",
+        "Khả năng tiếng Anh đọc - viết chuyên ngành tốt.",
+        "Kiên nhẫn, trung thực trong nghiên cứu và có tư duy phản biện khoa học sắc bén.",
+        "Biết sử dụng Python để xử lý dữ liệu hoặc mong muốn học hỏi bài bản."
+      ],
+      benefits: [
+        "Được đứng tên đồng tác giả trong các bài báo khoa học công bố tại hội nghị/tạp chí uy tín.",
+        "Điểm cộng lớn khi làm đồ án tốt nghiệp sớm hoặc xin học bổng du học Thạc sĩ / Tiến sĩ.",
+        "Mối quan hệ thân thiết và sự dẫn dắt trực tiếp từ các giảng viên đầu ngành của FPTU."
+      ]
+    }
+  },
+
+  // --- KHỐI NON-TECH ---
+  {
+    id: "nontech-media",
+    name: "Media",
+    vietnameseName: "Ban Truyền Thông & Thiết Kế",
+    division: "NON-TECH",
+    coreColor: "#FF7DAF", // Accent Pink/Red
+    pastelColor: "#FCE7F3",
+    halftoneColor: "#F472B6",
+    textColor: "#1E1E1E",
+    iconName: "Palette",
+    shortDesc: "Thiết kế ấn phẩm 2D/3D theo Google Brand Guideline, video recap, visual stage.",
+    skills: ["Google Brand Guideline", "Design 2D/3D", "Figma / Photoshop / Illustrator", "Video Editing / Premiere / CapCut", "Motion Graphics", "Stage Visuals"],
+    jd: {
+      overview: "Bộ mặt thương hiệu thị giác của GDGoC FPTU HCMC. Chịu trách nhiệm sáng tạo toàn bộ key visual, ấn phẩm social media, visual sân khấu led và video recap cho các sự kiện tầm cỡ.",
+      responsibilities: [
+        "Thiết kế poster, banner, avatar frame, standee và bộ nhận diện theo đúng Google Brand Guidelines.",
+        "Sản xuất motion graphic, trailer và video recap sinh động ghi lại dấu ấn sự kiện.",
+        "Phối hợp với Ban Web để thống nhất style UI/UX neo-brutalism và visual assets.",
+        "Chụp ảnh, quay tư liệu và quản lý kho tài nguyên truyền thông cho câu lạc bộ."
+      ],
+      requirements: [
+        "Sử dụng tốt ít nhất một phần mềm thiết kế (Figma, Photoshop, Illustrator) hoặc phần mềm dựng phim.",
+        "Có tư duy thẩm mỹ hiện đại, nhạy bén với xu hướng thị giác và cách phối màu thương hiệu.",
+        "Có trách nhiệm với deadline và sẵn sàng tiếp nhận đóng góp để hoàn thiện sản phẩm.",
+        "Gửi kèm Portfolio/Behance/Drive các sản phẩm đã từng thực hiện (nếu có)."
+      ],
+      benefits: [
+        "Thực chiến với bộ quy chuẩn thương hiệu nghiêm ngặt toàn cầu của Google (Google Brand).",
+        "Ấn phẩm thiết kế tiếp cận trực tiếp hàng chục nghìn lượt xem trên mạng xã hội và màn LED hội trường.",
+        "Xây dựng portfolio thiết kế đa phương tiện cực kỳ chuyên nghiệp và ấn tượng."
+      ]
+    }
+  },
+  {
+    id: "nontech-hr-event",
+    name: "HR & Event",
+    vietnameseName: "Ban Nhân Sự & Tổ Chức Sự Kiện",
+    division: "NON-TECH",
+    coreColor: "#34A853", // Green
+    pastelColor: "#CCF6C5",
+    halftoneColor: "#5CDB6D",
+    textColor: "#1E1E1E",
+    iconName: "CalendarCheck",
+    shortDesc: "Lập kế hoạch sự kiện (Hackathon, I/O Extended), điều phối logistics và gắn kết văn hóa nội bộ.",
+    skills: ["Event Planning", "Hackathon & I/O Extended Ops", "Logistics Coordination", "Văn Hóa Nội Bộ", "Team Bonding", "MC & Host", "Đối Ngoại"],
+    jd: {
+      overview: "Trái tim vận hành của câu lạc bộ. Đảm nhận từ khâu lên ý tưởng, kịch bản, chạy timeline sự kiện thực tế, cho đến chăm sóc thành viên, gắn kết văn hóa nội bộ nhiệt huyết.",
+      responsibilities: [
+        "Lập kế hoạch chi tiết, phân công nhân sự và điều phối hậu cần (logistics) cho các sự kiện lớn.",
+        "Điều phối hội trường, âm thanh ánh sáng, teabreak và đón tiếp diễn giả, Google Developer Experts.",
+        "Tổ chức các hoạt động nội bộ (Team Building, sinh nhật thành viên, Year-End Party, Check-in).",
+        "Đánh giá hiệu quả công việc (KPIs), quản lý danh sách thành viên và ghi nhận đóng góp tích cực."
+      ],
+      requirements: [
+        "Năng động, cởi mở, có kỹ năng giao tiếp và truyền năng lượng tích cực cho tập thể.",
+        "Khả năng tổ chức, quản lý thời gian và xử lý tình huống phát sinh linh hoạt.",
+        "Tỉ mỉ, có trách nhiệm cao với các công việc hậu cần, check-in, chuẩn bị quà tặng.",
+        "Yêu thích công việc gắn kết con người và tổ chức các sự kiện quy mô lớn."
+      ],
+      benefits: [
+        "Rèn luyện kỹ năng quản lý dự án (Project Management) và lãnh đạo đội ngũ thực chiến.",
+        "Mạng lưới quan hệ rộng khắp với các diễn giả công nghệ, doanh nghiệp đối tác và nhà tài trợ.",
+        "Trải nghiệm cảm giác tự hào khi cùng đồng đội tạo nên những sự kiện hàng trăm người bùng nổ."
+      ]
+    }
+  }
+];
+
+// Khung Tuyển Chọn Trưởng Ban (Lead Roles) Fall 2026
+export const LEAD_ROLES_DATA: LeadRole[] = [
+  {
+    id: "lead-ai",
+    role: "Lead AI (Trưởng Ban Trí Tuệ Nhân Tạo)",
+    departmentId: "tech-ai",
+    division: "KHỐI TECH",
+    badge: "Open for Application / Tuyển chọn nội bộ",
+    accentColor: "#FBBC04",
+    pastelColor: "#FFE7A5",
+    mission: "Định hướng nghiên cứu GenAI & Gemini API, dẫn dắt đội ngũ kỹ thuật AI thi đấu và chia sẻ kiến thức.",
+    responsibilities: [
+      "Xây dựng lộ trình đào tạo nội bộ (Study Jams) mảng AI/LLM cho thành viên Gen K22.",
+      "Chủ trì các buổi sinh hoạt chuyên môn, code review các dự án AI của câu lạc bộ.",
+      "Lên kế hoạch tổ chức chuỗi workshop kỹ thuật 'Build & Share Series' về Generative AI."
+    ],
+    requirements: [
+      "Sinh viên FPTU có kinh nghiệm thực tế triển khai các dự án AI/Data/LLM.",
+      "Khả năng truyền đạt, hướng dẫn và kết nối các thành viên trong ban.",
+      "Cam kết gắn bó và dành thời gian dẫn dắt chuyên môn trong kỳ Fall 2026."
+    ]
+  },
+  {
+    id: "lead-cloud",
+    role: "Lead Cloud (Trưởng Ban Điện Toán Đám Mây)",
+    departmentId: "tech-cloud",
+    division: "KHỐI TECH",
+    badge: "Open for Application / Tuyển chọn nội bộ",
+    accentColor: "#4285F4",
+    pastelColor: "#C3ECF6",
+    mission: "Quản trị toàn diện hạ tầng GCP và dẫn dắt chiến dịch phong trào Google Cloud Skills Boost toàn trường.",
+    responsibilities: [
+      "Quản lý kiến trúc cloud, giám sát bảo mật và triển khai các ứng dụng của GDGoC.",
+      "Phát động và điều phối chiến dịch 'Google Cloud Skills Boost Challenge' kỳ Fall 2026.",
+      "Đào tạo kỹ năng DevOps, Docker và CI/CD cho các thành viên kỹ thuật."
+    ],
+    requirements: [
+      "Có kinh nghiệm làm việc với GCP, Docker và quy trình deployment ứng dụng.",
+      "Có định hướng hoặc đã có chứng chỉ Google Cloud là một lợi thế lớn.",
+      "Tinh thần trách nhiệm cao đối với tính ổn định của hệ thống."
+    ]
+  },
+  {
+    id: "lead-web",
+    role: "Lead Web (Trưởng Ban Phát Triển Web)",
+    departmentId: "tech-web",
+    division: "KHỐI TECH",
+    badge: "Open for Application / Tuyển chọn nội bộ",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5",
+    mission: "Kiến trúc sư trưởng cho các nền tảng web, cổng sự kiện và hệ thống check-in của GDGoC.",
+    responsibilities: [
+      "Quyết định kiến trúc công nghệ (Tech Stack) cho các dự án web của câu lạc bộ.",
+      "Phân chia task, review pull request và bảo đảm tiến độ release trước mỗi sự kiện lớn.",
+      "Tổ chức mentoring kỹ thuật React, Next.js, TypeScript cho thành viên mới."
+    ],
+    requirements: [
+      "Kinh nghiệm làm Web Fullstack vững vàng (React/Next.js/Node.js/TypeScript).",
+      "Kỹ năng quản lý source code Git nhóm và review chất lượng mã nguồn.",
+      "Tác phong làm việc chuẩn mực, đúng hạn và kỹ năng giao tiếp tốt."
+    ]
+  },
+  {
+    id: "lead-research",
+    role: "Lead Research (Trưởng Ban Nghiên Cứu)",
+    departmentId: "tech-research",
+    division: "KHỐI TECH",
+    badge: "Open for Application / Tuyển chọn nội bộ",
+    accentColor: "#EA4335",
+    pastelColor: "#F8D8D8",
+    mission: "Dẫn dắt các nhóm sinh viên nghiên cứu khoa học, làm việc cùng giảng viên và xuất bản bài báo học thuật.",
+    responsibilities: [
+      "Kết nối đề tài với các thầy cô giảng viên Đại học FPT TP.HCM.",
+      "Tổ chức seminar phương pháp luận nghiên cứu và kỹ thuật viết bài báo khoa học.",
+      "Theo dõi tiến độ nộp bài các hội thảo sinh viên (ResFes) và các tạp chí chuyên ngành."
+    ],
+    requirements: [
+      "Có kinh nghiệm tham gia nghiên cứu khoa học sinh viên hoặc đồ án học thuật chuyên sâu.",
+      "Kỹ năng đọc hiểu tài liệu nghiên cứu tiếng Anh và tư duy phương pháp khoa học chuẩn xác.",
+      "Khả năng truyền cảm hứng học thuật và kết nối với giảng viên."
+    ]
+  },
+  {
+    id: "lead-media",
+    role: "Lead Media (Trưởng Ban Truyền Thông & Thiết Kế)",
+    departmentId: "nontech-media",
+    division: "KHỐI NON-TECH",
+    badge: "Open for Application / Tuyển chọn nội bộ",
+    accentColor: "#FF7DAF",
+    pastelColor: "#FCE7F3",
+    mission: "Định hình phong cách thị giác Neo-brutalism, quản lý chất lượng toàn bộ ấn phẩm và chiến dịch truyền thông.",
+    responsibilities: [
+      "Xây dựng định hướng hình ảnh (Brand Identity) cho từng chiến dịch sự kiện trong kỳ Fall 2026.",
+      "Phân công và duyệt sản phẩm thiết kế 2D/3D, video recap trước khi công bố.",
+      "Đào tạo kỹ năng thiết kế theo Google Brand Guidelines cho các bạn designer trẻ."
+    ],
+    requirements: [
+      "Portfolio thiết kế ấn tượng (Branding, Social Media, Visual Art).",
+      "Thành thạo công cụ đồ họa Figma/Photoshop/Illustrator hoặc dựng video.",
+      "Kỹ năng quản lý tiến độ thiết kế để không làm trễ lịch truyền thông."
+    ]
+  },
+  {
+    id: "lead-hr-event",
+    role: "Lead HR & Event (Trưởng Ban Nhân Sự & Sự Kiện)",
+    departmentId: "nontech-hr-event",
+    division: "KHỐI NON-TECH",
+    badge: "Open for Application / Tuyển chọn nội bộ",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5",
+    mission: "Chỉ huy trưởng công tác tổ chức sự kiện, gắn kết văn hóa và chăm sóc đời sống tinh thần của thành viên.",
+    responsibilities: [
+      "Lập master plan và tổng chỉ huy nhân sự cho Google I/O Extended FPTU 2026.",
+      "Xây dựng chính sách ghi nhận, khen thưởng và hoạt động gắn kết nội bộ toàn câu lạc bộ.",
+      "Điều phối tài chính, trang thiết bị và đối ngoại với các ban ngành nhà trường."
+    ],
+    requirements: [
+      "Kinh nghiệm dày dặn trong việc tổ chức các sự kiện quy mô từ 100+ người trở lên.",
+      "Khả năng lãnh đạo, giải quyết mâu thuẫn và truyền lửa cho tập thể.",
+      "Cực kỳ chu đáo, nhiệt tình và có kỹ năng giao tiếp xuất sắc."
+    ]
+  }
+];
+
+// Số liệu tổng kết thực tế của kỳ Summer 2026
+export const STATS_DATA: StatMilestone[] = [
+  {
+    value: "10",
+    number: 10,
+    suffix: "",
+    label: "Hoạt Động & Sự Kiện",
+    description: "Đã tổ chức thành công trong kỳ Summer 2026, tạo sân chơi công nghệ sôi động cho sinh viên.",
+    accentColor: "#4285F4",
+    pastelColor: "#C3ECF6"
+  },
+  {
+    value: "100+",
+    number: 100,
+    suffix: "+",
+    label: "Lượt Sinh Viên Tham Gia",
+    description: "Sinh viên tham dự trực tiếp và tích cực tại các buổi codelab, workshop và tech talk trên campus.",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5"
+  },
+  {
+    value: "30+",
+    number: 30,
+    suffix: "+",
+    label: "Thành Viên Cốt Cán",
+    description: "Đội ngũ Core Members năng nổ, nhiệt huyết cống hiến hết mình trong mọi công tác vận hành.",
+    accentColor: "#FBBC04",
+    pastelColor: "#FFE7A5"
+  },
+  {
+    value: "Top 1",
+    number: 1,
+    suffix: " VN",
+    label: "GDGoC AI Riser Vietnam 2026",
+    description: "Vinh dự đạt danh hiệu cao quý 'The GDGoC Impact Maker' toàn quốc do Google trao tặng.",
+    accentColor: "#EA4335",
+    pastelColor: "#F8D8D8"
+  }
+];
+
+// Pipeline sự kiện trọng điểm kỳ Fall 2026
+export const EVENTS_DATA: EventItem[] = [
+  {
+    id: "ai-riser-showcase",
+    title: "Showcase & Awarding Day - AI Riser Vietnam",
+    category: "Showcase",
+    date: "20/09/2026",
+    time: "08:30 - 12:00",
+    location: "Hội trường Edison, ĐH FPT TP.HCM (D9 Hi-Tech Park)",
+    isHybrid: true,
+    status: "Registration Open",
+    accentColor: "#EA4335",
+    pastelColor: "#F8D8D8",
+    speaker: {
+      name: "Đội Ngũ AI Riser FPTU",
+      role: "Top 1 Toàn Quốc - The GDGoC Impact Maker",
+      company: "GDG on Campus FPTU HCMC"
+    },
+    summary: "Buổi vinh danh và triển lãm các giải pháp AI xuất sắc nhất đã đưa GDGoC FPTU HCMC giành ngôi vô địch AI Riser Vietnam 2026, cùng phần chia sẻ kinh nghiệm thực chiến từ các quán quân.",
+    highlights: [
+      "Vinh danh thành tích Top 1 GDGoC AI Riser Vietnam 2026",
+      "Demo trực tiếp các ứng dụng GenAI tích hợp Gemini API",
+      "Giao lưu cùng đại diện Google Developer Ecosystem & Giảng viên",
+      "Nhận certificate và quà tặng Google Swag độc quyền"
+    ]
+  },
+  {
+    id: "google-io-extended-2026",
+    title: "Google I/O Extended FPT University 2026",
+    category: "Flagship Event",
+    date: "Tháng 10/2026",
+    time: "08:00 - 17:00",
+    location: "Khu Phức Hợp Sự Kiện Alpha & Edison, ĐH FPT TP.HCM",
+    isHybrid: true,
+    status: "Opening Soon",
+    accentColor: "#4285F4",
+    pastelColor: "#C3ECF6",
+    speaker: {
+      name: "Google Developer Experts (GDE)",
+      role: "Khách mời chuyên gia công nghệ hàng đầu",
+      company: "Google Developer Ecosystem"
+    },
+    summary: "Đại sự kiện thường niên lớn nhất của GDG on Campus, cập nhật những công nghệ đột phá mới nhất từ Google I/O: Gemini 2.0, Cloud Computing, Android 15, Web Platform cùng hàng loạt hoạt động trải nghiệm.",
+    highlights: [
+      "Quy mô dự kiến hơn 300+ sinh viên và lập trình viên tham dự",
+      "Khu trải nghiệm công nghệ tương tác Tech Expo & Hands-on Lab",
+      "4 Tracks chuyên môn chuyên sâu: AI, Cloud, Web, Career Talk",
+      "Cơ hội networking kết nối cùng các doanh nghiệp công nghệ đối tác"
+    ]
+  },
+  {
+    id: "build-and-share-series",
+    title: "Chuỗi Workshop Kỹ Thuật: Build & Share Series",
+    category: "Workshop Series",
+    date: "Tháng 9 - 12/2026",
+    time: "Định kỳ Thứ Bảy hàng tuần",
+    location: "Lab Kỹ Thuật Beta & Online Google Meet",
+    isHybrid: true,
+    status: "Upcoming",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5",
+    speaker: {
+      name: "Core Tech Leads & Alumni",
+      role: "Ban Kỹ Thuật GDGoC FPTU HCMC",
+      company: "GDG on Campus FPTU HCMC"
+    },
+    summary: "Chuỗi workshop thực hành 'Học đi đôi với hành' kéo dài xuyên suốt học kỳ Fall 2026 do Khối Tech chủ trì, dẫn dắt các bạn từ Zero đến Hero qua từng module thực tế.",
+    highlights: [
+      "Hands-on coding: Gemini API & RAG System từ cơ bản đến nâng cao",
+      "Deploy ứng dụng containerized lên Google Cloud Run",
+      "Thực chiến lập trình Fullstack với Next.js & Tailwind CSS",
+      "Seminar phương pháp nghiên cứu khoa học cho sinh viên IT"
+    ]
+  },
+  {
+    id: "cloud-skills-boost-challenge",
+    title: "Thử Thách Toàn Trường: Google Cloud Skills Boost Challenge",
+    category: "Campus Challenge",
+    date: "Kỳ Fall 2026",
+    time: "Hoạt động trực tuyến & Offline Mentoring",
+    location: "Nền tảng Google Cloud Skills Boost & Campus FPTU",
+    isHybrid: true,
+    status: "Upcoming",
+    accentColor: "#FBBC04",
+    pastelColor: "#FFE7A5",
+    speaker: {
+      name: "Lead Cloud & Mentor GCP",
+      role: "Ban Điện Toán Đám Mây",
+      company: "GDG on Campus FPTU HCMC"
+    },
+    summary: "Đấu trường rèn luyện kỹ năng đám mây chính thức dành riêng cho sinh viên FPT University HCMC. Hoàn thành các quest học tập để nhận Skill Badges danh giá từ Google và quà tặng hấp dẫn.",
+    highlights: [
+      "Cấp quyền truy cập tài nguyên Google Cloud Skills Boost miễn phí",
+      "Bảng xếp hạng vinh danh Top sinh viên chinh phục nhiều badge nhất",
+      "Cơ hội nhận voucher thi chứng chỉ Associate Cloud Engineer",
+      "Bộ quà tặng áo thun, bình nước, balo Google Cloud chính hãng"
+    ]
+  }
+];
+
+export const VALUES_PILLARS = [
+  {
+    title: "Connect",
+    accentColor: "#4285F4",
+    pastelColor: "#C3ECF6",
+    iconName: "Users2",
+    description: "Kết nối cộng đồng sinh viên đam mê công nghệ tại Đại học FPT TP.HCM cùng các chuyên gia Google Developer Experts và cựu sinh viên thành đạt."
+  },
+  {
+    title: "Learn",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5",
+    iconName: "BookOpenCheck",
+    description: "Học tập qua thực hành với hệ sinh thái công nghệ của Google: Gemini AI, Google Cloud Platform, Angular, Flutter, Web Vitals."
+  },
+  {
+    title: "Grow",
+    accentColor: "#FBBC04",
+    pastelColor: "#FFE7A5",
+    iconName: "TrendingUp",
+    description: "Phát triển toàn diện từ kỹ năng chuyên môn lập trình đến kỹ năng mềm, kỹ năng quản lý dự án và phong thái lãnh đạo công nghệ."
+  },
+  {
+    title: "Build for Impact",
+    accentColor: "#EA4335",
+    pastelColor: "#F8D8D8",
+    iconName: "Sparkles",
+    description: "Lan tỏa giá trị tích cực bằng những dòng code thật, giải quyết bài toán thực tế cho cộng đồng sinh viên và xã hội."
+  }
+];

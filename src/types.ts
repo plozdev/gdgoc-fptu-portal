@@ -50,6 +50,8 @@ export interface EventItem {
   highlights: string[];
   accentColor: string;
   pastelColor: string;
+  bevyUrl?: string; // Official Google Bevy event URL
+  bannerImage?: string; // Event visual poster / screenshot
 }
 
 export interface StatMilestone {
@@ -74,4 +76,21 @@ export interface RegistrationFormData {
   portfolioUrl: string;
   motivation: string;
 }
+
+export interface OrganizerMember {
+  id: string;
+  name: string;
+  role: string;
+  domain: 'Leads' | 'Tech' | 'Design & Media' | 'Event Operations';
+  major: string;
+  cohort: string;
+  bio: string;
+  avatarUrl: string;
+  color: string;
+  dotColor: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+}
+
 

@@ -10,32 +10,29 @@ import { About } from './components/About';
 import { Tracks } from './components/Tracks';
 import { Impact } from './components/Impact';
 import { Events } from './components/Events';
-import { Team } from './components/Team';
+import { Organizers } from './components/Organizers';
 import { JoinCTA } from './components/JoinCTA';
 import { Footer } from './components/Footer';
 import { JoinModal } from './components/JoinModal';
 import { EventModal } from './components/EventModal';
 import { TrackDetailModal } from './components/TrackDetailModal';
-import { Department, EventItem, LeadRole } from './types';
+import { Department, EventItem } from './types';
 import { DEPARTMENTS_DATA } from './data/gdgData';
 
 export default function App() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [selectedDefaultDept, setSelectedDefaultDept] = useState<string | undefined>(undefined);
-  const [isApplyingForLead, setIsApplyingForLead] = useState(false);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [activeDepartmentDetail, setActiveDepartmentDetail] = useState<Department | null>(null);
 
-  const handleOpenJoinModal = (defaultDept?: string, isLead = false) => {
+  const handleOpenJoinModal = (defaultDept?: string) => {
     setSelectedDefaultDept(defaultDept);
-    setIsApplyingForLead(isLead);
     setIsJoinModalOpen(true);
   };
 
   const handleCloseJoinModal = () => {
     setIsJoinModalOpen(false);
     setSelectedDefaultDept(undefined);
-    setIsApplyingForLead(false);
   };
 
   const handleSelectDepartment = (dept: Department) => {
@@ -59,11 +56,6 @@ export default function App() {
     setActiveEvent(null);
   };
 
-  const handleApplyLead = (leadRole: LeadRole) => {
-    const dept = DEPARTMENTS_DATA.find((d) => d.id === leadRole.departmentId);
-    handleOpenJoinModal(dept ? dept.name : undefined, true);
-  };
-
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#1E1E1E] flex flex-col font-sans selection:bg-[#C3ECF6] selection:text-[#1E1E1E]">
       {/* Top Sticky Navigation */}
@@ -85,7 +77,7 @@ export default function App() {
         />
         <Impact />
         <Events onSelectEvent={handleSelectEvent} />
-        <Team onApplyLead={handleApplyLead} />
+        <Organizers />
         <JoinCTA
           onOpenJoinModal={() => handleOpenJoinModal()}
           onOpenJdHandbook={handleOpenJdHandbook}
@@ -98,12 +90,11 @@ export default function App() {
         onOpenJdHandbook={handleOpenJdHandbook}
       />
 
-      {/* Interactive Chapter Membership & Lead Application Modal */}
+      {/* Interactive Chapter Membership Application Modal */}
       <JoinModal
         isOpen={isJoinModalOpen}
         onClose={handleCloseJoinModal}
         defaultDepartment={selectedDefaultDept}
-        isLeadRole={isApplyingForLead}
       />
 
       {/* Interactive Event Details & RSVP Modal */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check, Star, ExternalLink } from 'lucide-react';
 import { EventItem } from '../types';
+import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
 interface EventModalProps {
   event: EventItem | null;
@@ -71,7 +72,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
               <div className="bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-2xl p-4 space-y-2 text-xs font-mono-code">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#EA4335]" />
-                  <span className="font-bold text-[#1E1E1E]">{event.date}</span>
+                  <span className="font-bold text-[#1E1E1E]">{formatDateToDDMMYYYY(event.date)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#1E1E1E]/80">
                   <Clock className="w-4 h-4 text-[#FBBC04]" />
@@ -209,7 +210,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
 
               <div className="bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-2xl p-4 max-w-md mx-auto text-left text-xs font-mono-code space-y-1.5">
                 <div className="font-bold text-[#1E1E1E] truncate">{event.title}</div>
-                <div className="text-[#1E1E1E]/80">{event.date} • {event.time}</div>
+                <div className="text-[#1E1E1E]/80">{formatDateToDDMMYYYY(event.date)} • {event.time}</div>
                 <div className="text-[#1E1E1E]/80">{event.location}</div>
                 <div className="text-[#34A853] font-bold">Mã vé: GDGOC-{Math.floor(100000 + Math.random() * 900000)}</div>
               </div>

@@ -67,7 +67,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-2xl bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[92vh] flex flex-col overflow-hidden"
       >
-        
+
         {/* Sticky Header Bar */}
         <div className="bg-[#FFFFFF] border-b-2 border-[#1E1E1E] px-6 py-4 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center gap-3">
@@ -77,7 +77,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                 GDG on Campus FPT University HCMC
               </span>
               <span className="font-mono-code text-[11px] text-[#4285F4] font-bold">
-                Cổng Tuyển Sinh Thế Hệ Gen K22 • Fall 2026
+                Cổng Tuyển Sinh Thế Hệ Gen 4.0 • Fall 2026
               </span>
             </div>
           </div>
@@ -95,12 +95,12 @@ export const JoinModal: React.FC<JoinModalProps> = ({
         <div className="p-6 sm:p-7 overflow-y-auto custom-scrollbar flex-1">
           {!isSuccess ? (
             <form onSubmit={handleSubmit} className="space-y-4">
-              
+
               {/* Form Title */}
               <div className="space-y-1 pb-1">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#CCF6C5] border-[1.5px] border-[#1E1E1E] rounded-full font-mono-code text-xs font-bold text-[#1E1E1E]">
                   <Sparkles className="w-3.5 h-3.5 text-[#34A853]" />
-                  <span>Đăng Ký Gia Nhập Thành Viên Gen K22</span>
+                  <span>Đăng Ký Gia Nhập Thành Viên Gen 4.0</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1E1E1E] tracking-tight">
                   Thông Tin Ứng Viên
@@ -270,7 +270,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                   className="w-full py-3.5 px-6 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-extrabold text-sm sm:text-base rounded-full border-2 border-[#1E1E1E] brutal-shadow brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Nộp Hồ Sơ & Xuất Thẻ Ứng Viên Gen K22</span>
+                  <span>Nộp Hồ Sơ & Xuất Thẻ Ứng Viên Gen 4.0</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -287,7 +287,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                   Nộp Đơn Tuyển Sinh Thành Công!
                 </h3>
                 <p className="text-xs sm:text-sm text-[#1E1E1E]/80 max-w-md mx-auto">
-                  Hồ sơ ứng tuyển Gen K22 của bạn đã được tiếp nhận chính thức bởi Ban Chủ Nhiệm GDGoC FPT University HCMC.
+                  Hồ sơ ứng tuyển Gen 4.0 của bạn đã được tiếp nhận chính thức bởi Ban Chủ Nhiệm GDGoC FPT University HCMC.
                 </p>
               </div>
 
@@ -304,10 +304,10 @@ export const JoinModal: React.FC<JoinModalProps> = ({
                 <div className="pt-2 flex items-start justify-between border-b-2 border-[#1E1E1E] pb-4 mb-4">
                   <div>
                     <span className="font-mono-code text-[10px] font-extrabold text-[#1E1E1E] uppercase bg-[#FFE7A5] px-2.5 py-0.5 rounded border border-[#1E1E1E] inline-block mb-1">
-                      OFFICIAL CANDIDATE PASS • GEN K22
+                      OFFICIAL CANDIDATE PASS • Gen 4.0
                     </span>
                     <h4 className="font-extrabold text-xl sm:text-2xl text-[#1E1E1E]">
-                      {formData.fullName || 'Thành viên Gen K22'}
+                      {formData.fullName || 'Thành viên Gen 4.0'}
                     </h4>
                     <p className="font-mono-code text-xs text-[#4285F4] font-bold mt-0.5">
                       MSSV: {formData.studentId || 'SE200000'} • {formData.cohort}

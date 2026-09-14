@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Sparkles, ExternalLink, ArrowRight, Ticket, Users } from 'lucide-react';
-import { EVENTS_DATA } from '../data/gdgData';
+import { useLandingContentStore } from '../store/useLandingContentStore';
 import { EventItem } from '../types';
+import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
 interface EventsProps {
   onSelectEvent: (event: EventItem) => void;
@@ -9,13 +10,14 @@ interface EventsProps {
 
 export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
+  const events = useLandingContentStore((s) => s.events);
 
   const categories = ['ALL', 'Showcase', 'Flagship Event', 'Workshop Series', 'Campus Challenge'];
 
   const filteredEvents =
     activeFilter === 'ALL'
-      ? EVENTS_DATA
-      : EVENTS_DATA.filter((ev) => ev.category === activeFilter);
+      ? events
+      : events.filter((ev) => ev.category === activeFilter);
 
   return (
     <section id="events" className="py-20 sm:py-28 bg-[#FFFFFF] relative border-t border-[#1E1E1E]/10">
@@ -104,7 +106,7 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                 <div className="p-4 bg-[#F8F9FA] border border-[#1E1E1E]/20 rounded-2xl space-y-2 text-xs font-mono-code text-[#1E1E1E]">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3.5 h-3.5 text-[#EA4335] shrink-0" />
-                    <span className="font-extrabold">{event.date}</span>
+                    <span className="font-extrabold">{formatDateToDDMMYYYY(event.date)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-[#FBBC04] shrink-0" />

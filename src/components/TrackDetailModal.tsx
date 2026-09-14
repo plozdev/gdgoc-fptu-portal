@@ -24,7 +24,7 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-2xl bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[90vh] flex flex-col overflow-hidden"
       >
-        
+
         {/* Modal Top Bar (Non-scrolling fixed header) */}
         <div className="bg-[#FFFFFF] border-b-2 border-[#1E1E1E] px-6 py-4 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center gap-2.5">
@@ -60,7 +60,7 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
                 {department.vietnameseName}
               </span>
               <span className="px-2.5 py-0.5 bg-[#FFFFFF] border border-[#1E1E1E] rounded-full text-[11px] font-mono-code font-bold text-[#1E1E1E]">
-                Tuyển Sinh Gen K22
+                Tuyển Sinh Gen 4.0
               </span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1E1E1E]">
@@ -162,7 +162,7 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
               }}
               className="flex-1 py-3.5 px-6 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-sm rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Ứng Tuyển {department.name} (Gen K22)</span>
+              <span>Ứng Tuyển {department.name} (Gen 4.0)</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button

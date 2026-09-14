@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Users, BookOpen, Star, CalendarDays, ExternalLink, Flame, CheckCircle2, Award, Sparkles } from 'lucide-react';
-import { STATS_DATA, CHAPTER_INFO } from '../data/gdgData';
+import { CHAPTER_INFO } from '../data/gdgData';
+import { useLandingContentStore } from '../store/useLandingContentStore';
 
 export const Impact: React.FC = () => {
+  const stats = useLandingContentStore((s) => s.stats);
   const [counts, setCounts] = useState<{ [key: number]: number }>({
     0: 0,
     1: 0,
@@ -87,7 +89,7 @@ export const Impact: React.FC = () => {
 
         {/* 4 Clean Stats Counter Grid with Google Brand Colors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
-          {STATS_DATA.map((stat, idx) => (
+          {stats.map((stat, idx) => (
             <div
               key={stat.label}
               className="bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] p-6 brutal-shadow-sm brutal-shadow-hover flex flex-col justify-between transition-all"

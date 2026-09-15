@@ -19,6 +19,7 @@ export const Header: React.FC = () => {
     if (pathname.includes('/app/assets')) return 'Smart Asset Hub (Google Drive)';
     if (pathname.includes('/app/inventory')) return 'Quản Lý Vật Tư & Quà Tặng';
     if (pathname.includes('/app/gems')) return 'Điểm Thưởng & Bảng Xếp Hạng';
+    if (pathname.includes('/app/profile')) return 'Hồ Sơ Cá Nhân';
     return 'Bảng Tổng Quan (Dashboard)';
   };
 

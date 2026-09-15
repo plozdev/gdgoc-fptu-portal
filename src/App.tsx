@@ -35,6 +35,7 @@ import { AssetHub } from './pages/internal/AssetHub';
 import { GemsLeaderboard } from './pages/internal/GemsLeaderboard';
 import { GenerationSettings } from './pages/internal/GenerationSettings';
 import { InventoryManagement } from './pages/internal/InventoryManagement';
+import { MyProfile } from './pages/internal/MyProfile';
 
 function LandingPage() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -284,6 +285,18 @@ export default function App() {
             user ? (
               <DashboardLayout>
                 <GemsLeaderboard />
+              </DashboardLayout>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/app/profile"
+          element={
+            user ? (
+              <DashboardLayout>
+                <MyProfile />
               </DashboardLayout>
             ) : (
               <Navigate to="/login" />

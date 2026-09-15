@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { GdgLogo } from '../components/GdgLogo';
-import { ArrowLeft, ArrowRight, Shield, Sparkles, CheckCircle2, Lock, Users, Cpu, Palette } from 'lucide-react';
-import { mockUsers, BAN_NAMES } from '../mocks/fixtures/users';
+import { ArrowLeft, ArrowRight, Shield, Info, Lock } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -48,11 +47,6 @@ export const Login: React.FC = () => {
     performLogin(email.trim());
   };
 
-  // Group mock users for fast testing
-  const adminUsers = mockUsers.filter(u => u.tier === 'ORG_ADMIN');
-  const techLeadUsers = mockUsers.filter(u => u.tier === 'BAN_LEAD' && ['ai', 'cloud', 'web', 'research'].includes(u.banId || ''));
-  const nonTechLeadUsers = mockUsers.filter(u => u.tier === 'BAN_LEAD' && ['media', 'hr-event'].includes(u.banId || ''));
-  const memberUsers = mockUsers.filter(u => u.tier === 'BAN_MEMBER');
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 selection:bg-[#C3ECF6]">
@@ -139,116 +133,22 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          {/* Fast RBAC Role Picker */}
-          <div className="mt-8 pt-6 border-t border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#FBBC04]" />
-                Chọn nhanh vai trò mẫu (1-Click Login)
-              </span>
-              <span className="text-[11px] text-slate-400 font-mono-code">Dành cho DEV / Test</span>
-            </div>
-
-            <div className="space-y-3.5">
-              {/* Ban Chủ Nhiệm */}
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-[#EA4335]" />
-                  Ban Chủ Nhiệm (ORG_ADMIN - Toàn quyền)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {adminUsers.map(u => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => { setEmail(u.email); performLogin(u.email); }}
-                      className="text-left px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-slate-800 transition-all cursor-pointer flex items-center justify-between group"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <p className="text-xs font-bold truncate group-hover:text-amber-900">{u.name}</p>
-                        <p className="text-[11px] text-slate-500 font-mono-code truncate">{u.email}</p>
-                      </div>
-                      <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#EA4335] text-white">
-                        Admin
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Khối Tech: 4 Leads Ngang Hàng */}
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                  <Cpu className="w-3 h-3 text-[#4285F4]" />
-                  Khối Tech • 4 Trưởng Ban Ngang Hàng (BAN_LEAD)
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  {techLeadUsers.map(u => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => { setEmail(u.email); performLogin(u.email); }}
-                      className="text-left p-2 rounded-xl bg-blue-50/70 hover:bg-blue-100 border border-blue-200 text-slate-800 transition-all cursor-pointer group"
-                    >
-                      <p className="text-xs font-bold text-blue-900 truncate">{u.name.replace(/\(.*\)/, '')}</p>
-                      <span className="inline-block mt-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-600 text-white uppercase">
-                        Lead {u.banId}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Khối Non-Tech: 2 Leads Ngang Hàng */}
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                  <Palette className="w-3 h-3 text-[#34A853]" />
-                  Khối Non-Tech • 2 Trưởng Ban Ngang Hàng (BAN_LEAD)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {nonTechLeadUsers.map(u => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => { setEmail(u.email); performLogin(u.email); }}
-                      className="text-left px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-slate-800 transition-all cursor-pointer flex items-center justify-between group"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <p className="text-xs font-bold text-emerald-950 truncate">{u.name}</p>
-                        <p className="text-[11px] text-slate-500 font-mono-code truncate">{u.email}</p>
-                      </div>
-                      <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#34A853] text-white">
-                        Lead
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Thành Viên Các Ban */}
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                  <Users className="w-3 h-3 text-slate-600" />
-                  Thành Viên Các Ban (BAN_MEMBER)
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {memberUsers.slice(0, 6).map(u => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => { setEmail(u.email); performLogin(u.email); }}
-                      className="text-left p-2 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 transition-all cursor-pointer group"
-                    >
-                      <p className="text-[11px] font-bold truncate text-slate-800">{u.name.replace(/\(.*\)/, '')}</p>
-                      <span className="text-[9px] font-semibold text-slate-500 uppercase">
-                        Member {u.banId}
-                      </span>
-                    </button>
-                  ))}
+          {/* Dev Info Panel — Backend Integration Pending */}
+          {import.meta.env.DEV && (
+            <div className="mt-6 pt-5 border-t border-slate-200">
+              <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-bold text-amber-900">Backend chưa được kết nối</p>
+                  <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
+                    Hệ thống đang chạy ở chế độ development. Đăng nhập sẽ hoạt động sau khi backend API được tích hợp.
+                    Dùng <span className="font-bold">DevUserSwitcher</span> (nút tròn góc phải màn hình) để inject session test RBAC.
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
         </div>
 
         {/* Footer Note */}

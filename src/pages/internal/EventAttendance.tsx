@@ -1,24 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  Calendar, 
-  CheckCircle2, 
-  XCircle, 
-  Users, 
-  Clock, 
-  MapPin, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Search, 
-  UserCheck, 
-  UserX, 
-  Sparkles, 
-  Eye, 
-  Globe, 
-  Check, 
-  AlertCircle,
-  ShieldCheck,
-  UserPlus
+import {
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  MapPin,
+  Plus,
+  Trash2,
+  Edit3,
+  Search,
+  UserCheck,
+  UserX,
+  Globe,
+  Check,
+  UserPlus,
 } from 'lucide-react';
 import { useLandingContentStore } from '../../store/useLandingContentStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -547,26 +542,42 @@ export const EventAttendance: React.FC = () => {
                         </td>
                         <td className="p-2.5 text-right pr-4">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => toggleAttendeeCheckIn(activeEvent.id, att.id)}
-                              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 ${
-                                att.checkedIn 
-                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200' 
-                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                              }`}
-                            >
-                              {att.checkedIn ? (
-                                <>
-                                  <UserX className="w-3 h-3" />
-                                  <span>Hủy Check-in</span>
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck className="w-3 h-3" />
-                                  <span>Điểm Danh</span>
-                                </>
-                              )}
-                            </button>
+                            {/* Chỉ BCN (ORG_ADMIN) và HR-Event mới được toggle check-in */}
+                            {canManage ? (
+                              <button
+                                onClick={() => toggleAttendeeCheckIn(activeEvent.id, att.id)}
+                                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer flex items-center gap-1 ${
+                                  att.checkedIn
+                                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                                }`}
+                              >
+                                {att.checkedIn ? (
+                                  <>
+                                    <UserX className="w-3 h-3" />
+                                    <span>Hủy Check-in</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="w-3 h-3" />
+                                    <span>Điểm Danh</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              /* Read-only badge cho thành viên không có quyền */
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
+                                att.checkedIn
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {att.checkedIn ? (
+                                  <><CheckCircle2 className="w-3 h-3" /><span>Đã điểm danh</span></>
+                                ) : (
+                                  <><XCircle className="w-3 h-3" /><span>Chưa có mặt</span></>
+                                )}
+                              </span>
+                            )}
 
                             {canManage && (
                               <button

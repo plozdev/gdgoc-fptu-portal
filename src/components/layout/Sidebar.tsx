@@ -86,17 +86,15 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Current Generation Pill */}
-        <Link
-          to="/app/settings/generation"
-          title="Xem & Cấu hình Niên khóa"
-          className="mt-2.5 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-800 text-[11px] transition-colors"
+        {/* Current Generation Pill (Static display, not clickable) */}
+        <div
+          className="mt-2.5 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-slate-800 text-[11px]"
         >
           <span className="text-slate-400">Niên khóa:</span>
           <span className="font-bold text-amber-300 flex items-center gap-1">
             {currentGen}
           </span>
-        </Link>
+        </div>
       </div>
 
       {/* Navigation Sections */}
@@ -168,25 +166,27 @@ export const Sidebar: React.FC = () => {
               </NavLink>
             ) : null}
 
-            {/* Cấu Hình Niên Khóa & Chuyển Kỳ (Tất cả có thể xem, chỉ Admin mới đổi) */}
-            <NavLink
-              to="/app/settings/generation"
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40 font-bold'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <Sliders className="w-4 h-4 text-purple-400" />
-                <span>Cấu Hình Niên Khóa</span>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono-code">
-                Config
-              </span>
-            </NavLink>
+            {/* Cấu Hình Niên Khóa & Chuyển Kỳ (Chỉ BCN mới thấy và cấu hình) */}
+            {isOrgAdmin && (
+              <NavLink
+                to="/app/settings/generation"
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40 font-bold'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <Sliders className="w-4 h-4 text-purple-400" />
+                  <span>Cấu Hình Niên Khóa</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono-code">
+                  Config
+                </span>
+              </NavLink>
+            )}
 
             {/* Task Kanban Board */}
             <NavLink
@@ -208,8 +208,8 @@ export const Sidebar: React.FC = () => {
               </span>
             </NavLink>
 
-            {/* Landing Page CMS (Chỉ dành cho Ban Chủ Nhiệm và Trưởng Ban) */}
-            {(isOrgAdmin || isBanLead) && (
+            {/* Landing Page CMS (Chỉ dành riêng cho Ban Chủ Nhiệm) */}
+            {isOrgAdmin && (
               <NavLink
                 to="/app/landing-cms"
                 className={({ isActive }) =>

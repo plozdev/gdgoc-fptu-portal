@@ -33,6 +33,7 @@ export const LandingCMS: React.FC = () => {
     updateEvent, 
     addEvent, 
     deleteEvent, 
+    toggleShowOnLanding,
     updateOrganizer, 
     addOrganizer, 
     deleteOrganizer, 
@@ -46,9 +47,10 @@ export const LandingCMS: React.FC = () => {
   // Edit Event state
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [editingOrganizer, setEditingOrganizer] = useState<OrganizerMember | null>(null);
+  const [showEventPickerModal, setShowEventPickerModal] = useState(false);
 
-  // 🚨 Tự động chuyển hướng thành viên không có quyền quản trị về Dashboard (bỏ màn hình 403)
-  if (user?.tier === 'BAN_MEMBER') {
+  // 🚨 Chỉ BCN (ORG_ADMIN - Chapter Lead & Co-Chapter Lead) mới có quyền truy cập Landing CMS
+  if (user?.tier !== 'ORG_ADMIN') {
     return <Navigate to="/app/dashboard" replace />;
   }
 
@@ -190,52 +192,42 @@ export const LandingCMS: React.FC = () => {
       {/* TAB 1: EVENTS */}
       {activeTab === 'events' && (
         <div className="bg-white p-6 rounded-b-2xl border border-slate-200 border-t-0 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500">Danh sách các sự kiện hiển thị trên section "Sự Kiện" ngoài Landing Page:</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/60 p-4 rounded-xl border border-blue-200">
+            <div>
+              <h4 className="text-xs font-bold text-blue-950">Sự Kiện Xuất Bản Ngoài Landing Page</h4>
+              <p className="text-[11px] text-blue-800/80 mt-0.5">
+                Chọn từ danh sách sự kiện nội bộ của CLB để xuất bản hoặc ẩn khỏi Landing Page cho khách vãng lai.
+              </p>
+            </div>
             <button
-              onClick={() => {
-                const newEv: EventItem = {
-                  id: `event-${Date.now()}`,
-                  title: 'Workshop Kỹ Thuật Mới: AI & Cloud Computing',
-                  category: 'Workshop Series',
-                  date: '15/11/2026',
-                  time: '01:30 PM - 05:00 PM',
-                  location: 'Lab Beta 402, ĐH FPT TP.HCM',
-                  status: 'Registration Open',
-                  accentColor: '#4285F4',
-                  pastelColor: '#C3ECF6',
-                  summary: 'Workshop chia sẻ kiến thức mới cho thành viên.',
-                  highlights: ['Codelab thực hành', 'Quà tặng Google Swag'],
-                  bevyUrl: 'https://gdg.community.dev'
-                };
-                addEvent(newEv);
-                handleSave();
-              }}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              onClick={() => setShowEventPickerModal(true)}
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm Sự Kiện Mới</span>
+              <span>Chọn Sự Kiện Xuất Bản ({events.filter(e => e.showOnLanding !== false).length}/{events.length})</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {events.map((ev) => (
-              <div key={ev.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 space-y-2">
+            {events.filter(e => e.showOnLanding !== false).map((ev) => (
+              <div key={ev.id} className="p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-blue-300 space-y-2.5 transition-all shadow-xs">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 uppercase">
                     {ev.category}
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                    {ev.status}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      ✓ Đang hiển thị ngoài Landing
+                    </span>
+                  </div>
                 </div>
 
                 <h4 className="text-xs font-bold text-slate-900 leading-snug">{ev.title}</h4>
-                <p className="text-[11px] text-slate-500">📅 {formatDateToDDMMYYYY(ev.date)} • {ev.time}</p>
+                <p className="text-[11px] text-slate-500 font-medium">📅 {formatDateToDDMMYYYY(ev.date)} • {ev.time}</p>
                 <p className="text-[11px] text-slate-500">📍 {ev.location}</p>
 
-                <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
-                  <span className="text-[10px] text-slate-400 font-mono-code truncate max-w-[150px]">
+                <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-[10px] text-slate-400 font-mono-code truncate max-w-[130px]">
                     ID: {ev.id}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -248,20 +240,25 @@ export const LandingCMS: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Bạn có chắc muốn xóa sự kiện "${ev.title}"?`)) {
-                          deleteEvent(ev.id);
-                          handleSave();
-                        }
+                        toggleShowOnLanding(ev.id);
+                        handleSave();
                       }}
-                      className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                      title="Gỡ khỏi Landing Page (vẫn giữ trong hệ thống CLB)"
+                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] rounded-lg border border-amber-200 transition-colors cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Ẩn Khỏi Landing</span>
                     </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {events.filter(e => e.showOnLanding !== false).length === 0 && (
+            <div className="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              Hiện chưa có sự kiện nào được chọn để xuất bản ra ngoài Landing Page.
+            </div>
+          )}
         </div>
       )}
 
@@ -400,7 +397,100 @@ export const LandingCMS: React.FC = () => {
         </div>
       )}
 
-      {/* Edit Event Modal */}
+      {/* MODAL: SELECT EVENTS FROM INTERNAL LIST TO DISPLAY ON LANDING */}
+      {showEventPickerModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <span>Chọn Sự Kiện Hiển Thị Ngoài Landing Page</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Bật/tắt sự kiện từ danh sách sự kiện nội bộ của CLB để xuất bản ra trang chủ.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEventPickerModal(false)}
+                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {events.map((ev) => {
+                const isShown = ev.showOnLanding !== false;
+                return (
+                  <div 
+                    key={ev.id} 
+                    className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-4 ${
+                      isShown 
+                        ? 'border-emerald-300 bg-emerald-50/40' 
+                        : 'border-slate-200 bg-slate-50/70 opacity-75'
+                    }`}
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700 uppercase">
+                          {ev.category}
+                        </span>
+                        <span className="text-xs text-slate-400">•</span>
+                        <span className="text-xs font-semibold text-slate-500">
+                          {formatDateToDDMMYYYY(ev.date)} • {ev.time}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 truncate">
+                        {ev.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 truncate">📍 {ev.location}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleShowOnLanding(ev.id);
+                        handleSave();
+                      }}
+                      className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                        isShown
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}
+                    >
+                      {isShown ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                          <span>Đang Hiển Thị</span>
+                        </>
+                      ) : (
+                        <span>+ Bật Hiển Thị</span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+              <Link
+                to="/app/events"
+                onClick={() => setShowEventPickerModal(false)}
+                className="text-xs text-blue-600 hover:underline font-bold flex items-center gap-1"
+              >
+                <span>Tạo sự kiện mới tại trang Quản Lý Sự Kiện →</span>
+              </Link>
+              <button
+                onClick={() => setShowEventPickerModal(false)}
+                className="px-4 py-2 bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+              >
+                Hoàn Tất
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {editingEvent && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <form onSubmit={handleUpdateEditingEvent} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-3.5">
@@ -464,15 +554,19 @@ export const LandingCMS: React.FC = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Link Vé Google Bevy</label>
-              <input
-                type="url"
-                value={editingEvent.bevyUrl || ''}
-                onChange={(e) => setEditingEvent({ ...editingEvent, bevyUrl: e.target.value })}
-                className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900"
-              />
-            </div>
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={editingEvent.showOnLanding !== false}
+                    onChange={(e) => setEditingEvent({ ...editingEvent, showOnLanding: e.target.checked })}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-800">
+                    Hiển thị sự kiện này ngoài Landing Page
+                  </span>
+                </label>
+              </div>
 
             <div className="flex items-center justify-end gap-2 pt-3">
               <button

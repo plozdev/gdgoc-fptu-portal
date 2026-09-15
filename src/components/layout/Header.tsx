@@ -38,23 +38,28 @@ export const Header: React.FC = () => {
       
       {/* Right Action & Indicators */}
       <div className="flex items-center gap-3">
-        {/* Generation Status Badge with Link to Config */}
-        <Link
-          to="/app/settings/generation"
-          title="Xem và cấu hình niên khóa"
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors"
-        >
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span>{currentGen} • {currentSemester}</span>
-          {isOrgAdmin ? (
+        {/* Generation Status Badge */}
+        {isOrgAdmin ? (
+          <Link
+            to="/app/settings/generation"
+            title="Xem và cấu hình niên khóa"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span>{currentGen} • {currentSemester}</span>
             <span className="text-[10px] text-blue-600 font-bold ml-1 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 flex items-center gap-0.5">
               <Sliders className="w-2.5 h-2.5" />
               <span>Cấu hình</span>
             </span>
-          ) : (
-            <Lock className="w-3 h-3 text-slate-400 ml-0.5" />
-          )}
-        </Link>
+          </Link>
+        ) : (
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 select-none cursor-default"
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span>{currentGen} • {currentSemester}</span>
+          </div>
+        )}
 
         {/* View Public Site */}
         <Link

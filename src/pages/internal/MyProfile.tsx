@@ -198,10 +198,6 @@ export const MyProfile: React.FC = () => {
                   Thông Tin Định Danh
                 </h2>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md flex items-center gap-1">
-                <Lock className="w-3 h-3" />
-                <span>Khóa bảo mật</span>
-              </span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/80">

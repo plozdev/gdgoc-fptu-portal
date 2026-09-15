@@ -24,7 +24,6 @@ export const NotificationCenter: React.FC = () => {
   const { notifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,10 +40,6 @@ export const NotificationCenter: React.FC = () => {
   });
 
   const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
-
-  const displayList = filter === 'unread' 
-    ? visibleNotifications.filter((n) => !n.isRead)
-    : visibleNotifications;
 
   // Đóng popover khi click ra ngoài
   useEffect(() => {
@@ -140,44 +135,23 @@ export const NotificationCenter: React.FC = () => {
             </div>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center px-3 py-1.5 bg-white border-b border-slate-100 gap-2 text-xs">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
-                filter === 'all'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-              }`}
-            >
-              Tất cả ({visibleNotifications.length})
-            </button>
-            <button
-              onClick={() => setFilter('unread')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors cursor-pointer ${
-                filter === 'unread'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-              }`}
-            >
-              Chưa đọc ({unreadCount})
-            </button>
-          </div>
-
-          {/* Notifications List */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
-            {displayList.length === 0 ? (
+          {/* Notifications List (Hiển thị tất cả, tin đã đọc làm xám mờ lại) */}
+          <div className="max-h-[400px] overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
+            {visibleNotifications.length === 0 ? (
               <div className="p-8 text-center text-slate-400">
                 <Bell className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
                 <p className="text-xs font-medium">Không có thông báo nào</p>
               </div>
             ) : (
-              displayList.map((notif) => (
+              visibleNotifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => markAsRead(notif.id)}
-                  className={`p-3 transition-colors cursor-pointer hover:bg-slate-50 flex items-start gap-2.5 ${
-                    !notif.isRead ? 'bg-blue-50/40' : 'bg-white'
+                  title={notif.isRead ? 'Đã đọc' : 'Nhấp để đánh dấu đã đọc'}
+                  className={`p-3 transition-all cursor-pointer flex items-start gap-2.5 ${
+                    notif.isRead
+                      ? 'opacity-40 bg-slate-50/70 hover:opacity-75 grayscale'
+                      : 'bg-white hover:bg-blue-50/30'
                   }`}
                 >
                   {getNotificationIcon(notif)}
@@ -185,16 +159,18 @@ export const NotificationCenter: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                       <h4 className={`text-xs leading-snug truncate ${
-                        !notif.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'
+                        !notif.isRead ? 'font-black text-slate-900' : 'font-semibold text-slate-500'
                       }`}>
                         {notif.title}
                       </h4>
                       {!notif.isRead && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0"></span>
+                        <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 animate-pulse"></span>
                       )}
                     </div>
 
-                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2 mb-1.5">
+                    <p className={`text-[11px] leading-relaxed line-clamp-2 mb-1.5 ${
+                      !notif.isRead ? 'text-slate-600 font-normal' : 'text-slate-400 font-normal'
+                    }`}>
                       {notif.message}
                     </p>
 

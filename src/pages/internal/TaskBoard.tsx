@@ -27,12 +27,25 @@ import {
 import { BAN_NAMES, BanId } from '../../mocks/fixtures/users';
 import { DateInput } from '../../components/common/DateInput';
 import { formatDateToDDMMYYYY } from '../../utils/dateUtils';
+import { useMemberStore } from '../../store/useMemberStore';
+
+export type TaskLevel = 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER';
+
+export const BAN_LEADS_MAP: Record<BanId, { name: string; position: string }> = {
+  ai: { name: 'Trần Nguyên Bảo', position: 'AI Lead' },
+  cloud: { name: 'Hoàng Minh Tuấn', position: 'Cloud Lead' },
+  web: { name: 'Lê Hoàng Long', position: 'Web Lead' },
+  research: { name: 'Phạm Quốc Anh', position: 'Research Lead' },
+  media: { name: 'Vũ Thị Lan Hương', position: 'Media Lead' },
+  'hr-event': { name: 'Bùi Đức Thịnh', position: 'HR-Event Lead' },
+};
 
 export interface Task {
   id: string;
   title: string;
   description: string;
   banId: BanId;
+  level: TaskLevel; // BCN_TO_LEAD (Cấp 1: BCN giao Lead) hoặc LEAD_TO_MEMBER (Cấp 2: Lead giao Member)
   project: string; // Chiến dịch / Dự án / Milestone
   status: 'todo' | 'in_progress' | 'review' | 'done';
   assignee: string;
@@ -58,6 +71,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Nghiên cứu Gemini 2.0 Multimodal API & viết notebook mẫu',
     description: 'Xây dựng sample code gọi function calling và vector embeddings cho workshop.',
     banId: 'ai',
+    level: 'LEAD_TO_MEMBER',
     project: 'Build & Share Workshop Series',
     status: 'in_progress',
     assignee: 'Nguyễn Thành Nam (AI Member)',
@@ -70,6 +84,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Chuẩn bị dataset demo RAG cho sinh viên tại AI Riser Showcase',
     description: 'Thu thập tài liệu handbook Đại học FPT và tiền xử lý chunking cho Vector DB.',
     banId: 'ai',
+    level: 'LEAD_TO_MEMBER',
     project: 'AI Riser Showcase (20/09)',
     status: 'review',
     assignee: 'Nguyễn Thành Nam (AI Member)',
@@ -83,6 +98,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Đào tạo nội bộ Prompt Engineering cho tân thành viên AI',
     description: 'Soạn slide giáo án 3 buổi về System Instructions, Few-shot và ReAct Agents.',
     banId: 'ai',
+    level: 'BCN_TO_LEAD',
     project: 'Tuyển Sinh Gen 4.0',
     status: 'todo',
     assignee: 'Trần Nguyên Bảo (AI Lead)',
@@ -97,6 +113,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Deploy hạ tầng backend sự kiện lên Google Cloud Run',
     description: 'Thiết lập Dockerfile, cấu hình Cloud SQL Postgres và gắn custom domain.',
     banId: 'cloud',
+    level: 'LEAD_TO_MEMBER',
     project: 'Google I/O Extended FPTU 2026',
     status: 'review',
     assignee: 'Trần Đức Toàn (Cloud Member)',
@@ -108,14 +125,28 @@ const INITIAL_TASKS: Task[] = [
   {
     id: 'T-109',
     title: 'Cấp phát voucher Google Cloud Skills Boost cho 100 sinh viên tham dự',
-    description: 'Kiểm tra mã kích hoạt, đồng bộ danh sách email từ đơn RSVP Bevy.',
+    description: 'Kiểm tra mã kích hoạt, đồng bộ danh sách email sinh viên từ cổng đăng ký sự kiện.',
     banId: 'cloud',
+    level: 'LEAD_TO_MEMBER',
     project: 'AI Riser Showcase (20/09)',
     status: 'in_progress',
     assignee: 'Trần Đức Toàn (Cloud Member)',
     gems: 150,
     priority: 'Trung bình',
     deadline: '19/09/2026',
+  },
+  {
+    id: 'T-115',
+    title: 'Lập dự toán chi phí GCP Cloud Credits và quota hạn mức cho kỳ Fall 2026',
+    description: 'Báo cáo trực tiếp cho Ban Chủ Nhiệm về các dự án dùng tài nguyên Cloud Run và Firestore.',
+    banId: 'cloud',
+    level: 'BCN_TO_LEAD',
+    project: 'Vận Hành Thường Nhật',
+    status: 'todo',
+    assignee: 'Hoàng Minh Tuấn (Cloud Lead)',
+    gems: 250,
+    priority: 'Cao',
+    deadline: '28/09/2026',
   },
 
   // BAN WEB
@@ -124,6 +155,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Tối ưu Core Web Vitals cho Landing Page Gen 4.0',
     description: 'Nâng điểm LCP < 1.2s và CLS < 0.05 trên thiết bị di động.',
     banId: 'web',
+    level: 'LEAD_TO_MEMBER',
     project: 'Tuyển Sinh Gen 4.0',
     status: 'in_progress',
     assignee: 'Đỗ Hữu Minh (Web Member)',
@@ -134,8 +166,9 @@ const INITIAL_TASKS: Task[] = [
   {
     id: 'T-110',
     title: 'Tích hợp hệ thống check-in quét QR tự động tại sảnh hội trường',
-    description: 'Viết module quét camera quét mã vé Bevy và cập nhật trạng thái thời gian thực.',
+    description: 'Viết module camera quét mã QR tham dự sự kiện và cập nhật trạng thái điểm danh thời gian thực.',
     banId: 'web',
+    level: 'BCN_TO_LEAD',
     project: 'AI Riser Showcase (20/09)',
     status: 'done',
     assignee: 'Lê Hoàng Long (Web Lead)',
@@ -150,6 +183,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Soạn thảo Key Visual & Visual LED sự kiện Showcase',
     description: 'Bộ ấn phẩm 16:9 cho màn hình hội trường Edison và poster social.',
     banId: 'media',
+    level: 'LEAD_TO_MEMBER',
     project: 'AI Riser Showcase (20/09)',
     status: 'review',
     assignee: 'Lê Minh Tú (Media Member)',
@@ -163,6 +197,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Thiết kế bộ Avatar Frame và Banner tuyển sinh Gen 4.0',
     description: 'Sáng tạo theo đúng Google Brand Guidelines chuẩn màu sắc và typography.',
     banId: 'media',
+    level: 'BCN_TO_LEAD',
     project: 'Tuyển Sinh Gen 4.0',
     status: 'done',
     assignee: 'Vũ Thị Lan Hương (Media Lead)',
@@ -175,6 +210,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Quay và dựng video recap chuỗi hoạt động kỳ Summer 2026',
     description: 'Clip ngắn 90 giây phong cách năng động cho fanpage và sự kiện.',
     banId: 'media',
+    level: 'LEAD_TO_MEMBER',
     project: 'AI Riser Showcase (20/09)',
     status: 'todo',
     assignee: 'Lê Minh Tú (Media Member)',
@@ -187,8 +223,9 @@ const INITIAL_TASKS: Task[] = [
   {
     id: 'T-105',
     title: 'Tổng hợp danh sách check-in và chuẩn bị quà Google Swag',
-    description: 'Phân loại quà áo thun, sticker và bình nước theo mã QR sinh viên.',
+    description: 'Phân loại quà áo thun, sticker và bình nước theo danh sách điểm danh sinh viên.',
     banId: 'hr-event',
+    level: 'LEAD_TO_MEMBER',
     project: 'AI Riser Showcase (20/09)',
     status: 'todo',
     assignee: 'Hoàng Kim Chi (HR-Event Member)',
@@ -201,6 +238,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Chốt kịch bản MC song ngữ & điều phối teabreak đón tiếp khách mời',
     description: 'Liên hệ phòng ban nhà trường xin mượn thiết bị âm thanh hội trường Alpha.',
     banId: 'hr-event',
+    level: 'BCN_TO_LEAD',
     project: 'AI Riser Showcase (20/09)',
     status: 'in_progress',
     assignee: 'Bùi Đức Thịnh (HR-Event Lead)',
@@ -215,6 +253,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Viết bài tổng quan nghiên cứu sinh viên cho kỷ yếu ResFes 2026',
     description: 'Phối hợp với giảng viên hướng dẫn hoàn thiện bản thảo LaTeX.',
     banId: 'research',
+    level: 'LEAD_TO_MEMBER',
     project: 'Vận Hành Thường Nhật',
     status: 'done',
     assignee: 'Võ Mai Linh (Research Member)',
@@ -227,6 +266,7 @@ const INITIAL_TASKS: Task[] = [
     title: 'Tổng hợp tài liệu đọc hiểu paper Gemini Multimodal Reasoning',
     description: 'Dịch và tóm tắt 3 bài báo tiêu biểu từ Google DeepMind cho thành viên.',
     banId: 'research',
+    level: 'BCN_TO_LEAD',
     project: 'Build & Share Workshop Series',
     status: 'in_progress',
     assignee: 'Phạm Quốc Anh (Research Lead)',
@@ -258,10 +298,13 @@ export const TaskBoard: React.FC = () => {
     }
   }, [user?.id, user?.tier, user?.banId, isOrgAdmin]);
 
+  const { members } = useMemberStore();
+
   // Scalability Filters
   const [selectedProject, setSelectedProject] = useState<string>('Tất Cả Dự Án');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [levelFilter, setLevelFilter] = useState<'all' | 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER'>('all');
   const [myTasksOnly, setMyTasksOnly] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
@@ -275,26 +318,34 @@ export const TaskBoard: React.FC = () => {
   const [newGems, setNewGems] = useState(200);
   const [newPriority, setNewPriority] = useState<'Cao' | 'Trung bình' | 'Thấp'>('Cao');
   const [newDeadline, setNewDeadline] = useState('15/10/2026');
+  const [selectedCreateBan, setSelectedCreateBan] = useState<BanId>('ai');
+  const [selectedMemberAssignee, setSelectedMemberAssignee] = useState<string>('');
 
   // Enforce strict Data Scope: If user is not ORG_ADMIN, forced to their ban
   const activeBanScope = isOrgAdmin ? selectedBan : (user?.banId || 'ai');
 
   // Filter pipeline
   const filteredTasks = tasks.filter(t => {
-    // 1. Ban Scope
+    // 0. HIERARCHY RULE: Member KHÔNG ĐƯỢC THẤY công việc của LEAD (BCN_TO_LEAD)
+    if (isMember && t.level === 'BCN_TO_LEAD') {
+      return false;
+    }
+    // 1. Phân cấp Level Filter (cho BCN và Lead)
+    const matchesLevel = levelFilter === 'all' || t.level === levelFilter;
+    // 2. Ban Scope
     const matchesBan = activeBanScope === 'all' || t.banId === activeBanScope;
-    // 2. Project / Campaign
+    // 3. Project / Campaign
     const matchesProject = selectedProject === 'Tất Cả Dự Án' || t.project === selectedProject;
-    // 3. Priority
+    // 4. Priority
     const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-    // 4. Search Query
+    // 5. Search Query
     const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           t.assignee.toLowerCase().includes(searchQuery.toLowerCase());
-    // 5. My Tasks filter
+    // 6. My Tasks filter
     const matchesMyTask = !myTasksOnly || (user?.name && t.assignee.toLowerCase().includes(user.name.toLowerCase()));
 
-    return matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
+    return matchesLevel && matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
   });
 
   // Calculate metrics
@@ -335,24 +386,38 @@ export const TaskBoard: React.FC = () => {
     setSubmissionLink('');
   };
 
-  // Lead action: Create task
+  // Lead / BCN action: Create task
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
-    // Target Ban: If Lead, forced to their ban. If ORG_ADMIN, can choose.
+    // Target Ban: If Lead, forced to their ban. If ORG_ADMIN, selected create ban.
     const targetBan: BanId = isOrgAdmin 
-      ? (selectedBan !== 'all' ? selectedBan as BanId : 'web')
-      : (user?.banId || 'web');
+      ? selectedCreateBan
+      : (user?.banId || 'ai');
+
+    // Hierarchy Level & Assignee Enforcement:
+    // - BCN (ORG_ADMIN) giao việc cho LEAD -> level = 'BCN_TO_LEAD'
+    // - LEAD giao việc cho MEMBER -> level = 'LEAD_TO_MEMBER'
+    const taskLevel: TaskLevel = isOrgAdmin ? 'BCN_TO_LEAD' : 'LEAD_TO_MEMBER';
+
+    let chosenAssignee = '';
+    if (isOrgAdmin) {
+      const lead = BAN_LEADS_MAP[targetBan];
+      chosenAssignee = `${lead.name} (${lead.position})`;
+    } else {
+      chosenAssignee = selectedMemberAssignee || (user?.name ? `${user.name} (Tự phụ trách)` : 'Thành viên Ban');
+    }
 
     const newTask: Task = {
       id: `T-${Math.floor(200 + Math.random() * 800)}`,
       title: newTitle.trim(),
       description: newDesc.trim(),
       banId: targetBan,
+      level: taskLevel,
       project: newProject,
       status: 'todo',
-      assignee: user?.name || 'Chưa phân công',
+      assignee: chosenAssignee,
       gems: newGems,
       priority: newPriority,
       deadline: newDeadline,
@@ -397,10 +462,10 @@ export const TaskBoard: React.FC = () => {
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {isOrgAdmin
-              ? 'Đặc quyền Chapter Lead & Co-Chapter Lead: Theo dõi toàn bộ tiến độ của cả 6 ban và hỗ trợ phê duyệt.'
+              ? 'Phân cấp BCN: Giám sát toàn bộ tiến độ, giao việc trực tiếp cho các Trưởng Ban (BCN → Lead). Không giao việc trực tiếp cho Member.'
               : isLead
-              ? 'Trưởng Ban có quyền giao việc, chỉnh sửa, xóa và phê duyệt nộp bài cho các thành viên trong Ban của mình.'
-              : 'Thành viên xem các đầu việc được phân công, thực hiện và gửi báo cáo (Submit) để Trưởng Ban duyệt.'
+              ? 'Phân cấp Lead: Tiếp nhận chỉ đạo từ BCN và phân bổ, giao việc cho các Thành viên trong Ban (Lead → Member).'
+              : 'Thành viên theo dõi nhiệm vụ do Trưởng Ban giao (Lead → Member), hoàn thành và nộp báo cáo minh chứng.'
             }
           </p>
         </div>
@@ -409,11 +474,24 @@ export const TaskBoard: React.FC = () => {
         <div className="flex items-center gap-2.5 shrink-0">
           {isLead && (
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              onClick={() => {
+                if (isOrgAdmin) {
+                  setSelectedCreateBan(selectedBan !== 'all' ? selectedBan as BanId : 'ai');
+                } else if (user?.banId) {
+                  setSelectedCreateBan(user.banId);
+                  const banMems = members.filter(m => m.banId === user.banId && m.tier === 'BAN_MEMBER');
+                  if (banMems.length > 0) {
+                    setSelectedMemberAssignee(`${banMems[0].name} (${banMems[0].position})`);
+                  }
+                }
+                setShowCreateModal(true);
+              }}
+              className={`px-4 py-2.5 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                isOrgAdmin ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               <Plus className="w-4 h-4" />
-              <span>Tạo Task Mới ({!isOrgAdmin ? user?.banId?.toUpperCase() : 'Ban'})</span>
+              <span>{isOrgAdmin ? 'Giao Việc Cho Lead (BCN → Lead)' : `Giao Việc Cho Member (${user?.banId?.toUpperCase()})`}</span>
             </button>
           )}
         </div>
@@ -502,6 +580,22 @@ export const TaskBoard: React.FC = () => {
                 <option value="Thấp">Thấp</option>
               </select>
             </div>
+
+            {/* Hierarchy Level Filter (Only for BCN & Lead) */}
+            {!isMember && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-600">Phân cấp:</span>
+                <select
+                  value={levelFilter}
+                  onChange={(e: any) => setLevelFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">Tất Cả Cấp Bậc</option>
+                  <option value="BCN_TO_LEAD">👑 BCN → Lead</option>
+                  <option value="LEAD_TO_MEMBER">⚡ Lead → Member</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Right: Search, My Tasks Toggle & View Mode Switcher */}
@@ -584,11 +678,22 @@ export const TaskBoard: React.FC = () => {
                       key={task.id}
                       className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all space-y-2.5 group"
                     >
-                      {/* Project Tag & Priority */}
+                      {/* Project Tag, Hierarchy Badge & Priority */}
                       <div className="flex items-center justify-between gap-1 text-[10px]">
-                        <span className="font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 truncate max-w-[140px]" title={task.project}>
-                          {task.project}
-                        </span>
+                        <div className="flex items-center gap-1 min-w-0">
+                          {task.level === 'BCN_TO_LEAD' ? (
+                            <span className="font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                              👑 BCN → LEAD
+                            </span>
+                          ) : (
+                            <span className="font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
+                              ⚡ LEAD → MEMBER
+                            </span>
+                          )}
+                          <span className="font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 truncate max-w-[110px]" title={task.project}>
+                            {task.project}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <span className={`font-bold px-1.5 py-0.2 rounded ${
                             task.priority === 'Cao' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'
@@ -723,7 +828,18 @@ export const TaskBoard: React.FC = () => {
                   return (
                     <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-4 py-3">
-                        <span className="font-mono-code font-bold text-slate-400 mr-2">{task.id}</span>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="font-mono-code font-bold text-slate-400">{task.id}</span>
+                          {task.level === 'BCN_TO_LEAD' ? (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                              👑 BCN → LEAD
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                              ⚡ LEAD → MEMBER
+                            </span>
+                          )}
+                        </div>
                         <span className="font-bold text-slate-900">{task.title}</span>
                       </td>
                       <td className="px-4 py-3">
@@ -837,21 +953,93 @@ export const TaskBoard: React.FC = () => {
         </div>
       )}
 
-      {/* Lead Create Task Modal */}
+      {/* Task Creation Modal (Strict Hierarchy) */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <form onSubmit={handleCreateTask} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4">
-            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-blue-600" />
-              Tạo Công Việc Mới ({!isOrgAdmin ? user?.banName : 'Ban Quản Trị'})
-            </h3>
+          <form onSubmit={handleCreateTask} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="pb-2 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  isOrgAdmin ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                }`}>
+                  {isOrgAdmin ? '👑 PHÂN CẤP 1: BCN → TRƯỞNG BAN' : '⚡ PHÂN CẤP 2: TRƯỞNG BAN → THÀNH VIÊN'}
+                </span>
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900 mt-1 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-600" />
+                <span>{isOrgAdmin ? 'Giao Nhiệm Vụ Cho Trưởng Ban' : `Giao Nhiệm Vụ Cho Thành Viên (${user?.banName})`}</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {isOrgAdmin
+                  ? 'BCN chỉ giao việc trực tiếp cho các Trưởng Ban. Trưởng Ban sẽ chịu trách nhiệm phân bổ chi tiết cho thành viên ban mình.'
+                  : 'Trưởng Ban giao việc trực tiếp cho thành viên trong Ban để thực hiện và nộp báo cáo.'}
+              </p>
+            </div>
+
+            {/* Ban and Assignee Selection */}
+            {isOrgAdmin ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-purple-50/50 rounded-xl border border-purple-200">
+                <div>
+                  <label className="block text-xs font-bold text-purple-900 mb-1">Chọn Ban Nhận Việc *</label>
+                  <select
+                    value={selectedCreateBan}
+                    onChange={(e) => setSelectedCreateBan(e.target.value as BanId)}
+                    className="w-full px-3 py-2 bg-white border border-purple-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="ai">Ban AI</option>
+                    <option value="cloud">Ban Cloud</option>
+                    <option value="web">Ban Web</option>
+                    <option value="media">Ban Media</option>
+                    <option value="hr-event">Ban HR-Event</option>
+                    <option value="research">Ban Research</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-purple-900 mb-1">Trưởng Ban Phụ Trách (Cố định)</label>
+                  <div className="px-3 py-2 bg-purple-100/70 border border-purple-300 rounded-xl text-xs font-bold text-purple-900 truncate">
+                    👤 {BAN_LEADS_MAP[selectedCreateBan]?.name} ({BAN_LEADS_MAP[selectedCreateBan]?.position})
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-blue-900">Thành Viên Trong Ban Nhận Việc *</label>
+                  <span className="text-[10px] text-blue-600 font-bold">{user?.banName}</span>
+                </div>
+                {members.filter(m => m.banId === user?.banId && m.tier === 'BAN_MEMBER').length > 0 ? (
+                  <select
+                    value={selectedMemberAssignee}
+                    onChange={(e) => setSelectedMemberAssignee(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                  >
+                    {members
+                      .filter(m => m.banId === user?.banId && m.tier === 'BAN_MEMBER')
+                      .map(m => (
+                        <option key={m.id} value={`${m.name} (${m.position})`}>
+                          {m.name} - {m.studentId} ({m.position})
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tên thành viên ban phụ trách..."
+                    value={selectedMemberAssignee}
+                    onChange={(e) => setSelectedMemberAssignee(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-blue-300 rounded-xl text-xs font-medium text-slate-900"
+                  />
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Tiêu đề công việc *</label>
               <input
                 type="text"
                 required
-                placeholder="VD: Thiết lập hạ tầng Docker và CI/CD cho cổng sự kiện"
+                placeholder={isOrgAdmin ? "VD: Lập kế hoạch tổ chức Workshop và phân bổ nhân sự" : "VD: Viết module API đăng ký và kết nối cơ sở dữ liệu"}
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500"
@@ -859,10 +1047,10 @@ export const TaskBoard: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Mô tả chi tiết</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Mô tả chi tiết yêu cầu</label>
               <textarea
                 rows={3}
-                placeholder="Các yêu cầu kỹ thuật, tài liệu tham khảo..."
+                placeholder="Yêu cầu kết quả đầu ra, tài liệu tham khảo..."
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500"
@@ -919,7 +1107,7 @@ export const TaskBoard: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
@@ -929,9 +1117,11 @@ export const TaskBoard: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
+                className={`px-4 py-2 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer ${
+                  isOrgAdmin ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                Tạo Task
+                {isOrgAdmin ? 'Giao Việc Cho Trưởng Ban' : 'Giao Việc Cho Thành Viên'}
               </button>
             </div>
           </form>

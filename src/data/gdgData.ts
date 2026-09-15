@@ -397,6 +397,7 @@ export const EVENTS_DATA: EventItem[] = [
     status: "Registration Open",
     accentColor: "#EA4335",
     pastelColor: "#F8D8D8",
+    showOnLanding: true,
     speaker: {
       name: "Đội Ngũ AI Riser FPTU",
       role: '"The GDGoC Impact Maker" • AI Riser Vietnam 2026',
@@ -410,7 +411,14 @@ export const EVENTS_DATA: EventItem[] = [
       "Giao lưu cùng đại diện Google Developer Ecosystem & Giảng viên",
       "Nhận certificate và quà tặng Google Swag độc quyền"
     ],
-    bevyUrl: "https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/"
+    attendees: [
+      { id: "att-1", name: "Nguyễn Thành Nam", studentId: "SE180123", email: "namntse180123@fpt.edu.vn", ban: "Ban AI", checkedIn: true, checkedInAt: "08:15 20/09/2026" },
+      { id: "att-2", name: "Trần Đức Toàn", studentId: "SE181234", email: "toantdse181234@fpt.edu.vn", ban: "Ban Cloud", checkedIn: true, checkedInAt: "08:22 20/09/2026" },
+      { id: "att-3", name: "Phạm Minh Khoa", studentId: "SE172345", email: "khoapmse172345@fpt.edu.vn", ban: "Ban Web", checkedIn: false },
+      { id: "att-4", name: "Võ Thị Mỹ Duyên", studentId: "SS180456", email: "duyenvtmss180456@fpt.edu.vn", ban: "Ban Design", checkedIn: true, checkedInAt: "08:28 20/09/2026" },
+      { id: "att-5", name: "Bùi Quốc Hưng", studentId: "SE190012", email: "hungbqse190012@fpt.edu.vn", ban: "Khách mời K19", checkedIn: false },
+      { id: "att-6", name: "Lê Minh Quân", studentId: "SE183456", email: "quanlmse183456@fpt.edu.vn", ban: "Khách mời K18", checkedIn: true, checkedInAt: "08:35 20/09/2026" }
+    ]
   },
   {
     id: "google-io-extended-2026",
@@ -423,6 +431,7 @@ export const EVENTS_DATA: EventItem[] = [
     status: "Opening Soon",
     accentColor: "#4285F4",
     pastelColor: "#C3ECF6",
+    showOnLanding: true,
     speaker: {
       name: "Google Developer Experts (GDE)",
       role: "Keynote Speakers & Tech Industry Leaders",
@@ -436,7 +445,11 @@ export const EVENTS_DATA: EventItem[] = [
       "4 Tracks chuyên môn chuyên sâu: AI, Cloud, Web, Career Talk",
       "Cơ hội networking kết nối cùng các doanh nghiệp công nghệ đối tác"
     ],
-    bevyUrl: "https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/"
+    attendees: [
+      { id: "att-201", name: "Trần Nguyên Bảo", studentId: "SE170111", email: "baotnse170111@fpt.edu.vn", ban: "Ban AI", checkedIn: false },
+      { id: "att-202", name: "Lê Hoàng Nam", studentId: "SE170222", email: "namlhse170222@fpt.edu.vn", ban: "Ban Cloud", checkedIn: false },
+      { id: "att-203", name: "Vũ Nhật Huy", studentId: "SS170555", email: "huyvnss170555@fpt.edu.vn", ban: "Ban Media", checkedIn: false }
+    ]
   },
   {
     id: "build-and-share-series",
@@ -449,6 +462,7 @@ export const EVENTS_DATA: EventItem[] = [
     status: "Upcoming",
     accentColor: "#34A853",
     pastelColor: "#CCF6C5",
+    showOnLanding: true,
     speaker: {
       name: "Tran Nguyen Bao",
       role: "AI Lead, GDG on Campus FPTU & Student Researcher",
@@ -462,7 +476,9 @@ export const EVENTS_DATA: EventItem[] = [
       "Thực chiến lập trình Fullstack với Next.js & Tailwind CSS",
       "Seminar phương pháp nghiên cứu khoa học cho sinh viên IT"
     ],
-    bevyUrl: "https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/"
+    attendees: [
+      { id: "att-301", name: "Nguyễn Thành Nam", studentId: "SE180123", email: "namntse180123@fpt.edu.vn", ban: "Ban AI", checkedIn: false }
+    ]
   },
   {
     id: "cloud-skills-boost-challenge",
@@ -475,6 +491,7 @@ export const EVENTS_DATA: EventItem[] = [
     status: "Upcoming",
     accentColor: "#FBBC04",
     pastelColor: "#FFE7A5",
+    showOnLanding: true,
     speaker: {
       name: "Le Minh Duc",
       role: "Google Developer Expert (GCP) & Chapter Advisor",
@@ -488,7 +505,7 @@ export const EVENTS_DATA: EventItem[] = [
       "Cơ hội nhận voucher thi chứng chỉ Associate Cloud Engineer",
       "Bộ quà tặng áo thun, bình nước, balo Google Cloud chính hãng"
     ],
-    bevyUrl: "https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/"
+    attendees: []
   }
 ];
 

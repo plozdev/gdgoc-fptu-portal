@@ -6,7 +6,7 @@ import {
   STATS_DATA, 
   CORE_ORGANIZERS_DATA 
 } from '../data/gdgData';
-import { Department, EventItem, StatMilestone, OrganizerMember } from '../types';
+import { Department, EventItem, EventAttendee, StatMilestone, OrganizerMember } from '../types';
 
 interface LandingContentState {
   chapterInfo: typeof CHAPTER_INFO;
@@ -20,6 +20,11 @@ interface LandingContentState {
   updateEvent: (id: string, updated: Partial<EventItem>) => void;
   addEvent: (event: EventItem) => void;
   deleteEvent: (id: string) => void;
+  toggleShowOnLanding: (eventId: string) => void;
+
+  toggleAttendeeCheckIn: (eventId: string, attendeeId: string) => void;
+  addAttendee: (eventId: string, attendee: Omit<EventAttendee, 'id'>) => void;
+  removeAttendee: (eventId: string, attendeeId: string) => void;
 
   setOrganizers: (organizers: OrganizerMember[]) => void;
   updateOrganizer: (id: string, updated: Partial<OrganizerMember>) => void;
@@ -94,6 +99,75 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
   deleteEvent: (id) => {
     set((state) => {
       const events = state.events.filter((ev) => ev.id !== id);
+      const next = { ...state, events };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  },
+
+  toggleShowOnLanding: (eventId) => {
+    set((state) => {
+      const events = state.events.map((ev) => 
+        ev.id === eventId ? { ...ev, showOnLanding: !ev.showOnLanding } : ev
+      );
+      const next = { ...state, events };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  },
+
+  toggleAttendeeCheckIn: (eventId, attendeeId) => {
+    set((state) => {
+      const events = state.events.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        const attendees = (ev.attendees || []).map((att) => {
+          if (att.id !== attendeeId) return att;
+          const nextChecked = !att.checkedIn;
+          return {
+            ...att,
+            checkedIn: nextChecked,
+            checkedInAt: nextChecked 
+              ? new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN') 
+              : undefined
+          };
+        });
+        return { ...ev, attendees };
+      });
+      const next = { ...state, events };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  },
+
+  addAttendee: (eventId, attendeeData) => {
+    set((state) => {
+      const events = state.events.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        const newAttendee: EventAttendee = {
+          ...attendeeData,
+          id: `att-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          registeredAt: new Date().toLocaleDateString('vi-VN')
+        };
+        return {
+          ...ev,
+          attendees: [newAttendee, ...(ev.attendees || [])]
+        };
+      });
+      const next = { ...state, events };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  },
+
+  removeAttendee: (eventId, attendeeId) => {
+    set((state) => {
+      const events = state.events.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        return {
+          ...ev,
+          attendees: (ev.attendees || []).filter((a) => a.id !== attendeeId)
+        };
+      });
       const next = { ...state, events };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;

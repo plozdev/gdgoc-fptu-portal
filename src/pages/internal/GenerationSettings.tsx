@@ -19,17 +19,23 @@ import {
   Send,
   Lock
 } from 'lucide-react';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 
 export const GenerationSettings: React.FC = () => {
   const { user } = useAuthStore();
+
+  // 🚨 CRITICAL RULE: Member và Lead sẽ không thể xem mục cấu hình niên khóa
+  if (user?.tier !== 'ORG_ADMIN') {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+
   const { 
     currentGen, 
     currentSemester, 
     startMonthYear, 
     endMonthYear, 
-    status, 
     allowTaskSubmission, 
     allowRsvp, 
     freezeLeaderboard, 
@@ -40,7 +46,7 @@ export const GenerationSettings: React.FC = () => {
     performTransition 
   } = useGenerationStore();
 
-  const isOrgAdmin = user?.tier === 'ORG_ADMIN';
+  const isOrgAdmin = true;
 
   const [activeTab, setActiveTab] = useState<'current' | 'wizard' | 'archives'>('current');
   const [saveSuccess, setSaveSuccess] = useState(false);

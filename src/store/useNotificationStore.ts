@@ -48,7 +48,7 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
     id: 'notif-3',
     title: 'Sự kiện mở đăng ký: Showcase & Awarding Day',
-    message: 'Sự kiện AI Riser Vietnam đã mở đăng ký vé Bevy cho toàn thể thành viên và sinh viên FPTU.',
+    message: 'Sự kiện AI Riser Vietnam đã mở đăng ký tham dự cho toàn thể thành viên và sinh viên FPTU.',
     type: 'event',
     priority: 'urgent',
     targetScope: 'all',

@@ -3,12 +3,15 @@ import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check
 import { EventItem } from '../types';
 import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
+import { useLandingContentStore } from '../store/useLandingContentStore';
+
 interface EventModalProps {
   event: EventItem | null;
   onClose: () => void;
 }
 
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
+  const { addAttendee } = useLandingContentStore();
   const [isRsvpDone, setIsRsvpDone] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
@@ -18,6 +21,14 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
 
   const handleRsvp = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!studentName.trim() || !studentId.trim()) return;
+    addAttendee(event.id, {
+      name: studentName.trim(),
+      studentId: studentId.trim().toUpperCase(),
+      email: studentEmail.trim() || `${studentId.trim().toLowerCase()}@fpt.edu.vn`,
+      ban: 'Sinh viên FPTU (RSVP Web)',
+      checkedIn: false
+    });
     setIsRsvpDone(true);
   };
 
@@ -124,26 +135,6 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
                 </div>
               )}
 
-              {/* Bevy Official Platform Integration Link */}
-              <div className="p-4 bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="space-y-0.5 text-center sm:text-left">
-                  <span className="font-mono-code text-[11px] font-extrabold text-[#EA4335] uppercase">
-                    Cổng Sự Kiện Chính Thức
-                  </span>
-                  <p className="font-extrabold text-xs sm:text-sm text-[#1E1E1E]">
-                    Google Developer Groups on Campus (Bevy Platform)
-                  </p>
-                </div>
-                <a
-                  href={event.bevyUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-[#FFFFFF] hover:bg-[#1E1E1E] hover:text-[#FFFFFF] text-[#1E1E1E] font-bold text-xs font-mono-code rounded-xl border-2 border-[#1E1E1E] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-                >
-                  <span>RSVP Trên Bevy</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
 
               {/* Quick RSVP Form */}
               <form onSubmit={handleRsvp} className="pt-2 space-y-3 border-t-2 border-[#1E1E1E]/10">

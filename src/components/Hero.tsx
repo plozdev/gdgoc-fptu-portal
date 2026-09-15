@@ -34,15 +34,15 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-          
+
           {/* Left Column: Typography & CTAs */}
           <div className="lg:col-span-7 flex flex-col items-start space-y-6 text-left">
-            
+
             {/* Unified Sleek Status Pill */}
             <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-full brutal-shadow-sm text-xs font-mono-code">
               <span className="flex items-center gap-1.5 font-bold text-[#34A853]">
                 <span className="w-2 h-2 rounded-full bg-[#34A853] animate-ping" />
-                Tuyển Sinh Gen K22
+                Tuyển Sinh Gen 4.0
               </span>
               <span className="text-[#1E1E1E]/30 font-bold">•</span>
               <span className="font-bold text-[#4285F4]">Fall 2026</span>
@@ -78,7 +78,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                   <span className="font-mono-code text-[11px] font-extrabold text-[#EA4335] uppercase">Đợt Tuyển</span>
                   <Flame className="w-3.5 h-3.5 text-[#EA4335]" />
                 </div>
-                <span className="font-extrabold text-base text-[#1E1E1E]">Gen K22</span>
+                <span className="font-extrabold text-base text-[#1E1E1E]">Gen 4.0</span>
                 <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Mọi chuyên ngành</span>
               </div>
 
@@ -108,7 +108,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                 id="hero-join-community-btn"
                 className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow brutal-shadow-hover cursor-pointer whitespace-nowrap"
               >
-                <span>Gia Nhập Gen K22 Ngay</span>
+                <span>Gia Nhập Gen 4.0 Ngay</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
 
@@ -129,10 +129,10 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
 
           {/* Right Column (Request #3: Thay thế cửa sổ terminal code bằng Digital Admission Pass & Bento Chapter Showcase) */}
           <div className="lg:col-span-5 space-y-4">
-            
-            {/* Card 1: Official Gen K22 Digital Admission Pass */}
+
+            {/* Card 1: Official Gen 4.0 Digital Admission Pass */}
             <div className="relative bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow overflow-hidden p-6">
-              
+
               {/* Google 4-Color Top Accent Strip */}
               <div className="absolute top-0 left-0 right-0 h-2 flex">
                 <div className="flex-1 bg-[#EA4335]" />
@@ -166,7 +166,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-[#1E1E1E]/60 uppercase">ĐỐI TƯỢNG:</span>
                   <span className="font-extrabold text-[#1E1E1E] bg-[#FFE7A5] px-2 py-0.5 rounded border border-[#1E1E1E]">
-                    Tân Sinh Viên Gen K22
+                    Tân Sinh Viên Gen 4.0
                   </span>
                 </div>
 
@@ -216,7 +216,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
 
             {/* Bottom 2 Bento Mini-Cards */}
             <div className="grid grid-cols-2 gap-4">
-              
+
               {/* Bento Card A: Official Award Showcase */}
               <div className="p-4 bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-[24px] brutal-shadow-sm flex flex-col justify-between space-y-2">
                 <div className="flex items-center justify-between">

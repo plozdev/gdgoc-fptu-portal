@@ -10,13 +10,13 @@ interface JoinCTAProps {
 export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandbook }) => {
   return (
     <section className="py-20 sm:py-28 bg-[#FFFFFF] relative overflow-hidden">
-      
+
       {/* Neo-brutalist Background Pattern */}
       <div className="absolute inset-0 bg-dot-pattern opacity-40 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-[32px] p-8 sm:p-14 brutal-shadow-lg relative overflow-hidden">
-          
+
           {/* Top Decorative Tag */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#FFFFFF] border-[2px] border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#EA4335] mb-6 shadow-sm">
             <Trophy className="w-4 h-4 text-[#FBBC04]" />
@@ -24,12 +24,12 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
+
             {/* Left Content */}
             <div className="lg:col-span-8 space-y-4">
               <div className="space-y-2">
                 <span className="font-mono-code text-xs font-bold text-[#1E1E1E]/80 uppercase tracking-wider block">
-                  CỔNG TUYỂN SINH GEN K22 • KỲ FALL 2026
+                  CỔNG TUYỂN SINH Gen 4.0 • KỲ FALL 2026
                 </span>
                 <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight leading-tight">
                   Trở Thành Một Phần Của <br />
@@ -68,7 +68,7 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
                   id="cta-join-now-btn"
                   className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow brutal-shadow-hover transition-all cursor-pointer"
                 >
-                  <span>Gia Nhập Gen K22 Ngay</span>
+                  <span>Gia Nhập Gen 4.0 Ngay</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
 

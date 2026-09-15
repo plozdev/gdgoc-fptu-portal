@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check, Star, ExternalLink } from 'lucide-react';
 import { EventItem } from '../types';
+import { formatDateToDDMMYYYY } from '../utils/dateUtils';
+
+import { useLandingContentStore } from '../store/useLandingContentStore';
 
 interface EventModalProps {
   event: EventItem | null;
@@ -8,6 +11,7 @@ interface EventModalProps {
 }
 
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
+  const { addAttendee } = useLandingContentStore();
   const [isRsvpDone, setIsRsvpDone] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
@@ -17,6 +21,14 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
 
   const handleRsvp = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!studentName.trim() || !studentId.trim()) return;
+    addAttendee(event.id, {
+      name: studentName.trim(),
+      studentId: studentId.trim().toUpperCase(),
+      email: studentEmail.trim() || `${studentId.trim().toLowerCase()}@fpt.edu.vn`,
+      ban: 'Sinh viên FPTU (RSVP Web)',
+      checkedIn: false
+    });
     setIsRsvpDone(true);
   };
 
@@ -71,7 +83,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
               <div className="bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-2xl p-4 space-y-2 text-xs font-mono-code">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#EA4335]" />
-                  <span className="font-bold text-[#1E1E1E]">{event.date}</span>
+                  <span className="font-bold text-[#1E1E1E]">{formatDateToDDMMYYYY(event.date)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-[#1E1E1E]/80">
                   <Clock className="w-4 h-4 text-[#FBBC04]" />
@@ -123,26 +135,6 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
                 </div>
               )}
 
-              {/* Bevy Official Platform Integration Link */}
-              <div className="p-4 bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="space-y-0.5 text-center sm:text-left">
-                  <span className="font-mono-code text-[11px] font-extrabold text-[#EA4335] uppercase">
-                    Cổng Sự Kiện Chính Thức
-                  </span>
-                  <p className="font-extrabold text-xs sm:text-sm text-[#1E1E1E]">
-                    Google Developer Groups on Campus (Bevy Platform)
-                  </p>
-                </div>
-                <a
-                  href={event.bevyUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-[#FFFFFF] hover:bg-[#1E1E1E] hover:text-[#FFFFFF] text-[#1E1E1E] font-bold text-xs font-mono-code rounded-xl border-2 border-[#1E1E1E] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
-                >
-                  <span>RSVP Trên Bevy</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
 
               {/* Quick RSVP Form */}
               <form onSubmit={handleRsvp} className="pt-2 space-y-3 border-t-2 border-[#1E1E1E]/10">
@@ -209,7 +201,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
 
               <div className="bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-2xl p-4 max-w-md mx-auto text-left text-xs font-mono-code space-y-1.5">
                 <div className="font-bold text-[#1E1E1E] truncate">{event.title}</div>
-                <div className="text-[#1E1E1E]/80">{event.date} • {event.time}</div>
+                <div className="text-[#1E1E1E]/80">{formatDateToDDMMYYYY(event.date)} • {event.time}</div>
                 <div className="text-[#1E1E1E]/80">{event.location}</div>
                 <div className="text-[#34A853] font-bold">Mã vé: GDGOC-{Math.floor(100000 + Math.random() * 900000)}</div>
               </div>

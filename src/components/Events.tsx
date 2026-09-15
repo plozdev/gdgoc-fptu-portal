@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Sparkles, ExternalLink, ArrowRight, Ticket, Users } from 'lucide-react';
-import { EVENTS_DATA } from '../data/gdgData';
+import { useLandingContentStore } from '../store/useLandingContentStore';
 import { EventItem } from '../types';
+import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
 interface EventsProps {
   onSelectEvent: (event: EventItem) => void;
@@ -9,13 +10,16 @@ interface EventsProps {
 
 export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
+  const events = useLandingContentStore((s) => s.events);
 
   const categories = ['ALL', 'Showcase', 'Flagship Event', 'Workshop Series', 'Campus Challenge'];
 
+  const publishedEvents = events.filter((ev) => ev.showOnLanding !== false);
+
   const filteredEvents =
     activeFilter === 'ALL'
-      ? EVENTS_DATA
-      : EVENTS_DATA.filter((ev) => ev.category === activeFilter);
+      ? publishedEvents
+      : publishedEvents.filter((ev) => ev.category === activeFilter);
 
   return (
     <section id="events" className="py-20 sm:py-28 bg-[#FFFFFF] relative border-t border-[#1E1E1E]/10">
@@ -104,7 +108,7 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                 <div className="p-4 bg-[#F8F9FA] border border-[#1E1E1E]/20 rounded-2xl space-y-2 text-xs font-mono-code text-[#1E1E1E]">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3.5 h-3.5 text-[#EA4335] shrink-0" />
-                    <span className="font-extrabold">{event.date}</span>
+                    <span className="font-extrabold">{formatDateToDDMMYYYY(event.date)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-[#FBBC04] shrink-0" />
@@ -147,35 +151,13 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                   onClick={() => onSelectEvent(event)}
                   className="px-5 py-2.5 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-bold text-xs sm:text-sm font-mono-code rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>RSVP & View Agenda</span>
+                  <span>Xem Chi Tiết Sự Kiện</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
             </div>
           ))}
-        </div>
-
-        {/* Global Bevy Chapter Archive Banner */}
-        <div className="mt-12 p-6 bg-[#F0F0F0] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center sm:text-left">
-            <h4 className="font-extrabold text-base text-[#1E1E1E]">
-              Tìm kiếm toàn bộ lịch sử và tài liệu các sự kiện trước đây?
-            </h4>
-            <p className="text-xs text-[#1E1E1E]/80 font-mono-code font-medium">
-              Truy cập trang lưu trữ sự kiện chính thức của Chapter trên nền tảng Google Developer Groups Bevy.
-            </p>
-          </div>
-
-          <a
-            href="https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFFFFF] hover:bg-[#FFE7A5] text-[#1E1E1E] font-bold text-xs sm:text-sm font-mono-code rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all whitespace-nowrap cursor-pointer"
-          >
-            <span>Khám Phá Tất Cả Sự Kiện Trên Bevy</span>
-            <ExternalLink className="w-4 h-4 text-[#4285F4]" />
-          </a>
         </div>
 
       </div>

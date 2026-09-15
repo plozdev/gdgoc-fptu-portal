@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Github, Linkedin, Globe, Sparkles, Users, ArrowRight, ExternalLink } from 'lucide-react';
-import { CORE_ORGANIZERS_DATA } from '../data/gdgData';
+import { useLandingContentStore } from '../store/useLandingContentStore';
 import { OrganizerMember } from '../types';
 
 export const Organizers: React.FC = () => {
   const [activeDomain, setActiveDomain] = useState<string>('ALL');
+  const organizers = useLandingContentStore((s) => s.organizers);
 
   const domains = ['ALL', 'Leads', 'Tech', 'Design & Media', 'Event Operations'];
 
   const filteredOrganizers =
     activeDomain === 'ALL'
-      ? CORE_ORGANIZERS_DATA
-      : CORE_ORGANIZERS_DATA.filter((org) => org.domain === activeDomain);
+      ? organizers
+      : organizers.filter((org) => org.domain === activeDomain);
 
   return (
     <section id="organizers" className="py-20 sm:py-28 bg-[#FFFFFF] relative border-t border-[#1E1E1E]/10">

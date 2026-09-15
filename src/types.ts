@@ -31,6 +31,17 @@ export interface LeadRole {
   requirements: string[];
 }
 
+export interface EventAttendee {
+  id: string;
+  name: string;
+  studentId: string;
+  email: string;
+  ban?: string;
+  checkedIn: boolean;
+  checkedInAt?: string;
+  registeredAt?: string;
+}
+
 export interface EventItem {
   id: string;
   title: string;
@@ -50,8 +61,9 @@ export interface EventItem {
   highlights: string[];
   accentColor: string;
   pastelColor: string;
-  bevyUrl?: string; // Official Google Bevy event URL
-  bannerImage?: string; // Event visual poster / screenshot
+  bannerImage?: string;
+  showOnLanding?: boolean;
+  attendees?: EventAttendee[];
 }
 
 export interface StatMilestone {

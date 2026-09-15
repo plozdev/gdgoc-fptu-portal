@@ -1,5 +1,17 @@
+/**
+ * @file useNotificationStore.ts
+ * @description Zustand store quản lý thông báo nội bộ CLB.
+ *
+ * ⚠️  MOCK DATA ĐÃ BỊ XÓA — Store bắt đầu với danh sách rỗng.
+ * Khi backend được tích hợp, notifications sẽ được fetch từ GET /api/notifications.
+ */
+
 import { create } from 'zustand';
-import { BanId } from '../mocks/fixtures/users';
+import type { BanId } from '../mocks/fixtures/users';
+
+// ==========================================
+// TYPES
+// ==========================================
 
 export type NotificationType = 'task' | 'event' | 'gems' | 'broadcast' | 'system';
 export type NotificationPriority = 'normal' | 'important' | 'urgent';
@@ -13,64 +25,14 @@ export interface AppNotification {
   targetScope: 'all' | BanId; // Gửi cho toàn CLB hoặc riêng 1 Ban
   senderName: string;
   senderRole: string;
-  createdAt: string; // dd/MM/yyyy HH:mm
+  createdAt: string;          // dd/MM/yyyy HH:mm
   isRead: boolean;
   link?: string;
 }
 
-const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 'notif-1',
-    title: 'Nhiệm vụ mới được giao cho Ban AI',
-    message: 'Nghiên cứu Gemini 2.0 Multimodal API & viết notebook mẫu. Hạn nộp: 25/09/2026.',
-    type: 'task',
-    priority: 'important',
-    targetScope: 'ai',
-    senderName: 'Trần Nguyên Bảo',
-    senderRole: 'AI Lead',
-    createdAt: '14/09/2026 14:30',
-    isRead: false,
-    link: '/app/tasks'
-  },
-  {
-    id: 'notif-2',
-    title: '💎 Thưởng 200 Gems hoàn thành công việc',
-    message: 'Task "Tối ưu Core Web Vitals cho Landing Page Gen 4.0" đã được duyệt thành công.',
-    type: 'gems',
-    priority: 'normal',
-    targetScope: 'web',
-    senderName: 'Lê Hoàng Long',
-    senderRole: 'Web Lead',
-    createdAt: '14/09/2026 11:15',
-    isRead: false,
-    link: '/app/gems'
-  },
-  {
-    id: 'notif-3',
-    title: 'Sự kiện mở đăng ký: Showcase & Awarding Day',
-    message: 'Sự kiện AI Riser Vietnam đã mở đăng ký tham dự cho toàn thể thành viên và sinh viên FPTU.',
-    type: 'event',
-    priority: 'urgent',
-    targetScope: 'all',
-    senderName: 'Đặng Mai Phương',
-    senderRole: 'Chapter Lead',
-    createdAt: '13/09/2026 09:00',
-    isRead: true,
-    link: '/app/events'
-  },
-  {
-    id: 'notif-4',
-    title: 'Họp giao ban toàn CLB giữa kỳ Fall 2026',
-    message: 'Tất cả thành viên 6 ban tham dự họp trực tuyến qua Google Meet vào lúc 20:00 ngày 25/09/2026.',
-    type: 'broadcast',
-    priority: 'urgent',
-    targetScope: 'all',
-    senderName: 'Đặng Mai Phương',
-    senderRole: 'Chapter Lead',
-    createdAt: '12/09/2026 16:45',
-    isRead: true,
-  }
-];
+// ==========================================
+// STATE INTERFACE
+// ==========================================
 
 interface NotificationState {
   notifications: AppNotification[];
@@ -80,31 +42,40 @@ interface NotificationState {
   deleteNotification: (id: string) => void;
 }
 
+// ==========================================
+// HELPERS
+// ==========================================
+
+function formatDateTimeVN(): string {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const y = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  return `${d}/${m}/${y} ${hh}:${mm}`;
+}
+
+// ==========================================
+// STORE
+// ==========================================
+
 export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: INITIAL_NOTIFICATIONS,
+  notifications: [], // Empty — data comes from backend
 
   addNotification: (notif) => {
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const y = now.getFullYear();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const createdAt = `${d}/${m}/${y} ${hh}:${mm}`;
-
     const newNotif: AppNotification = {
       ...notif,
       id: `notif-${Date.now()}`,
-      createdAt,
+      createdAt: formatDateTimeVN(),
       isRead: false,
     };
-
     set((state) => ({
       notifications: [newNotif, ...state.notifications],
     }));
   },
 
-  markAsRead: (id: string) => {
+  markAsRead: (id) => {
     set((state) => ({
       notifications: state.notifications.map((n) =>
         n.id === id ? { ...n, isRead: true } : n
@@ -118,7 +89,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     }));
   },
 
-  deleteNotification: (id: string) => {
+  deleteNotification: (id) => {
     set((state) => ({
       notifications: state.notifications.filter((n) => n.id !== id),
     }));

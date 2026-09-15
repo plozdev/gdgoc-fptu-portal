@@ -411,14 +411,8 @@ export const EVENTS_DATA: EventItem[] = [
       "Giao lưu cùng đại diện Google Developer Ecosystem & Giảng viên",
       "Nhận certificate và quà tặng Google Swag độc quyền"
     ],
-    attendees: [
-      { id: "att-1", name: "Nguyễn Thành Nam", studentId: "SE180123", email: "namntse180123@fpt.edu.vn", ban: "Ban AI", checkedIn: true, checkedInAt: "08:15 20/09/2026" },
-      { id: "att-2", name: "Trần Đức Toàn", studentId: "SE181234", email: "toantdse181234@fpt.edu.vn", ban: "Ban Cloud", checkedIn: true, checkedInAt: "08:22 20/09/2026" },
-      { id: "att-3", name: "Phạm Minh Khoa", studentId: "SE172345", email: "khoapmse172345@fpt.edu.vn", ban: "Ban Web", checkedIn: false },
-      { id: "att-4", name: "Võ Thị Mỹ Duyên", studentId: "SS180456", email: "duyenvtmss180456@fpt.edu.vn", ban: "Ban Design", checkedIn: true, checkedInAt: "08:28 20/09/2026" },
-      { id: "att-5", name: "Bùi Quốc Hưng", studentId: "SE190012", email: "hungbqse190012@fpt.edu.vn", ban: "Khách mời K19", checkedIn: false },
-      { id: "att-6", name: "Lê Minh Quân", studentId: "SE183456", email: "quanlmse183456@fpt.edu.vn", ban: "Khách mời K18", checkedIn: true, checkedInAt: "08:35 20/09/2026" }
-    ]
+    // attendees: [] // Populated from backend — GET /api/events/:id/attendees
+    attendees: []
   },
   {
     id: "google-io-extended-2026",
@@ -445,11 +439,8 @@ export const EVENTS_DATA: EventItem[] = [
       "4 Tracks chuyên môn chuyên sâu: AI, Cloud, Web, Career Talk",
       "Cơ hội networking kết nối cùng các doanh nghiệp công nghệ đối tác"
     ],
-    attendees: [
-      { id: "att-201", name: "Trần Nguyên Bảo", studentId: "SE170111", email: "baotnse170111@fpt.edu.vn", ban: "Ban AI", checkedIn: false },
-      { id: "att-202", name: "Lê Hoàng Nam", studentId: "SE170222", email: "namlhse170222@fpt.edu.vn", ban: "Ban Cloud", checkedIn: false },
-      { id: "att-203", name: "Vũ Nhật Huy", studentId: "SS170555", email: "huyvnss170555@fpt.edu.vn", ban: "Ban Media", checkedIn: false }
-    ]
+    // attendees: [] // Populated from backend — GET /api/events/:id/attendees
+    attendees: []
   },
   {
     id: "build-and-share-series",
@@ -476,9 +467,8 @@ export const EVENTS_DATA: EventItem[] = [
       "Thực chiến lập trình Fullstack với Next.js & Tailwind CSS",
       "Seminar phương pháp nghiên cứu khoa học cho sinh viên IT"
     ],
-    attendees: [
-      { id: "att-301", name: "Nguyễn Thành Nam", studentId: "SE180123", email: "namntse180123@fpt.edu.vn", ban: "Ban AI", checkedIn: false }
-    ]
+    // attendees: [] // Populated from backend — GET /api/events/:id/attendees
+    attendees: []
   },
   {
     id: "cloud-skills-boost-challenge",
@@ -540,127 +530,13 @@ export const VALUES_PILLARS = [
   }
 ];
 
-// Core Community Leads & Organizers (Meet the Student Organizers)
-export const CORE_ORGANIZERS_DATA: OrganizerMember[] = [
-  {
-    id: "lead-phuong",
-    name: "Dang Mai Phuong",
-    role: "Chapter Lead Organizer",
-    domain: "Leads",
-    major: "Software Engineering",
-    cohort: "K17",
-    bio: "Passionate about building inclusive tech communities and connecting student engineers with industry mentors and Google opportunities.",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-    color: "#4285F4",
-    dotColor: "#4285F4",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-tuan",
-    name: "Hoang Minh Tuan",
-    role: "Technical Lead (Cloud & Architecture)",
-    domain: "Tech",
-    major: "Information Assurance & Cloud",
-    cohort: "K17",
-    bio: "Google Cloud Certified Associate Cloud Engineer. Loves containerization, Golang, and designing resilient distributed backends.",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-    color: "#4285F4",
-    dotColor: "#4285F4",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-bao",
-    name: "Tran Nguyen Bao",
-    role: "AI & Machine Learning Lead",
-    domain: "Tech",
-    major: "Artificial Intelligence",
-    cohort: "K18",
-    bio: "Researcher in NLP and LLM agents. Exploring multimodal Gemini capabilities, RAG pipelines, and automated reasoning systems.",
-    avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
-    color: "#FBBC04",
-    dotColor: "#FBBC04",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-anh",
-    name: "Pham Quoc Anh",
-    role: "Mobile Development Lead",
-    domain: "Tech",
-    major: "Software Engineering",
-    cohort: "K18",
-    bio: "Flutter enthusiast and open-source contributor. Shipped 5+ mobile apps to App Store & Google Play with 50K+ total downloads.",
-    avatarUrl: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
-    color: "#34A853",
-    dotColor: "#34A853",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-long",
-    name: "Nguyen Hoang Long",
-    role: "Algorithm & CP Lead",
-    domain: "Tech",
-    major: "Computer Science",
-    cohort: "K18",
-    bio: "ICPC Asia Regional Silver Medalist, Codeforces Master. Mentoring students in competitive programming and technical interviews.",
-    avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
-    color: "#EA4335",
-    dotColor: "#EA4335",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-huong",
-    name: "Vu Thi Lan Huong",
-    role: "Creative Design & Media Lead",
-    domain: "Design & Media",
-    major: "Digital Art & Design",
-    cohort: "K18",
-    bio: "Crafting modern Google brand experiences, neo-brutalist tech visuals, UI/UX design systems, and motion graphics for chapter media.",
-    avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
-    color: "#FF7DAF",
-    dotColor: "#FF7DAF",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-thinh",
-    name: "Bui Duc Thinh",
-    role: "Event Operations & Logistics Lead",
-    domain: "Event Operations",
-    major: "Information Systems",
-    cohort: "K19",
-    bio: "Orchestrating memorable hackathons, booking halls, managing tech AV setups, and ensuring seamless experiences for our community members.",
-    avatarUrl: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400&auto=format&fit=crop&q=80",
-    color: "#34A853",
-    dotColor: "#34A853",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  },
-  {
-    id: "lead-linh",
-    name: "Nguyen Khanh Linh",
-    role: "Community Relations Lead",
-    domain: "Event Operations",
-    major: "International Business & IT",
-    cohort: "K19",
-    bio: "Connecting student developers with tech startups, coordinating university partnerships, and fostering a warm, collaborative environment.",
-    avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
-    color: "#4285F4",
-    dotColor: "#4285F4",
-    githubUrl: "https://github.com",
-    linkedinUrl: "https://linkedin.com",
-    portfolioUrl: "https://gdg.community.dev"
-  }
-];
-
+/**
+ * CORE_ORGANIZERS_DATA — Dữ liệu ban tổ chức (Organizers section trên landing page)
+ *
+ * ⚠️  Mock data đã bị xóa vì thông tin thành viên thuộc dữ liệu nội bộ CLB.
+ * Khi backend được tích hợp, dữ liệu này sẽ được fetch từ:
+ *   GET /api/members/organizers?featured=true
+ *
+ * Landing page sẽ hiển thị empty state hoặc ẩn section khi array rỗng.
+ */
+export const CORE_ORGANIZERS_DATA: OrganizerMember[] = [];

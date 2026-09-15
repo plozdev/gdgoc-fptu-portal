@@ -1,5 +1,19 @@
+/**
+ * @file useGenerationStore.ts
+ * @description Zustand store quản lý cấu hình kỳ hoạt động (Generation/Semester).
+ *
+ * ⚠️  MOCK DATA ĐÃ BỊ XÓA — Store bắt đầu với config mặc định và archives rỗng.
+ * Khi backend được tích hợp:
+ * - Config sẽ được fetch từ GET /api/config/generation
+ * - Archives sẽ được fetch từ GET /api/config/generation/archives
+ */
+
 import { create } from 'zustand';
 import { useNotificationStore } from './useNotificationStore';
+
+// ==========================================
+// TYPES
+// ==========================================
 
 export interface ArchivedSemester {
   id: string;
@@ -33,43 +47,31 @@ export interface GenerationConfig {
     targetType: 'semester' | 'generation';
     newGen: string;
     newSemester: string;
-    startMonthYear: string; // MM/yyyy
-    endMonthYear: string;   // MM/yyyy
+    startMonthYear: string;
+    endMonthYear: string;
     carryOverCoreTeam: boolean;
     notifyAllMembers: boolean;
   }) => void;
 }
 
-const INITIAL_ARCHIVES: ArchivedSemester[] = [
-  {
-    id: 'arch-gen3-summer26',
-    gen: 'Gen 3 (2024 - 2025)',
-    semesterName: 'Summer 2026',
-    startMonthYear: '05/2026',
-    endMonthYear: '08/2026',
-    totalTasks: 86,
-    totalGems: 24500,
-    membersCount: 48,
-    eventsCount: 3,
-    archivedAt: '31/08/2026',
-    chapterLead: 'Hoàng Quốc Bảo (Gen 3 Lead)',
-  },
-  {
-    id: 'arch-gen3-spring26',
-    gen: 'Gen 3 (2024 - 2025)',
-    semesterName: 'Spring 2026',
-    startMonthYear: '01/2026',
-    endMonthYear: '04/2026',
-    totalTasks: 92,
-    totalGems: 28000,
-    membersCount: 45,
-    eventsCount: 4,
-    archivedAt: '30/04/2026',
-    chapterLead: 'Hoàng Quốc Bảo (Gen 3 Lead)',
-  },
-];
+// ==========================================
+// HELPERS
+// ==========================================
+
+function formatDateVN(): string {
+  const now = new Date();
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const y = now.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+// ==========================================
+// STORE
+// ==========================================
 
 export const useGenerationStore = create<GenerationConfig>((set, get) => ({
+  // Default config — sẽ được override bởi backend khi tích hợp
   currentGen: 'Gen 4 (2025 - 2026)',
   currentSemester: 'Fall 2026',
   startMonthYear: '09/2026',
@@ -78,9 +80,9 @@ export const useGenerationStore = create<GenerationConfig>((set, get) => ({
   allowTaskSubmission: true,
   allowRsvp: true,
   freezeLeaderboard: false,
-  chapterLead: 'Đặng Mai Phương',
-  coChapterLead: 'Nguyễn Văn An',
-  archivedSemesters: INITIAL_ARCHIVES,
+  chapterLead: '',
+  coChapterLead: '',
+  archivedSemesters: [], // Empty — data comes from backend
 
   updateConfig: (updates) => {
     set((state) => ({ ...state, ...updates }));
@@ -88,29 +90,26 @@ export const useGenerationStore = create<GenerationConfig>((set, get) => ({
 
   performTransition: (newTerm) => {
     const state = get();
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const y = now.getFullYear();
-    const archivedDate = `${d}/${m}/${y}`;
 
     // 1. Tạo bản lưu trữ snapshot kỳ cũ
+    // NOTE: totalTasks, totalGems, membersCount, eventsCount cần được
+    // cung cấp từ backend khi perform transition thật.
     const archivedRecord: ArchivedSemester = {
       id: `arch-${Date.now()}`,
       gen: state.currentGen,
       semesterName: state.currentSemester,
       startMonthYear: state.startMonthYear,
       endMonthYear: state.endMonthYear,
-      totalTasks: 18,
-      totalGems: 15200,
-      membersCount: 52,
-      eventsCount: 4,
-      archivedAt: archivedDate,
+      totalTasks: 0,    // TODO: Lấy từ backend snapshot
+      totalGems: 0,     // TODO: Lấy từ backend snapshot
+      membersCount: 0,  // TODO: Lấy từ backend snapshot
+      eventsCount: 0,   // TODO: Lấy từ backend snapshot
+      archivedAt: formatDateVN(),
       chapterLead: state.chapterLead,
     };
 
-    // 2. Cập nhật state sang kỳ mới
-    set((s) => ({
+    // 2. Cập nhật config sang kỳ mới
+    set(() => ({
       currentGen: newTerm.newGen,
       currentSemester: newTerm.newSemester,
       startMonthYear: newTerm.startMonthYear,
@@ -119,14 +118,14 @@ export const useGenerationStore = create<GenerationConfig>((set, get) => ({
       allowTaskSubmission: true,
       allowRsvp: true,
       freezeLeaderboard: false,
-      archivedSemesters: [archivedRecord, ...s.archivedSemesters],
+      archivedSemesters: [archivedRecord, ...state.archivedSemesters],
     }));
 
-    // 3. Tự động gửi thông báo Broadcast nếu được chọn
+    // 3. Gửi thông báo broadcast nếu được chọn
     if (newTerm.notifyAllMembers) {
       useNotificationStore.getState().addNotification({
         title: `🚀 Khởi động nhiệm kỳ mới: ${newTerm.newSemester} - ${newTerm.newGen}`,
-        message: `Ban Chủ Nhiệm chính thức kích hoạt kỳ hoạt động mới (${newTerm.startMonthYear} - ${newTerm.endMonthYear}). Dữ liệu kỳ cũ đã được kết toán và lưu trữ thành công.`,
+        message: `Ban Chủ Nhiệm chính thức kích hoạt kỳ hoạt động mới (${newTerm.startMonthYear} – ${newTerm.endMonthYear}). Dữ liệu kỳ cũ đã được kết toán và lưu trữ thành công.`,
         type: 'broadcast',
         priority: 'urgent',
         targetScope: 'all',

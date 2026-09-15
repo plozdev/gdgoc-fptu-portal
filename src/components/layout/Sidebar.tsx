@@ -251,8 +251,8 @@ export const Sidebar: React.FC = () => {
               </span>
             </NavLink>
 
-            {/* Quản lý Vật tư & Quà tặng (Chỉ cho Admin và Lead) */}
-            {(isOrgAdmin || isBanLead) && (
+            {/* Quản lý Vật tư & Quà tặng (Chỉ dành riêng cho Ban Chủ Nhiệm: Chapter Lead & Co-Chapter Lead) */}
+            {isOrgAdmin && (
               <NavLink
                 to="/app/inventory"
                 className={({ isActive }) =>

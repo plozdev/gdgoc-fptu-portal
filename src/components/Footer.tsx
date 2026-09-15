@@ -25,6 +25,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandboo
     { name: 'Các Ban Chuyên Môn', href: '#departments' },
     { name: 'Số Liệu Summer 2026', href: '#impact' },
     { name: 'Sự Kiện Fall 2026', href: '#events' },
+    { name: 'Cổng Thành Viên (GDGoC-OS)', href: '/login' },
   ];
 
   const resources = [

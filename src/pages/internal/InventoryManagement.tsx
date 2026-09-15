@@ -5,7 +5,6 @@ import { mockUsers } from '../../mocks/fixtures/users';
 import { 
   PackageSearch,
   PackagePlus,
-  ShieldAlert,
   ArrowLeftRight,
   Archive,
   Gift,
@@ -16,7 +15,7 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 export const InventoryManagement: React.FC = () => {
   const { user } = useAuthStore();
@@ -39,31 +38,10 @@ export const InventoryManagement: React.FC = () => {
   const [allocQuantity, setAllocQuantity] = useState(1);
   const [allocNotes, setAllocNotes] = useState('');
 
-  // 🚨 CRITICAL RULE: "Chỉ BCN và Lead quản lý khâu này"
-  const hasAccess = user?.tier === 'ORG_ADMIN' || user?.tier === 'BAN_LEAD';
-
-  if (!hasAccess) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-2xl p-8 border-2 border-red-200 shadow-lg text-center">
-          <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-extrabold text-slate-900 mb-1">
-            Quyền Truy Cập Bị Từ Chối (403)
-          </h2>
-          <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-            Phân hệ <strong>Quản Lý Vật Tư & Quà Tặng</strong> chỉ dành riêng cho <strong>Ban Chủ Nhiệm và Trưởng Ban</strong> do tính bảo mật tài sản. Vai trò hiện tại của bạn (<span className="text-blue-600 font-bold">{user?.tier}</span>) không được cấp quyền.
-          </p>
-          <Link
-            to="/app/dashboard"
-            className="inline-block px-6 py-2.5 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors"
-          >
-            Về Màn Hình Chính
-          </Link>
-        </div>
-      </div>
-    );
+  // 🚨 CRITICAL RULE: Chỉ Ban Chủ Nhiệm (Chapter Lead & Co-Chapter Lead) mới có quyền truy cập.
+  // Không hiển thị màn hình 403 gây phiền toái, tự động redirect về dashboard đối với Member và Lead.
+  if (user?.tier !== 'ORG_ADMIN') {
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   const handleAddItem = (e: React.FormEvent) => {

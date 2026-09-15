@@ -13,7 +13,8 @@ import {
   ChevronRight,
   ExternalLink,
   Lock,
-  Sliders
+  Sliders,
+  PackageSearch
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
@@ -249,6 +250,28 @@ export const Sidebar: React.FC = () => {
                 Drive
               </span>
             </NavLink>
+
+            {/* Quản lý Vật tư & Quà tặng (Chỉ cho Admin và Lead) */}
+            {(isOrgAdmin || isBanLead) && (
+              <NavLink
+                to="/app/inventory"
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40 font-bold'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <PackageSearch className="w-4 h-4 text-pink-400" />
+                  <span>Quản Lý Vật Tư</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-pink-500/20 text-pink-300 font-mono-code">
+                  Items
+                </span>
+              </NavLink>
+            )}
 
             <NavLink
               to="/app/gems"

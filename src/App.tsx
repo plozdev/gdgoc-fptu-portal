@@ -34,6 +34,7 @@ import { EventAttendance } from './pages/internal/EventAttendance';
 import { AssetHub } from './pages/internal/AssetHub';
 import { GemsLeaderboard } from './pages/internal/GemsLeaderboard';
 import { GenerationSettings } from './pages/internal/GenerationSettings';
+import { InventoryManagement } from './pages/internal/InventoryManagement';
 
 function LandingPage() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -259,6 +260,18 @@ export default function App() {
             user ? (
               <DashboardLayout>
                 <AssetHub />
+              </DashboardLayout>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/app/inventory"
+          element={
+            user ? (
+              <DashboardLayout>
+                <InventoryManagement />
               </DashboardLayout>
             ) : (
               <Navigate to="/login" />

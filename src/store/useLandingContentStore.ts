@@ -61,7 +61,7 @@ interface LandingContentState {
 // STORAGE HELPERS
 // ==========================================
 
-const STORAGE_KEY = 'gdgoc_landing_content_v1';
+const STORAGE_KEY = 'gdgoc_landing_content_v2';
 
 function loadFromStorage(): Partial<LandingContentState> | null {
   try {

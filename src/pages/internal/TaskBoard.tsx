@@ -64,221 +64,25 @@ const PROJECTS_LIST = [
   'Vận Hành Thường Nhật'
 ];
 
-const INITIAL_TASKS: Task[] = [
-  // BAN AI
-  {
-    id: 'T-101',
-    title: 'Nghiên cứu Gemini 2.0 Multimodal API & viết notebook mẫu',
-    description: 'Xây dựng sample code gọi function calling và vector embeddings cho workshop.',
-    banId: 'ai',
-    level: 'LEAD_TO_MEMBER',
-    project: 'Build & Share Workshop Series',
-    status: 'in_progress',
-    assignee: 'Nguyễn Thành Nam (AI Member)',
-    gems: 250,
-    priority: 'Cao',
-    deadline: '25/09/2026',
-  },
-  {
-    id: 'T-107',
-    title: 'Chuẩn bị dataset demo RAG cho sinh viên tại AI Riser Showcase',
-    description: 'Thu thập tài liệu handbook Đại học FPT và tiền xử lý chunking cho Vector DB.',
-    banId: 'ai',
-    level: 'LEAD_TO_MEMBER',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'review',
-    assignee: 'Nguyễn Thành Nam (AI Member)',
-    gems: 300,
-    priority: 'Cao',
-    deadline: '18/09/2026',
-    submissionProof: 'https://github.com/gdgoc-fptu/rag-campus-dataset'
-  },
-  {
-    id: 'T-108',
-    title: 'Đào tạo nội bộ Prompt Engineering cho tân thành viên AI',
-    description: 'Soạn slide giáo án 3 buổi về System Instructions, Few-shot và ReAct Agents.',
-    banId: 'ai',
-    level: 'BCN_TO_LEAD',
-    project: 'Tuyển Sinh Gen 4.0',
-    status: 'todo',
-    assignee: 'Trần Nguyên Bảo (AI Lead)',
-    gems: 200,
-    priority: 'Trung bình',
-    deadline: '05/10/2026',
-  },
-
-  // BAN CLOUD
-  {
-    id: 'T-102',
-    title: 'Deploy hạ tầng backend sự kiện lên Google Cloud Run',
-    description: 'Thiết lập Dockerfile, cấu hình Cloud SQL Postgres và gắn custom domain.',
-    banId: 'cloud',
-    level: 'LEAD_TO_MEMBER',
-    project: 'Google I/O Extended FPTU 2026',
-    status: 'review',
-    assignee: 'Trần Đức Toàn (Cloud Member)',
-    gems: 300,
-    priority: 'Cao',
-    deadline: '22/09/2026',
-    submissionProof: 'https://console.cloud.google.com/run/deploy/gdgoc-api',
-  },
-  {
-    id: 'T-109',
-    title: 'Cấp phát voucher Google Cloud Skills Boost cho 100 sinh viên tham dự',
-    description: 'Kiểm tra mã kích hoạt, đồng bộ danh sách email sinh viên từ cổng đăng ký sự kiện.',
-    banId: 'cloud',
-    level: 'LEAD_TO_MEMBER',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'in_progress',
-    assignee: 'Trần Đức Toàn (Cloud Member)',
-    gems: 150,
-    priority: 'Trung bình',
-    deadline: '19/09/2026',
-  },
-  {
-    id: 'T-115',
-    title: 'Lập dự toán chi phí GCP Cloud Credits và quota hạn mức cho kỳ Fall 2026',
-    description: 'Báo cáo trực tiếp cho Ban Chủ Nhiệm về các dự án dùng tài nguyên Cloud Run và Firestore.',
-    banId: 'cloud',
-    level: 'BCN_TO_LEAD',
-    project: 'Vận Hành Thường Nhật',
-    status: 'todo',
-    assignee: 'Hoàng Minh Tuấn (Cloud Lead)',
-    gems: 250,
-    priority: 'Cao',
-    deadline: '28/09/2026',
-  },
-
-  // BAN WEB
-  {
-    id: 'T-103',
-    title: 'Tối ưu Core Web Vitals cho Landing Page Gen 4.0',
-    description: 'Nâng điểm LCP < 1.2s và CLS < 0.05 trên thiết bị di động.',
-    banId: 'web',
-    level: 'LEAD_TO_MEMBER',
-    project: 'Tuyển Sinh Gen 4.0',
-    status: 'in_progress',
-    assignee: 'Đỗ Hữu Minh (Web Member)',
-    gems: 200,
-    priority: 'Trung bình',
-    deadline: '28/09/2026',
-  },
-  {
-    id: 'T-110',
-    title: 'Tích hợp hệ thống check-in quét QR tự động tại sảnh hội trường',
-    description: 'Viết module camera quét mã QR tham dự sự kiện và cập nhật trạng thái điểm danh thời gian thực.',
-    banId: 'web',
-    level: 'BCN_TO_LEAD',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'done',
-    assignee: 'Lê Hoàng Long (Web Lead)',
-    gems: 350,
-    priority: 'Cao',
-    deadline: '15/09/2026',
-  },
-
-  // BAN MEDIA
-  {
-    id: 'T-104',
-    title: 'Soạn thảo Key Visual & Visual LED sự kiện Showcase',
-    description: 'Bộ ấn phẩm 16:9 cho màn hình hội trường Edison và poster social.',
-    banId: 'media',
-    level: 'LEAD_TO_MEMBER',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'review',
-    assignee: 'Lê Minh Tú (Media Member)',
-    gems: 200,
-    priority: 'Cao',
-    deadline: '17/09/2026',
-    submissionProof: 'https://figma.com/file/gdgoc-showcase-visual',
-  },
-  {
-    id: 'T-111',
-    title: 'Thiết kế bộ Avatar Frame và Banner tuyển sinh Gen 4.0',
-    description: 'Sáng tạo theo đúng Google Brand Guidelines chuẩn màu sắc và typography.',
-    banId: 'media',
-    level: 'BCN_TO_LEAD',
-    project: 'Tuyển Sinh Gen 4.0',
-    status: 'done',
-    assignee: 'Vũ Thị Lan Hương (Media Lead)',
-    gems: 250,
-    priority: 'Cao',
-    deadline: '12/09/2026',
-  },
-  {
-    id: 'T-112',
-    title: 'Quay và dựng video recap chuỗi hoạt động kỳ Summer 2026',
-    description: 'Clip ngắn 90 giây phong cách năng động cho fanpage và sự kiện.',
-    banId: 'media',
-    level: 'LEAD_TO_MEMBER',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'todo',
-    assignee: 'Lê Minh Tú (Media Member)',
-    gems: 250,
-    priority: 'Cao',
-    deadline: '19/09/2026',
-  },
-
-  // BAN HR-EVENT
-  {
-    id: 'T-105',
-    title: 'Tổng hợp danh sách check-in và chuẩn bị quà Google Swag',
-    description: 'Phân loại quà áo thun, sticker và bình nước theo danh sách điểm danh sinh viên.',
-    banId: 'hr-event',
-    level: 'LEAD_TO_MEMBER',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'todo',
-    assignee: 'Hoàng Kim Chi (HR-Event Member)',
-    gems: 150,
-    priority: 'Trung bình',
-    deadline: '19/09/2026',
-  },
-  {
-    id: 'T-113',
-    title: 'Chốt kịch bản MC song ngữ & điều phối teabreak đón tiếp khách mời',
-    description: 'Liên hệ phòng ban nhà trường xin mượn thiết bị âm thanh hội trường Alpha.',
-    banId: 'hr-event',
-    level: 'BCN_TO_LEAD',
-    project: 'AI Riser Showcase (20/09)',
-    status: 'in_progress',
-    assignee: 'Bùi Đức Thịnh (HR-Event Lead)',
-    gems: 200,
-    priority: 'Cao',
-    deadline: '18/09/2026',
-  },
-
-  // BAN RESEARCH
-  {
-    id: 'T-106',
-    title: 'Viết bài tổng quan nghiên cứu sinh viên cho kỷ yếu ResFes 2026',
-    description: 'Phối hợp với giảng viên hướng dẫn hoàn thiện bản thảo LaTeX.',
-    banId: 'research',
-    level: 'LEAD_TO_MEMBER',
-    project: 'Vận Hành Thường Nhật',
-    status: 'done',
-    assignee: 'Võ Mai Linh (Research Member)',
-    gems: 350,
-    priority: 'Cao',
-    deadline: '10/09/2026',
-  },
-  {
-    id: 'T-114',
-    title: 'Tổng hợp tài liệu đọc hiểu paper Gemini Multimodal Reasoning',
-    description: 'Dịch và tóm tắt 3 bài báo tiêu biểu từ Google DeepMind cho thành viên.',
-    banId: 'research',
-    level: 'BCN_TO_LEAD',
-    project: 'Build & Share Workshop Series',
-    status: 'in_progress',
-    assignee: 'Phạm Quốc Anh (Research Lead)',
-    gems: 250,
-    priority: 'Trung bình',
-    deadline: '01/10/2026',
-  }
-];
+const INITIAL_TASKS: Task[] = [];
 
 export const TaskBoard: React.FC = () => {
   const { user } = useAuthStore();
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem('gdgoc_tasks_v2');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return INITIAL_TASKS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gdgoc_tasks_v2', JSON.stringify(tasks));
+  }, [tasks]);
 
   // RBAC checks
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
@@ -816,7 +620,25 @@ export const TaskBoard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredTasks.map(task => {
+                {filteredTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <FolderGit2 className="w-8 h-8 text-slate-300" />
+                        <span className="text-xs font-semibold">Chưa có công việc nào trong danh sách</span>
+                        {isLead && (
+                          <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                          >
+                            + Giao Công Việc Mới
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTasks.map(task => {
                   const statusMap = {
                     todo: { label: 'Cần Làm', bg: 'bg-slate-100 text-slate-700' },
                     in_progress: { label: 'Đang Làm', bg: 'bg-blue-100 text-blue-800' },
@@ -899,7 +721,7 @@ export const TaskBoard: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>

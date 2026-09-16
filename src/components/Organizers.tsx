@@ -22,13 +22,13 @@ export const Organizers: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#1E1E1E]">
-              <span>{'//'} 05. CORE COMMUNITY LEADS</span>
+              <span>{'//'} 05. BAN ĐIỀU HÀNH & CORE LEADS</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight">
-              Meet the Student Organizers
+              Ban Chủ Nhiệm & Trưởng Ban Điều Hành
             </h2>
             <p className="text-base sm:text-lg text-[#1E1E1E]/85 max-w-2xl">
-              Dedicated student developers and community leads driving technical excellence and community engagement at FPT University HCMC.
+              Đội ngũ sinh viên nhiệt huyết, dẫn dắt các hoạt động chuyên môn và kết nối cộng đồng công nghệ tại Đại học FPT TP.HCM.
             </p>
           </div>
 
@@ -44,14 +44,41 @@ export const Organizers: React.FC = () => {
                     : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
                 }`}
               >
-                {dom === 'ALL' ? 'All Leads' : dom}
+                {dom === 'ALL' ? 'Tất Cả' : dom}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Organizers Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Organizers Grid or Preparing State */}
+        {filteredOrganizers.length === 0 ? (
+          <div className="bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] p-8 sm:p-12 brutal-shadow text-center max-w-2xl mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-[#C3ECF6] border-[2.5px] border-[#1E1E1E] flex items-center justify-center mx-auto brutal-shadow-sm">
+              <Users className="w-8 h-8 text-[#4285F4]" />
+            </div>
+            <div className="space-y-2">
+              <span className="font-mono-code text-xs font-bold px-3 py-1 bg-[#FFE7A5] border border-[#1E1E1E] rounded-full text-[#1E1E1E] inline-block">
+                GEN 4.0 CORE TEAM
+              </span>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E1E1E]">
+                Đội Ngũ Ban Điều Hành Kỳ Fall 2026 Đang Được Kiện Toàn
+              </h3>
+              <p className="text-xs sm:text-sm text-[#1E1E1E]/80 max-w-lg mx-auto leading-relaxed">
+                Danh sách Trưởng Ban (Lead Roles) và Ban Chủ Nhiệm chính thức sẽ được công bố ngay sau khi hoàn tất đợt tuyển sinh và phỏng vấn Gen 4.0.
+              </p>
+            </div>
+            <div className="pt-2">
+              <a
+                href="#join"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-mono-code font-bold text-xs rounded-full border-2 border-[#1E1E1E] transition-colors"
+              >
+                <span>Ứng Tuyển Gia Nhập GDG on Campus Ngay</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredOrganizers.map((org) => (
             <div
               key={org.id}
@@ -145,6 +172,7 @@ export const Organizers: React.FC = () => {
             </div>
           ))}
         </div>
+        )}
 
         {/* Bottom Banner as in Reference Design */}
         <div className="mt-12 p-5 sm:p-6 bg-[#C3ECF6] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">

@@ -104,39 +104,6 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
           </div>
         </div>
 
-        {/* Division Summary Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-          <div className="p-4 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] flex items-center justify-between brutal-shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C3ECF6] border-2 border-[#1E1E1E] flex items-center justify-center font-mono-code font-extrabold text-[#4285F4]">
-                T
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E]">KHỐI TECH (Kỹ Thuật & Công Nghệ)</h4>
-                <p className="text-xs text-[#1E1E1E]/80 font-mono-code font-medium">AI • Cloud • Web Development • Research</p>
-              </div>
-            </div>
-            <span className="px-2.5 py-1 bg-[#F0F0F0] border border-[#1E1E1E] rounded-lg text-xs font-mono-code font-bold">
-              4 Ban
-            </span>
-          </div>
-
-          <div className="p-4 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] flex items-center justify-between brutal-shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#CCF6C5] border-2 border-[#1E1E1E] flex items-center justify-center font-mono-code font-extrabold text-[#34A853]">
-                NT
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E]">KHỐI NON-TECH (Truyền Thông & Vận Hành)</h4>
-                <p className="text-xs text-[#1E1E1E]/80 font-mono-code font-medium">Media • HR & Event</p>
-              </div>
-            </div>
-            <span className="px-2.5 py-1 bg-[#F0F0F0] border border-[#1E1E1E] rounded-lg text-xs font-mono-code font-bold">
-              2 Ban
-            </span>
-          </div>
-        </div>
-
         {/* Departments Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedDepts.map((dept) => {

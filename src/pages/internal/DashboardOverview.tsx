@@ -1,28 +1,57 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useMemberStore } from '../../store/useMemberStore';
+import { useLandingContentStore } from '../../store/useLandingContentStore';
 import { 
   Users, 
   CheckSquare, 
   Calendar, 
   Award, 
-  Clock, 
-  ShieldCheck, 
   Sparkles,
-  Layers
+  ArrowRight,
+  FolderGit2
 } from 'lucide-react';
-import { BAN_NAMES } from '../../mocks/fixtures/users';
+import { BAN_NAMES, BanId } from '../../mocks/fixtures/users';
+
+interface StoredTask {
+  id: string;
+  banId: string;
+  status: string;
+  gems: number;
+}
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuthStore();
+  const { members } = useMemberStore();
+  const { events } = useLandingContentStore();
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
 
-  const banStats = [
-    { id: 'ai', name: 'Ban Trí Tuệ Nhân Tạo (AI)', division: 'Khối Tech', members: 10, tasks: 4, lead: 'Trần Nguyên Bảo', color: 'border-l-amber-400' },
-    { id: 'cloud', name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', members: 8, tasks: 3, lead: 'Hoàng Minh Tuấn', color: 'border-l-blue-500' },
-    { id: 'web', name: 'Ban Phát Triển Web', division: 'Khối Tech', members: 9, tasks: 5, lead: 'Lê Hoàng Long', color: 'border-l-emerald-500' },
-    { id: 'research', name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', members: 7, tasks: 2, lead: 'Phạm Quốc Anh', color: 'border-l-red-500' },
-    { id: 'media', name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', members: 10, tasks: 4, lead: 'Vũ Thị Lan Hương', color: 'border-l-pink-500' },
-    { id: 'hr-event', name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', members: 8, tasks: 3, lead: 'Bùi Đức Thịnh', color: 'border-l-teal-500' },
+  // Read actual tasks from storage
+  const tasks: StoredTask[] = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('gdgoc_tasks_v2');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const activeMembersCount = members.filter(m => m.status === 'ACTIVE').length;
+  const runningTasksCount = tasks.filter(t => t.status !== 'done').length;
+  const reviewTasksCount = tasks.filter(t => t.status === 'review').length;
+  const totalGemsEarned = tasks
+    .filter(t => t.status === 'done')
+    .reduce((sum, t) => sum + (Number(t.gems) || 0), 0);
+
+  const upcomingEvents = events.filter(e => e.status !== 'Completed');
+
+  const BAN_CONFIGS = [
+    { id: 'ai' as BanId, name: 'Ban Trí Tuệ Nhân Tạo (AI)', division: 'Khối Tech', defaultLead: 'Trần Nguyên Bảo', color: 'border-l-amber-400' },
+    { id: 'cloud' as BanId, name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', defaultLead: 'Hoàng Minh Tuấn', color: 'border-l-blue-500' },
+    { id: 'web' as BanId, name: 'Ban Phát Triển Web', division: 'Khối Tech', defaultLead: 'Lê Hoàng Long', color: 'border-l-emerald-500' },
+    { id: 'research' as BanId, name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', defaultLead: 'Phạm Quốc Anh', color: 'border-l-red-500' },
+    { id: 'media' as BanId, name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', defaultLead: 'Vũ Thị Lan Hương', color: 'border-l-pink-500' },
+    { id: 'hr-event' as BanId, name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', defaultLead: 'Bùi Đức Thịnh', color: 'border-l-teal-500' },
   ];
 
   return (
@@ -59,9 +88,13 @@ export const DashboardOverview: React.FC = () => {
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-800">52</div>
+          <div className="text-2xl font-black text-slate-800">{activeMembersCount}</div>
           <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-            <span className="text-emerald-600 font-bold">100%</span> đã phân ban chính thức
+            {activeMembersCount > 0 ? (
+              <span className="text-emerald-600 font-bold">Đã phân ban hoạt động</span>
+            ) : (
+              <span className="text-slate-400">Chưa có thành viên nào trong danh bạ</span>
+            )}
           </p>
         </div>
 
@@ -72,9 +105,9 @@ export const DashboardOverview: React.FC = () => {
               <CheckSquare className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-800">18 Tasks</div>
+          <div className="text-2xl font-black text-slate-800">{runningTasksCount} Tasks</div>
           <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-            <span className="text-amber-600 font-bold">5 tasks</span> đang chờ duyệt kết quả
+            <span className="text-amber-600 font-bold">{reviewTasksCount} tasks</span> đang chờ duyệt kết quả
           </p>
         </div>
 
@@ -85,9 +118,13 @@ export const DashboardOverview: React.FC = () => {
               <Calendar className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-800">4 Events</div>
-          <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-            Gần nhất: <span className="font-semibold text-slate-700">AI Riser Showcase (20/09/2026)</span>
+          <div className="text-2xl font-black text-slate-800">{upcomingEvents.length} Events</div>
+          <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 truncate">
+            {upcomingEvents.length > 0 ? (
+              <span>Gần nhất: <strong className="text-slate-700">{upcomingEvents[0].title}</strong></span>
+            ) : (
+              <span className="text-slate-400">Chưa có lịch sự kiện kỳ Fall 2026</span>
+            )}
           </p>
         </div>
 
@@ -98,9 +135,9 @@ export const DashboardOverview: React.FC = () => {
               <Award className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-800">15,200 💎</div>
+          <div className="text-2xl font-black text-slate-800">{totalGemsEarned} 💎</div>
           <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-            <span className="text-emerald-600 font-bold">+1,450 Gems</span> được cấp tuần này
+            <span className="text-emerald-600 font-bold">Từ các task hoàn thành</span>
           </p>
         </div>
       </div>
@@ -110,14 +147,18 @@ export const DashboardOverview: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-extrabold text-slate-800">Tiến Độ Vận Hành 6 Ban Chuyên Môn</h2>
-            <p className="text-xs text-slate-500">Bao gồm 4 Trưởng Ban Khối Tech & 2 Trưởng Ban Khối Non-Tech ngang hàng</p>
+            <p className="text-xs text-slate-500">Bao gồm 4 Ban Khối Tech & 2 Ban Khối Non-Tech đồng cấp trong kỳ Fall 2026</p>
           </div>
           <span className="text-xs font-bold text-slate-400 font-mono-code">6 Departments</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {banStats.map((ban) => {
+          {BAN_CONFIGS.map((ban) => {
             const isUserBan = user?.banId === ban.id;
+            const banMembersCount = members.filter(m => m.banId === ban.id && m.status === 'ACTIVE').length;
+            const banTasksCount = tasks.filter(t => t.banId === ban.id && t.status !== 'done').length;
+            const designatedLead = members.find(m => m.banId === ban.id && m.tier === 'BAN_LEAD')?.name || ban.defaultLead;
+
             return (
               <div 
                 key={ban.id} 
@@ -137,11 +178,11 @@ export const DashboardOverview: React.FC = () => {
                 </div>
 
                 <h3 className="text-sm font-bold text-slate-900 truncate mb-1">{ban.name}</h3>
-                <p className="text-xs text-slate-600 mb-3">Lead: <span className="font-semibold text-slate-800">{ban.lead}</span></p>
+                <p className="text-xs text-slate-600 mb-3">Trưởng Ban: <span className="font-semibold text-slate-800">{designatedLead}</span></p>
 
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-200/80">
-                  <span>{ban.members} thành viên</span>
-                  <span className="font-semibold text-slate-800">{ban.tasks} tasks đang chạy</span>
+                  <span>{banMembersCount} thành viên</span>
+                  <span className="font-semibold text-slate-800">{banTasksCount} tasks đang chạy</span>
                 </div>
               </div>
             );

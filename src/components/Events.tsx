@@ -29,13 +29,13 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#C3ECF6] border-[2.5px] border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#1E1E1E]">
-              <span>{'//'} 04. FLAGSHIP PROGRAMS</span>
+              <span>{'//'} 04. HOẠT ĐỘNG & SỰ KIỆN</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight">
-              Featured Chapter Events
+              Sự Kiện & Chương Trình Trọng Điểm
             </h2>
             <p className="text-base sm:text-lg text-[#1E1E1E]/85 max-w-2xl">
-              From global hackathons to hands-on weekend codelabs. Level up your technical craft alongside peers and mentors.
+              Từ các buổi Codelab thực chiến, workshop GenAI chuyên sâu đến ngày hội công nghệ lớn thường niên tại Đại học FPT TP.HCM.
             </p>
           </div>
 
@@ -51,114 +51,144 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                     : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
                 }`}
               >
-                {cat === 'ALL' ? 'All Events' : cat}
+                {cat === 'ALL' ? 'Tất Cả Sự Kiện' : cat}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Events Grid (2 columns as in Reference UI) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          {filteredEvents.map((event) => (
-            <div
-              key={event.id}
-              className="bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] p-6 sm:p-8 brutal-shadow flex flex-col justify-between transition-all group hover:-translate-y-1"
-            >
-              <div className="space-y-4">
-                {/* Event Category & Status Badges */}
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span
-                    className="font-mono-code text-xs font-bold px-3 py-1 rounded-md border-[1.5px] border-[#1E1E1E]"
-                    style={{ backgroundColor: event.pastelColor }}
-                  >
-                    {event.category}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    {event.isHybrid && (
-                      <span className="font-mono-code text-[11px] font-bold px-2.5 py-0.5 rounded-md border border-[#1E1E1E] bg-[#FFFFFF] text-[#1E1E1E]">
-                        Hybrid
-                      </span>
-                    )}
+        {/* Events Grid or Elegant Upcoming State */}
+        {filteredEvents.length === 0 ? (
+          <div className="bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] p-8 sm:p-12 brutal-shadow text-center max-w-2xl mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] flex items-center justify-center mx-auto brutal-shadow-sm">
+              <Calendar className="w-8 h-8 text-[#1E1E1E]" />
+            </div>
+            <div className="space-y-2">
+              <span className="font-mono-code text-xs font-bold px-3 py-1 bg-[#C3ECF6] border border-[#1E1E1E] rounded-full text-[#1E1E1E] inline-block">
+                FALL 2026 PIPELINE
+              </span>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E1E1E]">
+                Lịch Hoạt Động & Sự Kiện Đang Được Cập Nhật
+              </h3>
+              <p className="text-xs sm:text-sm text-[#1E1E1E]/80 max-w-lg mx-auto leading-relaxed">
+                Chuỗi hoạt động Codelabs thực hành tại phòng Lab, Workshop GenAI và Google I/O Extended FPTU 2026 sẽ được công bố chính thức sau đợt tuyển sinh Gen 4.0.
+              </p>
+            </div>
+            <div className="pt-2">
+              <a
+                href="https://facebook.com/gdgoc.fptu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-mono-code font-bold text-xs rounded-full border-2 border-[#1E1E1E] transition-colors"
+              >
+                <span>Theo Dõi Fanpage Để Cập Nhật Sớm Nhất</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            {filteredEvents.map((event) => (
+              <div
+                key={event.id}
+                className="bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] p-6 sm:p-8 brutal-shadow flex flex-col justify-between transition-all group hover:-translate-y-1"
+              >
+                <div className="space-y-4">
+                  {/* Event Category & Status Badges */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <span
-                      className={`font-mono-code text-[11px] font-bold px-2.5 py-0.5 rounded-md border border-[#1E1E1E] ${
-                        event.status === 'Registration Open'
-                          ? 'bg-[#CCF6C5] text-[#1E1E1E]'
-                          : event.status === 'Opening Soon'
-                          ? 'bg-[#FFE7A5] text-[#1E1E1E]'
-                          : 'bg-[#F0F0F0] text-[#1E1E1E]'
-                      }`}
+                      className="font-mono-code text-xs font-bold px-3 py-1 rounded-md border-[1.5px] border-[#1E1E1E]"
+                      style={{ backgroundColor: event.pastelColor }}
                     >
-                      {event.status}
+                      {event.category}
                     </span>
-                  </div>
-                </div>
 
-                {/* Event Title */}
-                <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E1E1E] tracking-tight leading-snug">
-                  {event.title}
-                </h3>
-
-                {/* Summary */}
-                <p className="text-xs sm:text-sm text-[#1E1E1E]/80 leading-relaxed font-normal">
-                  {event.summary}
-                </p>
-
-                {/* Event Meta Box (Gray rounded box with Date, Time, Location) */}
-                <div className="p-4 bg-[#F8F9FA] border border-[#1E1E1E]/20 rounded-2xl space-y-2 text-xs font-mono-code text-[#1E1E1E]">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-[#EA4335] shrink-0" />
-                    <span className="font-extrabold">{formatDateToDDMMYYYY(event.date)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-[#FBBC04] shrink-0" />
-                    <span className="text-[#1E1E1E]/90">{event.time}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-[#4285F4] shrink-0" />
-                    <span className="truncate text-[#1E1E1E]/90">{event.location}</span>
-                  </div>
-                </div>
-
-                {/* Speaker row with circular avatar */}
-                {event.speaker && (
-                  <div className="pt-2 flex items-center gap-3">
-                    <img
-                      src={event.speaker.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-                      alt={event.speaker.name}
-                      className="w-10 h-10 rounded-full border-2 border-[#1E1E1E] object-cover shrink-0 shadow-xs"
-                    />
-                    <div className="min-w-0">
-                      <div className="font-extrabold text-xs sm:text-sm text-[#1E1E1E] truncate">
-                        {event.speaker.name}
-                      </div>
-                      <div className="text-[11px] text-[#1E1E1E]/75 font-mono-code truncate">
-                        {event.speaker.role}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      {event.isHybrid && (
+                        <span className="font-mono-code text-[11px] font-bold px-2.5 py-0.5 rounded-md border border-[#1E1E1E] bg-[#FFFFFF] text-[#1E1E1E]">
+                          Hybrid
+                        </span>
+                      )}
+                      <span
+                        className={`font-mono-code text-[11px] font-bold px-2.5 py-0.5 rounded-md border border-[#1E1E1E] ${
+                          event.status === 'Registration Open'
+                            ? 'bg-[#CCF6C5] text-[#1E1E1E]'
+                            : event.status === 'Opening Soon'
+                            ? 'bg-[#FFE7A5] text-[#1E1E1E]'
+                            : 'bg-[#F0F0F0] text-[#1E1E1E]'
+                        }`}
+                      >
+                        {event.status}
+                      </span>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Bottom Action Bar */}
-              <div className="pt-6 mt-4 border-t border-[#1E1E1E]/15 flex items-center justify-between gap-3">
-                <div className="inline-flex items-center gap-1.5 font-mono-code text-xs font-bold text-[#34A853]">
-                  <Ticket className="w-4 h-4 text-[#34A853]" />
-                  <span>Free Student Pass</span>
+                  {/* Event Title */}
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E1E1E] tracking-tight leading-snug">
+                    {event.title}
+                  </h3>
+
+                  {/* Summary */}
+                  <p className="text-xs sm:text-sm text-[#1E1E1E]/80 leading-relaxed font-normal">
+                    {event.summary}
+                  </p>
+
+                  {/* Event Meta Box (Gray rounded box with Date, Time, Location) */}
+                  <div className="p-4 bg-[#F8F9FA] border border-[#1E1E1E]/20 rounded-2xl space-y-2 text-xs font-mono-code text-[#1E1E1E]">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-[#EA4335] shrink-0" />
+                      <span className="font-extrabold">{formatDateToDDMMYYYY(event.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-[#FBBC04] shrink-0" />
+                      <span className="text-[#1E1E1E]/90">{event.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-[#4285F4] shrink-0" />
+                      <span className="truncate text-[#1E1E1E]/90">{event.location}</span>
+                    </div>
+                  </div>
+
+                  {/* Speaker row with circular avatar */}
+                  {event.speaker && (
+                    <div className="pt-2 flex items-center gap-3">
+                      <img
+                        src={event.speaker.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
+                        alt={event.speaker.name}
+                        className="w-10 h-10 rounded-full border-2 border-[#1E1E1E] object-cover shrink-0 shadow-xs"
+                      />
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-xs sm:text-sm text-[#1E1E1E] truncate">
+                          {event.speaker.name}
+                        </div>
+                        <div className="text-[11px] text-[#1E1E1E]/75 font-mono-code truncate">
+                          {event.speaker.role}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <button
-                  onClick={() => onSelectEvent(event)}
-                  className="px-5 py-2.5 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-bold text-xs sm:text-sm font-mono-code rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>Xem Chi Tiết Sự Kiện</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+                {/* Bottom Action Bar */}
+                <div className="pt-6 mt-4 border-t border-[#1E1E1E]/15 flex items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-1.5 font-mono-code text-xs font-bold text-[#34A853]">
+                    <Ticket className="w-4 h-4 text-[#34A853]" />
+                    <span>Free Student Pass</span>
+                  </div>
 
-            </div>
-          ))}
-        </div>
+                  <button
+                    onClick={() => onSelectEvent(event)}
+                    className="px-5 py-2.5 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-bold text-xs sm:text-sm font-mono-code rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Xem Chi Tiết Sự Kiện</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
     </section>

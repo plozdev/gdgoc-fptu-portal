@@ -2,17 +2,7 @@ import React from 'react';
 import {
   ArrowRight,
   BookOpen,
-  Sparkles,
-  Trophy,
-  CheckCircle2,
-  ChevronRight,
-  Flame,
-  Award,
-  Users,
-  Compass,
-  QrCode,
-  Layers,
-  Cpu
+  Award
 } from 'lucide-react';
 import { CHAPTER_INFO } from '../data/gdgData';
 import { GdgBracketsGlyph } from './GdgLogo';
@@ -71,38 +61,8 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
               Cộng đồng công nghệ sinh viên hàng đầu tại <strong className="text-[#1E1E1E]">Đại học FPT TP.HCM</strong>. Nơi bạn làm chủ công nghệ mới nhất từ Google, kết nối chuyên gia GDE và cùng đồng đội tạo nên những sản phẩm thực tế có sức ảnh hưởng.
             </p>
 
-            {/* Hero Value Strip */}
-            <div className="w-full max-w-2xl grid grid-cols-3 gap-3 pt-1">
-              <div className="p-3 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono-code text-[11px] font-extrabold text-[#EA4335] uppercase">Đợt Tuyển</span>
-                  <Flame className="w-3.5 h-3.5 text-[#EA4335]" />
-                </div>
-                <span className="font-extrabold text-base text-[#1E1E1E]">Gen 4.0</span>
-                <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Mọi chuyên ngành</span>
-              </div>
-
-              <div className="p-3 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono-code text-[11px] font-extrabold text-[#4285F4] uppercase">Quy Mô</span>
-                  <Layers className="w-3.5 h-3.5 text-[#4285F4]" />
-                </div>
-                <span className="font-extrabold text-base text-[#1E1E1E]">2 Khối • 6 Ban</span>
-                <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Tech & Non-Tech</span>
-              </div>
-
-              <div className="p-3 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono-code text-[11px] font-extrabold text-[#34A853] uppercase">Hệ Sinh Thái</span>
-                  <Sparkles className="w-3.5 h-3.5 text-[#34A853]" />
-                </div>
-                <span className="font-extrabold text-base text-[#1E1E1E]">Google Devs</span>
-                <span className="text-[11px] font-mono-code text-[#1E1E1E]/75 font-medium">Cloud, AI & Mentors</span>
-              </div>
-            </div>
-
             {/* Action Buttons */}
-            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto">
+            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto">
               <button
                 onClick={onOpenJoinModal}
                 id="hero-join-community-btn"
@@ -127,7 +87,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
 
           </div>
 
-          {/* Right Column (Request #3: Thay thế cửa sổ terminal code bằng Digital Admission Pass & Bento Chapter Showcase) */}
+          {/* Right Column: Digital Admission Pass & Chapter Recognition */}
           <div className="lg:col-span-5 space-y-4">
 
             {/* Card 1: Official Gen 4.0 Digital Admission Pass */}
@@ -214,55 +174,26 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
 
             </div>
 
-            {/* Bottom 2 Bento Mini-Cards */}
-            <div className="grid grid-cols-2 gap-4">
-
-              {/* Bento Card A: Official Award Showcase */}
-              <div className="p-4 bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-[24px] brutal-shadow-sm flex flex-col justify-between space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-[#FFFFFF] border-2 border-[#1E1E1E] flex items-center justify-center text-[#EA4335] shadow-xs">
-                    <Award className="w-5 h-5 text-[#EA4335]" />
-                  </div>
-                  <span className="font-mono-code text-[10px] font-extrabold px-2 py-0.5 bg-[#FFFFFF] border border-[#1E1E1E] rounded-full text-[#EA4335]">
-                    AI Riser 2026
-                  </span>
+            {/* Official Chapter Honor Card */}
+            <div className="p-4 bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-[24px] brutal-shadow-sm flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-[#FFFFFF] border-2 border-[#1E1E1E] flex items-center justify-center text-[#EA4335] shrink-0 shadow-xs">
+                  <Award className="w-6 h-6 text-[#EA4335]" />
                 </div>
-
                 <div>
-                  <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E] leading-tight">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono-code text-[10px] font-extrabold px-2 py-0.5 bg-[#FFFFFF] border border-[#1E1E1E] rounded-full text-[#EA4335]">
+                      AI Riser Vietnam 2026
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E] leading-tight mt-0.5">
                     "The GDGoC Impact Maker"
                   </h4>
-                  <p className="text-[11px] font-mono-code text-[#1E1E1E]/80 font-medium">
-                    Google Developer Ecosystem
+                  <p className="text-[11px] font-mono-code text-[#1E1E1E]/80">
+                    Google Developer Ecosystem Recognition
                   </p>
                 </div>
               </div>
-
-              {/* Bento Card B: 2 Khối Ban Chuyên Môn */}
-              <div
-                onClick={() => {
-                  const el = document.getElementById('departments');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="p-4 bg-[#FFFFFF] hover:bg-[#C3ECF6] border-[2.5px] border-[#1E1E1E] rounded-[24px] brutal-shadow-sm transition-colors flex flex-col justify-between space-y-2 cursor-pointer group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono-code text-[10px] font-extrabold px-2 py-0.5 bg-[#CCF6C5] border border-[#1E1E1E] rounded-full text-[#1E1E1E]">
-                    2 KHỐI • 6 BAN
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-[#1E1E1E] group-hover:translate-x-0.5 transition-transform" />
-                </div>
-
-                <div>
-                  <h4 className="font-extrabold text-sm sm:text-base text-[#1E1E1E] leading-tight">
-                    Khối Tech & Non-Tech
-                  </h4>
-                  <p className="text-[11px] font-mono-code text-[#4285F4] font-bold">
-                    Xem chi tiết & JD ➔
-                  </p>
-                </div>
-              </div>
-
             </div>
 
           </div>

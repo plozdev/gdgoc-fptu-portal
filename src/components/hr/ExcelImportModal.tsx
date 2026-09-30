@@ -9,7 +9,8 @@ import {
   AlertTriangle, 
   Info,
   RefreshCw,
-  Sparkles
+  Calendar,
+  Layers
 } from 'lucide-react';
 import { useMemberStore, ExcelImportRow } from '../../store/useMemberStore';
 
@@ -26,42 +27,50 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   availableGens,
   currentGen
 }) => {
-  const { importFromExcel, members } = useMemberStore();
+  const { importFromExcelFile, members, availableTenures, activeTenureId } = useMemberStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedGen, setSelectedGen] = useState<string>(currentGen || 'Gen 4.0');
-  const [customGen, setCustomGen] = useState('');
-  const [isCustomGen, setIsCustomGen] = useState(false);
+  const [selectedTenureId, setSelectedTenureId] = useState<string>(activeTenureId || availableTenures[0]?.id || '');
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedTenureId(activeTenureId || availableTenures[0]?.id || '');
+    }
+  }, [isOpen, activeTenureId, availableTenures]);
+
+  const [rawFile, setRawFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>('');
-  const [parsedRows, setParsedRows] = useState<ExcelImportRow[]>([]);
+  const [parsedRows, setParsedRows] = useState<any[]>([]);
   const [parsingError, setParsingError] = useState<string>('');
+  const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ added: number; errors: string[] } | null>(null);
 
   if (!isOpen) return null;
 
-  const targetGen = isCustomGen && customGen.trim() ? customGen.trim() : selectedGen;
+  const chosenTenure = availableTenures.find(t => t.id === selectedTenureId);
+  const targetGen = chosenTenure?.genLabel || chosenTenure?.name || currentGen;
 
-  // Generate and download standard Excel template
+  // Generate and download standard Excel template aligning with Backend Excel Parser
   const handleDownloadTemplate = () => {
-    const headers = ['Họ và tên', 'Khóa', 'MSSV', 'Email', 'Số điện thoại', 'Position'];
+    const headers = ['Họ và tên', 'MSSV', 'Email', 'Số điện thoại', 'Ban Chuyên Môn', 'Vai Trò', 'Position'];
     const sampleData = [
       headers,
-      ['Nguyễn Hoàng Nam', 'K21', 'SE184567', 'namnhse184567@fpt.edu.vn', '0912345678', 'AI Member'],
-      ['Trần Thị Bích Trâm', 'K20', 'SE173890', 'tramttbse173890@fpt.edu.vn', '0934567890', 'Media Lead'],
-      ['Lê Quốc Huy', 'K22', 'SE190112', 'huylqse190112@fpt.edu.vn', '0987654321', 'Cloud Member'],
-      ['Phan Thanh Hà', 'K19', 'SE160234', 'haptse160234@fpt.edu.vn', '0978123456', 'HR-Event Member']
+      ['Nguyễn Hoàng Nam', 'SE184567', 'namnhse184567@fpt.edu.vn', '0912345678', 'TECH_AI', 'MEMBER', 'AI Member'],
+      ['Trần Thị Bích Trâm', 'SE173890', 'tramttbse173890@fpt.edu.vn', '0934567890', 'MEDIA', 'DEPARTMENT_LEAD', 'Media Lead'],
+      ['Lê Quốc Huy', 'SE190112', 'huylqse190112@fpt.edu.vn', '0987654321', 'TECH_CLOUD', 'MEMBER', 'Cloud Member'],
+      ['Phan Thanh Hà', 'SE160234', 'haptse160234@fpt.edu.vn', '0978123456', 'HR_EVENT', 'MEMBER', 'HR-Event Member'],
+      ['Phạm Hoàng Long', 'SE180099', 'longphse180099@fpt.edu.vn', '0901234567', 'TECH_WEB', 'MEMBER', 'Frontend Developer']
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
-    // Set column widths for readability
     ws['!cols'] = [
       { wch: 24 }, // Họ và tên
-      { wch: 10 }, // Khóa
       { wch: 14 }, // MSSV
       { wch: 32 }, // Email
       { wch: 16 }, // Số điện thoại
+      { wch: 20 }, // Ban Chuyên Môn
+      { wch: 18 }, // Vai Trò
       { wch: 20 }  // Position
     ];
 
@@ -74,6 +83,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setRawFile(file);
     setFileName(file.name);
     setParsingError('');
     setImportResult(null);
@@ -86,8 +96,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         const firstSheetName = wb.SheetNames[0];
         const ws = wb.Sheets[firstSheetName];
         
-        // Convert to array of objects
-        const data = XLSX.utils.sheet_to_json<ExcelImportRow>(ws, { defval: '' });
+        const data = XLSX.utils.sheet_to_json<any>(ws, { defval: '' });
         
         if (data.length === 0) {
           setParsingError('File Excel không có dữ liệu hoặc định dạng bảng trống.');
@@ -95,11 +104,14 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
           return;
         }
 
-        // Check if required headers exist
         const firstRow = data[0];
-        const hasRequiredCols = 'Họ và tên' in firstRow || 'MSSV' in firstRow || 'Email' in firstRow;
-        if (!hasRequiredCols) {
-          setParsingError('File Excel không đúng mẫu! Bắt buộc có các cột: "Họ và tên", "Khóa", "MSSV", "Email", "Position". Hãy tải file mẫu để kiểm tra.');
+        const keys = Object.keys(firstRow).map(k => k.toLowerCase());
+        const hasName = keys.some(k => k.includes('tên') || k.includes('name'));
+        const hasMssv = keys.some(k => k.includes('mssv') || k.includes('mã số'));
+        const hasEmail = keys.some(k => k.includes('email') || k.includes('mail'));
+
+        if (!hasName || !hasMssv || !hasEmail) {
+          setParsingError('File Excel không đúng định dạng! Bắt buộc có các cột: "Họ và tên", "MSSV", "Email", "Ban Chuyên Môn". Hãy tải file mẫu để kiểm tra.');
           setParsedRows([]);
           return;
         }
@@ -113,13 +125,21 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     reader.readAsArrayBuffer(file);
   };
 
-  const handleConfirmImport = () => {
-    if (parsedRows.length === 0) return;
-    const result = importFromExcel(parsedRows, targetGen);
-    setImportResult(result);
+  const handleConfirmImport = async () => {
+    if (!rawFile) return;
+    setIsImporting(true);
+    try {
+      const result = await importFromExcelFile(rawFile);
+      setImportResult(result);
+    } catch (err: any) {
+      setParsingError(err.response?.data?.message || err.message || 'Lỗi tải file lên máy chủ');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleReset = () => {
+    setRawFile(null);
     setFileName('');
     setParsedRows([]);
     setParsingError('');
@@ -141,7 +161,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                 Nhập Danh Sách Thành Viên Từ Excel (.xlsx)
               </h3>
               <p className="text-xs text-slate-500">
-                Nhập hàng loạt thành viên vào hệ thống với chuẩn 6 cột thông tin FPTU
+                Đồng bộ hàng loạt nhân sự vào nhiệm kỳ với chuẩn định dạng Backend GDGoC Portal
               </p>
             </div>
           </div>
@@ -160,10 +180,10 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
                 <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>Quy chuẩn 6 cột file Excel:</span>
+                <span>Quy chuẩn 7 cột file Excel (Chuẩn Backend):</span>
               </div>
               <p className="text-xs text-blue-700 font-mono-code">
-                Họ và tên | Khóa (K19, K20...) | MSSV | Email | Số điện thoại | Position
+                Họ và tên | MSSV | Email | SĐT | Ban Chuyên Môn (TECH_AI, MEDIA...) | Vai Trò | Position
               </p>
             </div>
             <button
@@ -175,57 +195,27 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             </button>
           </div>
 
-          {/* Gen Configuration for Import */}
+          {/* Tenure Selection for Import */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-            <label className="block text-xs font-bold text-slate-700">
-              Gán Khóa Gen Cho Đợt Nhập Này:
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              {availableGens.map(g => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => {
-                    setSelectedGen(g);
-                    setIsCustomGen(false);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    !isCustomGen && selectedGen === g
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setIsCustomGen(true)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  isCustomGen
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                + Gen Tùy Chọn
-              </button>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                <span>Nhiệm Kỳ Áp Dụng Cho Đợt Nhập:</span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono-code">Tenure Database ID</span>
             </div>
 
-            {isCustomGen && (
-              <div className="pt-2 max-w-xs flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Gen 2.5, Gen 4.5..."
-                  value={customGen}
-                  onChange={(e) => setCustomGen(e.target.value)}
-                  className="px-3 py-1.5 bg-white border border-blue-400 rounded-lg text-xs font-medium focus:outline-none w-full"
-                />
-                <span className="text-[11px] text-slate-500 whitespace-nowrap">
-                  Hỗ trợ cả Gen số lẻ
-                </span>
-              </div>
-            )}
+            <select
+              value={selectedTenureId}
+              onChange={(e) => setSelectedTenureId(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+            >
+              {availableTenures.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} — {t.genLabel} {t.id === activeTenureId ? '(Đang hoạt động)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Upload Area */}
@@ -237,7 +227,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx, .xls"
+                accept=".xlsx, .xls, .csv"
                 onChange={handleFileUpload}
                 className="hidden"
               />
@@ -245,10 +235,10 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                 <UploadCloud className="w-7 h-7 text-blue-600" />
               </div>
               <p className="text-sm font-bold text-slate-800">
-                Nhấp để chọn file Excel (.xlsx) từ máy tính
+                Nhấp để chọn file Excel (.xlsx / .csv) từ máy tính
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                Hỗ trợ định dạng bảng tính Microsoft Excel (.xlsx, .xls)
+                Hỗ trợ định dạng bảng tính Microsoft Excel (.xlsx, .xls, .csv)
               </p>
             </div>
           )}
@@ -300,7 +290,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                 </div>
                 <button
                   onClick={handleReset}
-                  className="text-xs text-slate-500 hover:text-red-600 flex items-center gap-1 font-medium transition-colors"
+                  className="text-xs text-slate-500 hover:text-red-600 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Chọn file khác</span>
@@ -313,32 +303,39 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                     <tr>
                       <th className="px-3 py-2">STT</th>
                       <th className="px-3 py-2">Họ và Tên</th>
-                      <th className="px-3 py-2">Khóa</th>
                       <th className="px-3 py-2">MSSV</th>
                       <th className="px-3 py-2">Email FPT</th>
-                      <th className="px-3 py-2">Số Điện Thoại</th>
+                      <th className="px-3 py-2">Ban</th>
+                      <th className="px-3 py-2">Vai Trò</th>
                       <th className="px-3 py-2">Position</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {parsedRows.map((row, idx) => {
-                      const emailExists = members.some(m => m.email.toLowerCase() === (row['Email'] || '').toLowerCase());
-                      const isInvalid = !row['Họ và tên'] || !row['MSSV'] || !row['Email'];
+                      const name = row['Họ và tên'] || row['Họ tên'] || row['Full Name'] || row['name'] || '';
+                      const mssv = row['MSSV'] || row['Mã số'] || row['studentId'] || '';
+                      const email = row['Email'] || row['email'] || '';
+                      const dept = row['Ban Chuyên Môn'] || row['Ban'] || row['department'] || '';
+                      const role = row['Vai Trò'] || row['Role'] || 'MEMBER';
+                      const pos = row['Position'] || row['Chức danh'] || '';
+
+                      const emailExists = members.some(m => m.email.toLowerCase() === email.toLowerCase());
+                      const isInvalid = !name || !mssv || !email;
 
                       return (
                         <tr key={idx} className={isInvalid ? 'bg-red-50/50' : emailExists ? 'bg-amber-50/40' : 'hover:bg-slate-50'}>
                           <td className="px-3 py-2 font-mono-code text-slate-400">{idx + 1}</td>
-                          <td className="px-3 py-2 font-bold text-slate-800">{row['Họ và tên'] || <span className="text-red-500 font-normal">Thiếu tên</span>}</td>
-                          <td className="px-3 py-2 font-mono-code">{row['Khóa'] || 'K20'}</td>
-                          <td className="px-3 py-2 font-mono-code font-bold text-slate-700">{row['MSSV'] || <span className="text-red-500 font-normal">Thiếu</span>}</td>
+                          <td className="px-3 py-2 font-bold text-slate-800">{name || <span className="text-red-500 font-normal">Thiếu tên</span>}</td>
+                          <td className="px-3 py-2 font-mono-code font-bold text-slate-700">{mssv || <span className="text-red-500 font-normal">Thiếu</span>}</td>
                           <td className="px-3 py-2 font-mono-code">
-                            {row['Email']}
+                            {email}
                             {emailExists && <span className="text-amber-600 ml-1 text-[10px] font-bold">(Đã có)</span>}
                           </td>
-                          <td className="px-3 py-2 font-mono-code">{row['Số điện thoại'] || '-'}</td>
+                          <td className="px-3 py-2 font-semibold text-blue-700">{dept || 'Mặc định'}</td>
+                          <td className="px-3 py-2 font-mono-code text-[11px]">{role}</td>
                           <td className="px-3 py-2">
                             <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-semibold">
-                              {row['Position'] || 'Thành Viên'}
+                              {pos || 'Thành Viên'}
                             </span>
                           </td>
                         </tr>
@@ -354,7 +351,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="text-xs text-slate-500">
-            Khóa Gen áp dụng: <strong className="text-slate-800">{targetGen}</strong>
+            Nhiệm kỳ áp dụng: <strong className="text-slate-800">{targetGen}</strong>
           </div>
           
           <div className="flex items-center gap-2">
@@ -369,11 +366,21 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             {!importResult && parsedRows.length > 0 && (
               <button
                 type="button"
+                disabled={isImporting}
                 onClick={handleConfirmImport}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Xác Nhận Nhập ({parsedRows.length} Thành Viên)</span>
+                {isImporting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Đang Nhập Dữ Liệu Lên DB...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Xác Nhận Nhập ({parsedRows.length} Thành Viên)</span>
+                  </>
+                )}
               </button>
             )}
           </div>

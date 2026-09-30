@@ -1,7 +1,7 @@
 /**
  * @file client.ts
  * @description HTTP Client trung tâm cho GDGoC Portal Frontend.
- * Tự động gắn credentials (HttpOnly Cookie session_token) và chuẩn hóa response.
+ * Tự động gắn credentials (HttpOnly Cookie session_token) và unwrap envelope { data, message }.
  */
 
 export interface ApiResponse<T = any> {
@@ -20,6 +20,18 @@ export class ApiError extends Error {
     this.statusCode = statusCode;
     this.data = data;
   }
+}
+
+export function buildQueryString(params?: Record<string, any>): string {
+  if (!params) return '';
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== '') {
+      query.append(key, String(val));
+    }
+  });
+  const res = query.toString();
+  return res ? `?${res}` : '';
 }
 
 export async function request<T = any>(
@@ -60,7 +72,7 @@ export async function request<T = any>(
     throw new ApiError(errorMessage, response.status, json);
   }
 
-  // Nếu backend trả về cấu trúc { data: T, ... } thì unwrap data
+  // Nếu backend trả về cấu trúc { data: T, message: ... } thì unwrap data
   if (json && typeof json === 'object' && 'data' in json) {
     return json.data as T;
   }

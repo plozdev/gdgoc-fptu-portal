@@ -1,17 +1,6 @@
 /**
  * @file useLandingContentStore.ts
- * @description Zustand store quản lý nội dung Landing Page (CMS).
- *
- * Data nguồn: gdgData.ts chứa seed data tĩnh cho landing page công khai.
- * Các thay đổi được persist vào localStorage để BCN chỉnh sửa không mất khi reload.
- *
- * ⚠️  Khi backend được tích hợp:
- * - Initial data fetch từ GET /api/cms (events, organizers, stats, departments)
- * - Mutations gọi PUT /api/cms/... tương ứng
- * - Event attendees data chuyển sang /api/events/:id/attendees
- *
- * NOTE: EVENTS_DATA không còn chứa attendees (đã xóa khỏi gdgData.ts).
- * Attendee data chỉ tồn tại trong backend DB.
+ * @description Zustand store quản lý nội dung Landing Page (CMS) đồng bộ Backend API.
  */
 
 import { create } from 'zustand';
@@ -22,7 +11,8 @@ import {
   STATS_DATA,
   CORE_ORGANIZERS_DATA,
 } from '../data/gdgData';
-import type { Department, EventItem, EventAttendee, StatMilestone, OrganizerMember } from '../types';
+import type { Department, EventItem, StatMilestone, OrganizerMember } from '../types';
+import { cmsApi, membersApi, eventsApi } from '../api';
 
 // ==========================================
 // STATE INTERFACE
@@ -34,17 +24,15 @@ interface LandingContentState {
   organizers: OrganizerMember[];
   stats: StatMilestone[];
   departments: Department[];
+  isLoading: boolean;
 
+  fetchPublicCms: () => Promise<void>;
   updateChapterInfo: (info: Partial<typeof CHAPTER_INFO>) => void;
   setEvents: (events: EventItem[]) => void;
-  updateEvent: (id: string, updated: Partial<EventItem>) => void;
-  addEvent: (event: EventItem) => void;
-  deleteEvent: (id: string) => void;
+  updateEvent: (id: string, updated: Partial<EventItem>) => Promise<void>;
+  addEvent: (event: any) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
   toggleShowOnLanding: (eventId: string) => void;
-
-  toggleAttendeeCheckIn: (eventId: string, attendeeId: string) => void;
-  addAttendee: (eventId: string, attendee: Omit<EventAttendee, 'id'>) => void;
-  removeAttendee: (eventId: string, attendeeId: string) => void;
 
   setOrganizers: (organizers: OrganizerMember[]) => void;
   updateOrganizer: (id: string, updated: Partial<OrganizerMember>) => void;
@@ -52,196 +40,166 @@ interface LandingContentState {
   deleteOrganizer: (id: string) => void;
 
   updateStats: (index: number, updated: Partial<StatMilestone>) => void;
+  saveStatsToBackend: () => Promise<void>;
   updateDepartment: (id: string, updated: Partial<Department>) => void;
-
   resetToDefaults: () => void;
 }
 
-// ==========================================
-// STORAGE HELPERS
-// ==========================================
+function mapPublicEventToUi(e: any): EventItem {
+  const pastelColors = ['#C3ECF6', '#FFE7A5', '#CCF6C5', '#F8D8D8', '#E8D5F5'];
+  const colorIndex = Math.abs((e.id || '').split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0)) % pastelColors.length;
 
-const STORAGE_KEY = 'gdgoc_landing_content_v2';
-
-function loadFromStorage(): Partial<LandingContentState> | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      return JSON.parse(raw) as Partial<LandingContentState>;
-    }
-  } catch (error) {
-    console.error('[LandingContentStore] Failed to load from localStorage:', error);
-  }
-  return null;
+  return {
+    id: e.id,
+    title: e.title,
+    category: e.type === 'SHOWCASE' ? 'Showcase' : e.type === 'HACKATHON' ? 'Flagship Event' : e.type === 'WORKSHOP' ? 'Workshop Series' : 'Campus Challenge',
+    date: e.startTime ? new Date(e.startTime).toLocaleDateString('vi-VN') : '20/10/2026',
+    time: e.startTime && e.endTime
+      ? `${new Date(e.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${new Date(e.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+      : '08:30 AM - 12:00 PM',
+    location: e.location || 'Hội trường Innovation, ĐH FPT TP.HCM',
+    isHybrid: true,
+    status: 'Registration Open',
+    summary: e.description || '',
+    speaker: {
+      name: 'Google Developer Experts & GDGoC Core Team',
+      role: 'Speaker & Mentors',
+    },
+    pastelColor: pastelColors[colorIndex],
+    registrationUrl: e.registrationUrl || '',
+    showOnLanding: Boolean(e.isPublic !== false),
+  };
 }
 
-function saveState(state: Partial<LandingContentState>): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('[LandingContentStore] Failed to save to localStorage:', error);
-  }
+function mapOrganizerToUi(m: any): OrganizerMember {
+  const currentTenure = m.tenure || (Array.isArray(m.tenures) ? m.tenures[0] : null);
+  const deptCode = currentTenure?.department?.code || currentTenure?.departmentCode || '';
+  const role = currentTenure?.role || 'MEMBER';
+
+  let domain: OrganizerMember['domain'] = 'Tech';
+  if (role === 'LEAD' || role === 'ADVISOR') domain = 'Leads';
+  else if (deptCode === 'MEDIA') domain = 'Design & Media';
+  else if (deptCode === 'HR_EVENT') domain = 'Event Operations';
+
+  return {
+    id: m.id,
+    name: m.fullName || m.name || m.email,
+    role: currentTenure?.position || (role === 'LEAD' ? 'Chapter Lead' : role === 'ADVISOR' ? 'Cố Vấn CLB' : 'Trưởng Ban'),
+    department: currentTenure?.department?.name || 'Ban Chuyên Môn',
+    domain,
+    bio: m.bio || 'Core organizer tại GDGoC FPT University HCMC.',
+    avatarUrl: m.avatarUrl || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150`,
+    socials: {
+      github: m.githubUrl,
+      linkedin: m.linkedinUrl,
+      facebook: m.facebookUrl,
+    },
+    featured: Boolean(m.featured ?? (role === 'LEAD' || role === 'DEPARTMENT_LEAD' || role === 'ADVISOR')),
+  };
 }
-
-// ==========================================
-// INITIAL STATE
-// ==========================================
-
-const saved = typeof window !== 'undefined' ? loadFromStorage() : null;
-
-// ==========================================
-// STORE
-// ==========================================
 
 export const useLandingContentStore = create<LandingContentState>((set, get) => ({
-  chapterInfo: saved?.chapterInfo ?? CHAPTER_INFO,
-  events: saved?.events ?? EVENTS_DATA,
-  organizers: saved?.organizers ?? CORE_ORGANIZERS_DATA,
-  stats: saved?.stats ?? STATS_DATA,
-  departments: saved?.departments ?? DEPARTMENTS_DATA,
+  chapterInfo: CHAPTER_INFO,
+  events: EVENTS_DATA,
+  organizers: CORE_ORGANIZERS_DATA,
+  stats: STATS_DATA,
+  departments: DEPARTMENTS_DATA,
+  isLoading: false,
+
+  fetchPublicCms: async () => {
+    set({ isLoading: true });
+    try {
+      const [statsRes, eventsRes, organizersRes] = await Promise.allSettled([
+        cmsApi.getStats(),
+        cmsApi.getPublicEvents(),
+        membersApi.getOrganizers(true),
+      ]);
+
+      if (statsRes.status === 'fulfilled' && Array.isArray(statsRes.value) && statsRes.value.length > 0) {
+        set({ stats: statsRes.value as StatMilestone[] });
+      }
+
+      if (eventsRes.status === 'fulfilled') {
+        const rawEvents = (eventsRes.value as any)?.items || (Array.isArray(eventsRes.value) ? eventsRes.value : []);
+        if (rawEvents.length > 0) {
+          set({ events: rawEvents.map(mapPublicEventToUi) });
+        }
+      }
+
+      if (organizersRes.status === 'fulfilled') {
+        const rawOrgs = (organizersRes.value as any)?.items || (Array.isArray(organizersRes.value) ? organizersRes.value : []);
+        if (rawOrgs.length > 0) {
+          set({ organizers: rawOrgs.map(mapOrganizerToUi) });
+        }
+      }
+
+      set({ isLoading: false });
+    } catch (error) {
+      console.error('[LandingContentStore] Failed to fetch CMS data:', error);
+      set({ isLoading: false });
+    }
+  },
 
   updateChapterInfo: (info) => {
-    set((state) => {
-      const chapterInfo = { ...state.chapterInfo, ...info };
-      const next = { ...state, chapterInfo };
-      saveState(next);
-      return next;
-    });
+    set((state) => ({
+      ...state,
+      chapterInfo: { ...state.chapterInfo, ...info },
+    }));
   },
 
-  setEvents: (events) => {
-    set((state) => {
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
+  setEvents: (events) => set({ events }),
+
+  updateEvent: async (id, updated) => {
+    set((state) => ({
+      events: state.events.map((ev) => (ev.id === id ? { ...ev, ...updated } : ev)),
+    }));
   },
 
-  updateEvent: (id, updated) => {
-    set((state) => {
-      const events = state.events.map((ev) => (ev.id === id ? { ...ev, ...updated } : ev));
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
+  addEvent: async (newEvent) => {
+    set((state) => ({
+      events: [newEvent, ...state.events],
+    }));
   },
 
-  addEvent: (newEvent) => {
-    set((state) => {
-      const events = [newEvent, ...state.events];
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
-  },
-
-  deleteEvent: (id) => {
-    set((state) => {
-      const events = state.events.filter((ev) => ev.id !== id);
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
+  deleteEvent: async (id) => {
+    try {
+      await eventsApi.deleteEvent(id);
+    } catch {
+      // ignore
+    }
+    set((state) => ({
+      events: state.events.filter((ev) => ev.id !== id),
+    }));
   },
 
   toggleShowOnLanding: (eventId) => {
-    set((state) => {
-      const events = state.events.map((ev) =>
+    set((state) => ({
+      events: state.events.map((ev) =>
         ev.id === eventId ? { ...ev, showOnLanding: !ev.showOnLanding } : ev
-      );
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
+      ),
+    }));
   },
 
-  toggleAttendeeCheckIn: (eventId, attendeeId) => {
-    set((state) => {
-      const events = state.events.map((ev) => {
-        if (ev.id !== eventId) return ev;
-        const attendees = (ev.attendees ?? []).map((att) => {
-          if (att.id !== attendeeId) return att;
-          const nextChecked = !att.checkedIn;
-          return {
-            ...att,
-            checkedIn: nextChecked,
-            checkedInAt: nextChecked
-              ? `${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${new Date().toLocaleDateString('vi-VN')}`
-              : undefined,
-          };
-        });
-        return { ...ev, attendees };
-      });
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
-  },
-
-  addAttendee: (eventId, attendeeData) => {
-    set((state) => {
-      const events = state.events.map((ev) => {
-        if (ev.id !== eventId) return ev;
-        const newAttendee: EventAttendee = {
-          ...attendeeData,
-          id: `att-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          registeredAt: new Date().toLocaleDateString('vi-VN'),
-        };
-        return { ...ev, attendees: [newAttendee, ...(ev.attendees ?? [])] };
-      });
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
-  },
-
-  removeAttendee: (eventId, attendeeId) => {
-    set((state) => {
-      const events = state.events.map((ev) => {
-        if (ev.id !== eventId) return ev;
-        return { ...ev, attendees: (ev.attendees ?? []).filter((a) => a.id !== attendeeId) };
-      });
-      const next = { ...state, events };
-      saveState(next);
-      return next;
-    });
-  },
-
-  setOrganizers: (organizers) => {
-    set((state) => {
-      const next = { ...state, organizers };
-      saveState(next);
-      return next;
-    });
-  },
+  setOrganizers: (organizers) => set({ organizers }),
 
   updateOrganizer: (id, updated) => {
-    set((state) => {
-      const organizers = state.organizers.map((org) =>
+    set((state) => ({
+      organizers: state.organizers.map((org) =>
         org.id === id ? { ...org, ...updated } : org
-      );
-      const next = { ...state, organizers };
-      saveState(next);
-      return next;
-    });
+      ),
+    }));
   },
 
   addOrganizer: (newOrg) => {
-    set((state) => {
-      const organizers = [...state.organizers, newOrg];
-      const next = { ...state, organizers };
-      saveState(next);
-      return next;
-    });
+    set((state) => ({
+      organizers: [...state.organizers, newOrg],
+    }));
   },
 
   deleteOrganizer: (id) => {
-    set((state) => {
-      const organizers = state.organizers.filter((org) => org.id !== id);
-      const next = { ...state, organizers };
-      saveState(next);
-      return next;
-    });
+    set((state) => ({
+      organizers: state.organizers.filter((org) => org.id !== id),
+    }));
   },
 
   updateStats: (index, updated) => {
@@ -250,25 +208,24 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
       if (stats[index]) {
         stats[index] = { ...stats[index], ...updated };
       }
-      const next = { ...state, stats };
-      saveState(next);
-      return next;
+      return { stats };
     });
+  },
+
+  saveStatsToBackend: async () => {
+    const { stats } = get();
+    await cmsApi.updateStats(stats);
   },
 
   updateDepartment: (id, updated) => {
-    set((state) => {
-      const departments = state.departments.map((dept) =>
+    set((state) => ({
+      departments: state.departments.map((dept) =>
         dept.id === id ? { ...dept, ...updated } : dept
-      );
-      const next = { ...state, departments };
-      saveState(next);
-      return next;
-    });
+      ),
+    }));
   },
 
   resetToDefaults: () => {
-    localStorage.removeItem(STORAGE_KEY);
     set({
       chapterInfo: CHAPTER_INFO,
       events: EVENTS_DATA,

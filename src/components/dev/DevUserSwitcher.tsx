@@ -13,48 +13,44 @@
  */
 
 import React, { useState } from 'react';
-import type { UserSession, Tier, BanId } from '../../mocks/fixtures/users';
-import { BAN_NAMES } from '../../mocks/fixtures/users';
+import type { UserSession, Tier, BanId } from '../../types/auth.types';
+import { BAN_NAMES, mapBackendUserToSession } from '../../types/auth.types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { UserCircle2, X, Check, ChevronDown } from 'lucide-react';
 
 // ==========================================
 // PRESET USERS CHO DEV TESTING
-// Thêm vào đây khi cần test các role cụ thể
 // ==========================================
 const DEV_PRESET_USERS: UserSession[] = [
-  // BCN
-  { id: 'dev-1', email: 'lead@fpt.edu.vn',    name: 'Chapter Lead (BCN)',     tier: 'ORG_ADMIN', banId: null,       banName: 'Ban Chủ Nhiệm' },
-  { id: 'dev-2', email: 'colead@fpt.edu.vn',  name: 'Co-Chapter Lead (BCN)',  tier: 'ORG_ADMIN', banId: null,       banName: 'Ban Chủ Nhiệm' },
-  // Advisor
-  { id: 'dev-3', email: 'advisor@fpt.edu.vn', name: 'Giảng Viên Cố Vấn',     tier: 'ADVISOR',   banId: null,       banName: 'Cố Vấn CLB' },
-  // Tech Leads
-  { id: 'dev-4', email: 'ai.lead@fpt.edu.vn',       name: 'AI Lead',       tier: 'BAN_LEAD',  banId: 'ai',       banName: BAN_NAMES['ai'] },
-  { id: 'dev-5', email: 'cloud.lead@fpt.edu.vn',    name: 'Cloud Lead',    tier: 'BAN_LEAD',  banId: 'cloud',    banName: BAN_NAMES['cloud'] },
-  { id: 'dev-6', email: 'web.lead@fpt.edu.vn',      name: 'Web Lead',      tier: 'BAN_LEAD',  banId: 'web',      banName: BAN_NAMES['web'] },
-  { id: 'dev-7', email: 'research.lead@fpt.edu.vn', name: 'Research Lead', tier: 'BAN_LEAD',  banId: 'research', banName: BAN_NAMES['research'] },
-  // Non-Tech Leads
-  { id: 'dev-8', email: 'media.lead@fpt.edu.vn',    name: 'Media Lead',    tier: 'BAN_LEAD',  banId: 'media',    banName: BAN_NAMES['media'] },
-  { id: 'dev-9', email: 'hr.lead@fpt.edu.vn',       name: 'HR-Event Lead', tier: 'BAN_LEAD',  banId: 'hr-event', banName: BAN_NAMES['hr-event'] },
+  // BCN & Advisor
+  { id: 'lead', email: 'lead@gdgfptu.dev',       name: 'Đặng Mai Phương (Chapter Lead)', tier: 'ORG_ADMIN',  banId: null,       banName: 'Ban Chủ Nhiệm' },
+  { id: 'advisor', email: 'advisor@gdgfptu.dev', name: 'ThS. Trần Hoàng Nam (Cố Vấn)',  tier: 'ADVISOR',    banId: null,       banName: 'Cố Vấn CLB' },
+  // Leads
+  { id: 'web-lead', email: 'web.lead@gdgfptu.dev',     name: 'Phạm Gia Huy (Web Lead)',     tier: 'BAN_LEAD',   banId: 'web',      banName: BAN_NAMES['web'] },
+  { id: 'ai-lead', email: 'ai.lead@gdgfptu.dev',       name: 'Lê Hoàng Long (AI Lead)',     tier: 'BAN_LEAD',   banId: 'ai',       banName: BAN_NAMES['ai'] },
+  { id: 'hr-lead', email: 'hr.lead@gdgfptu.dev',       name: 'Nguyễn Thảo Vy (HR Lead)',    tier: 'BAN_LEAD',   banId: 'hr-event', banName: BAN_NAMES['hr-event'] },
+  { id: 'media-lead', email: 'media.lead@gdgfptu.dev', name: 'Trần Minh Quân (Media Lead)', tier: 'BAN_LEAD',   banId: 'media',    banName: BAN_NAMES['media'] },
   // Members
-  { id: 'dev-10', email: 'ai.member@fpt.edu.vn',     name: 'AI Member',       tier: 'BAN_MEMBER', banId: 'ai',       banName: BAN_NAMES['ai'] },
-  { id: 'dev-11', email: 'cloud.member@fpt.edu.vn',  name: 'Cloud Member',    tier: 'BAN_MEMBER', banId: 'cloud',    banName: BAN_NAMES['cloud'] },
-  { id: 'dev-12', email: 'web.member@fpt.edu.vn',    name: 'Web Member',      tier: 'BAN_MEMBER', banId: 'web',      banName: BAN_NAMES['web'] },
-  { id: 'dev-13', email: 'hr.member@fpt.edu.vn',     name: 'HR-Event Member', tier: 'BAN_MEMBER', banId: 'hr-event', banName: BAN_NAMES['hr-event'] },
+  { id: 'member-web', email: 'member.web@gdgfptu.dev', name: 'Hoàng Kim Ngân (Web Dev)',   tier: 'BAN_MEMBER', banId: 'web',      banName: BAN_NAMES['web'] },
+  { id: 'member-ai', email: 'member.ai@gdgfptu.dev',   name: 'Vũ Đức Thành (AI Core)',      tier: 'BAN_MEMBER', banId: 'ai',       banName: BAN_NAMES['ai'] },
+  { id: 'member-hr', email: 'member.hr@gdgfptu.dev',   name: 'Đỗ Tuấn Kiệt (HR Member)',    tier: 'BAN_MEMBER', banId: 'hr-event', banName: BAN_NAMES['hr-event'] },
+  { id: 'ctv-media', email: 'ctv.media@gdgfptu.dev',   name: 'Bùi Yến Nhi (CTV Media)',     tier: 'BAN_MEMBER', banId: 'media',    banName: BAN_NAMES['media'] },
 ];
 
 const TIER_COLORS: Record<Tier, string> = {
-  ADVISOR:    'bg-purple-50 text-purple-900 border-purple-200',
-  ORG_ADMIN:  'bg-red-50 text-red-900 border-red-200',
-  BAN_LEAD:   'bg-blue-50 text-blue-900 border-blue-200',
-  BAN_MEMBER: 'bg-slate-100 text-slate-900 border-slate-300',
+  ADVISOR:      'bg-purple-50 text-purple-900 border-purple-200',
+  ORG_ADMIN:    'bg-red-50 text-red-900 border-red-200',
+  BAN_LEAD:     'bg-blue-50 text-blue-900 border-blue-200',
+  BAN_MEMBER:   'bg-slate-100 text-slate-900 border-slate-300',
+  COLLABORATOR: 'bg-emerald-50 text-emerald-900 border-emerald-200',
 };
 
 const TIER_BADGE: Record<Tier, string> = {
-  ADVISOR:    'bg-purple-600 text-white',
-  ORG_ADMIN:  'bg-red-500 text-white',
-  BAN_LEAD:   'bg-blue-600 text-white',
-  BAN_MEMBER: 'bg-slate-500 text-white',
+  ADVISOR:      'bg-purple-600 text-white',
+  ORG_ADMIN:    'bg-red-500 text-white',
+  BAN_LEAD:     'bg-blue-600 text-white',
+  BAN_MEMBER:   'bg-slate-500 text-white',
+  COLLABORATOR: 'bg-emerald-600 text-white',
 };
 
 export const DevUserSwitcher: React.FC = () => {
@@ -66,22 +62,26 @@ export const DevUserSwitcher: React.FC = () => {
 
   const handleSwitchUser = async (preset: UserSession) => {
     try {
-      const res = await fetch('/api/auth/switch-user', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userData: preset }),
+        body: JSON.stringify({ email: preset.email, password: 'GDGoC@2026' }),
       });
       if (res.ok) {
-        const switched = await res.json() as UserSession;
-        setUser(switched);
-        setIsOpen(false);
+        const meRes = await fetch('/api/auth/me');
+        if (meRes.ok) {
+          const user = await meRes.json();
+          setUser(mapBackendUserToSession(user));
+          setIsOpen(false);
+          return;
+        }
       }
     } catch (error) {
-      console.error('[DevUserSwitcher] Failed to switch user:', error);
-      // Fallback: inject trực tiếp vào store mà không cần MSW
-      setUser(preset);
-      setIsOpen(false);
+      console.error('[DevUserSwitcher] Failed to switch user via API:', error);
     }
+    // Fallback inject directly
+    setUser(preset);
+    setIsOpen(false);
   };
 
   const handleLogout = () => {

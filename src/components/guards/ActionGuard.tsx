@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { Tier } from '../../mocks/fixtures/users';
+import { Tier } from '../../types/auth.types';
 
 interface ActionGuardProps {
   requiredTier: Tier[];

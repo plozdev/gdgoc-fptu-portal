@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useMemberStore } from '../../store/useMemberStore';
 import { 
   Folder, 
   FolderLock, 
-  FolderGit2, 
   Lock, 
   Unlock, 
   ExternalLink, 
@@ -12,329 +12,527 @@ import {
   FileCode, 
   FileArchive, 
   Search, 
-  Upload, 
+  Plus, 
   ShieldCheck, 
   AlertCircle,
-  HardDrive
+  HardDrive,
+  Trash2,
+  Filter,
+  Loader2,
+  CheckCircle2,
+  X
 } from 'lucide-react';
-import { BanId, BAN_NAMES } from '../../mocks/fixtures/users';
+import { BanId, BAN_NAMES, BAN_ID_TO_DEPT_CODE, DEPT_CODE_TO_BAN_ID } from '../../types/auth.types';
+import { assetsApi, DriveCategory, AccessLevel } from '../../api';
 
-interface AssetFolder {
+interface AssetItem {
   id: string;
   name: string;
-  banId: BanId | 'shared';
-  description: string;
-  itemCount: number;
-  driveLink: string;
-  files: Array<{
+  description?: string;
+  category: DriveCategory;
+  driveUrl: string;
+  driveFileId: string;
+  accessLevel: AccessLevel;
+  createdAt: string;
+  department?: {
+    id: string;
+    code: string;
     name: string;
-    type: 'doc' | 'image' | 'code' | 'archive';
-    size: string;
-    updatedAt: string;
-  }>;
+  };
+  event?: {
+    id: string;
+    title: string;
+  };
+  tenure?: {
+    id: string;
+    name: string;
+    genLabel: string;
+  };
 }
 
-const ASSET_FOLDERS: AssetFolder[] = [
-  // 1. Thư mục Chung Toàn CLB
-  {
-    id: 'shared-all',
-    name: '00_TAI_NGUYEN_CHUNG_TOAN_CLB',
-    banId: 'shared',
-    description: 'Logo Google Developer Groups, Google Brand Guidelines, Master Slide Deck, Avatar Frame Gen 4.0',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/gdgoc-fptu-shared',
-    files: []
-  },
-  // 2. Ban AI
-  {
-    id: 'ban-ai',
-    name: '01_BAN_AI_RESEARCH_NOTEBOOKS',
-    banId: 'ai',
-    description: 'Notebooks mẫu Gemini API, Codelabs, Vertex AI Prompt Engineering, Datasets.',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/ban-ai-internal',
-    files: []
-  },
-  // 3. Ban Cloud
-  {
-    id: 'ban-cloud',
-    name: '02_BAN_CLOUD_INFRA_DOCKER',
-    banId: 'cloud',
-    description: 'Terraform scripts, Dockerfile mẫu, GCP architecture diagrams, Service Account keys.',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/ban-cloud-internal',
-    files: []
-  },
-  // 4. Ban Web
-  {
-    id: 'ban-web',
-    name: '03_BAN_WEB_SOURCE_COMPONENTS',
-    banId: 'web',
-    description: 'Frontend components, API schema, Figma inspect tokens, Swagger export.',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/ban-web-internal',
-    files: []
-  },
-  // 5. Ban Research
-  {
-    id: 'ban-research',
-    name: '04_BAN_RESEARCH_ACADEMIC_PAPERS',
-    banId: 'research',
-    description: 'Bản thảo bài báo khoa học LaTeX, dữ liệu thực nghiệm, tài liệu hướng dẫn viết paper.',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/ban-research-internal',
-    files: []
-  },
-  // 6. Ban Media
-  {
-    id: 'ban-media',
-    name: '05_BAN_MEDIA_RAW_FOOTAGE_EXPORTS',
-    banId: 'media',
-    description: 'Footage quay sự kiện 4K, Premiere Pro Projects, Video recap, After Effects assets.',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/ban-media-internal',
-    files: []
-  },
-  // 7. Ban HR-Event
-  {
-    id: 'ban-hr-event',
-    name: '06_BAN_HR_EVENT_LOGISTICS_PLANS',
-    banId: 'hr-event',
-    description: 'Timeline chạy sự kiện, danh sách đại biểu khách mời, kịch bản MC, dự trù ngân sách.',
-    itemCount: 0,
-    driveLink: 'https://drive.google.com/drive/folders/ban-hr-internal',
-    files: []
-  }
+const CATEGORY_NAMES: Record<DriveCategory, string> = {
+  BRAND_KIT: 'Bộ Nhận Diện Brand Kit',
+  TECH_LIBRARY: 'Tài Liệu & Source Code Kỹ Thuật',
+  MEDIA_VAULT: 'Kho Media, Footage & Video',
+  PR_COMMS: 'Tài Liệu PR & Truyền Thông',
+  FINANCE: 'Tài Chính & Kế Hoạch',
+  HANDOVER_VAULT: 'Tài Liệu Bàn Giao & Lưu Trữ',
+};
+
+const CATEGORIES: DriveCategory[] = [
+  'BRAND_KIT',
+  'TECH_LIBRARY',
+  'MEDIA_VAULT',
+  'PR_COMMS',
+  'FINANCE',
+  'HANDOVER_VAULT',
 ];
 
 export const AssetHub: React.FC = () => {
   const { user } = useAuthStore();
-  const [activeFolderId, setActiveFolderId] = useState<string>('shared-all');
-  const [requestSent, setRequestSent] = useState(false);
+  const { activeTenureId } = useMemberStore();
+
+  const [assets, setAssets] = useState<AssetItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedBan, setSelectedBan] = useState<string>('all');
+
+  // Modal Add Asset State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newCategory, setNewCategory] = useState<DriveCategory>('TECH_LIBRARY');
+  const [newDriveUrl, setNewDriveUrl] = useState('');
+  const [newDriveFileId, setNewDriveFileId] = useState('');
+  const [newAccessLevel, setNewAccessLevel] = useState<AccessLevel>('INTERNAL_MEMBER');
+  const [newBan, setNewBan] = useState<BanId | 'shared'>('shared');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
+  const isLead = user?.tier === 'BAN_LEAD' || isOrgAdmin;
 
-  // Check if current user can access a folder
-  const canAccessFolder = (folder: AssetFolder) => {
-    if (folder.banId === 'shared') return true;
-    if (isOrgAdmin) return true;
-    return user?.banId === folder.banId;
+  const fetchAssets = async () => {
+    setIsLoading(true);
+    try {
+      const res = await assetsApi.getAssets({ limit: 100 });
+      const items = (res as any)?.items || (Array.isArray(res) ? res : []);
+      setAssets(items);
+    } catch (err) {
+      console.error('Failed to fetch assets:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const selectedFolder = ASSET_FOLDERS.find(f => f.id === activeFolderId) || ASSET_FOLDERS[0];
-  const hasAccess = canAccessFolder(selectedFolder);
+  useEffect(() => {
+    fetchAssets();
+  }, []);
+
+  const handleCreateAsset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() || !newDriveUrl.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const deptCode = newBan === 'shared' ? undefined : BAN_ID_TO_DEPT_CODE[newBan];
+      const fileId = newDriveFileId.trim() || `file_${Date.now()}`;
+
+      await assetsApi.createAsset({
+        name: newName.trim(),
+        description: newDesc.trim() || undefined,
+        category: newCategory,
+        driveUrl: newDriveUrl.trim(),
+        driveFileId: fileId,
+        accessLevel: newAccessLevel,
+        departmentCode: deptCode,
+        tenureId: activeTenureId || undefined,
+      });
+
+      setIsAddModalOpen(false);
+      setNewName('');
+      setNewDesc('');
+      setNewDriveUrl('');
+      setNewDriveFileId('');
+      setActionSuccess('Đăng ký tài nguyên Google Drive thành công!');
+      setTimeout(() => setActionSuccess(null), 3500);
+      await fetchAssets();
+    } catch (err: any) {
+      console.error('Failed to create asset:', err);
+      alert(err.message || 'Lỗi khi tạo tài nguyên');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAsset = async (id: string, name: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa tài nguyên "${name}"?`)) return;
+    try {
+      await assetsApi.deleteAsset(id);
+      setActionSuccess(`Đã xóa "${name}" thành công!`);
+      setTimeout(() => setActionSuccess(null), 3500);
+      await fetchAssets();
+    } catch (err: any) {
+      console.error('Failed to delete asset:', err);
+      alert(err.message || 'Lỗi khi xóa tài nguyên');
+    }
+  };
+
+  // Filter Assets
+  const filteredAssets = useMemo(() => {
+    return assets.filter((asset) => {
+      const matchesSearch =
+        !searchQuery ||
+        asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (asset.description && asset.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesCat =
+        selectedCategory === 'all' || asset.category === selectedCategory;
+
+      const assetBanId = asset.department?.code
+        ? DEPT_CODE_TO_BAN_ID[asset.department.code]
+        : 'shared';
+
+      const matchesBan =
+        selectedBan === 'all' ||
+        (selectedBan === 'shared' && !asset.department) ||
+        assetBanId === selectedBan;
+
+      return matchesSearch && matchesCat && matchesBan;
+    });
+  }, [assets, searchQuery, selectedCategory, selectedBan]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto select-none">
-      {/* Top Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono-code">
-              SMART GOOGLE DRIVE HUB
-            </span>
-            <span className="text-xs text-slate-400">•</span>
-            <span className="text-xs text-slate-500 font-medium">Đồng bộ Google Workspace FPT Education</span>
-          </div>
-          <h2 className="text-lg font-extrabold text-slate-900">
-            Kho Tài Nguyên Số Phân Quyền Theo Ban
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Thành viên chỉ được truy cập vào Thư mục Chung và Thư mục Ban chuyên môn của mình. Chapter Lead có toàn quyền quản trị tất cả các ban.
-          </p>
+    <div className="space-y-6 max-w-7xl mx-auto select-none pb-12">
+      {/* Toast */}
+      {actionSuccess && (
+        <div className="fixed top-20 right-8 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-bounce">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <p className="text-xs font-bold">{actionSuccess}</p>
         </div>
+      )}
 
-        <div className="flex items-center gap-2 shrink-0">
-          <a
-            href="https://drive.google.com"
-            target="_blank"
-            rel="noreferrer"
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <HardDrive className="w-4 h-4 text-blue-400" />
-            <span>Mở Drive Gốc</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg border border-slate-700/60 relative overflow-hidden">
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold px-3 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                GOOGLE DRIVE HUB • GDGoC-OS
+              </span>
+              <span className="text-xs text-slate-400">|</span>
+              <span className="text-xs text-emerald-300 font-medium flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> Phân quyền 4 cấp độ
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+              Kho Tài Nguyên & Lưu Trữ Đám Mây
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300">
+              Truy cập tập trung toàn bộ Brand Kit, Notebook AI, source code, tài liệu bàn giao và media footage chính thức của CLB.
+            </p>
+          </div>
+
+          {isLead && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg flex items-center gap-2 cursor-pointer transition-all shrink-0 self-start md:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Đăng Ký Tài Nguyên Drive</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main Two-Column Explorer Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column: Folders List */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-2.5">
-          <div className="px-2 py-1 flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
-            <span>Danh Sách Thư Mục</span>
-            <span className="font-mono-code text-[11px]">{ASSET_FOLDERS.length} Folders</span>
-          </div>
+      {/* Control / Filter Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative w-full lg:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm tài liệu, thư mục, notebook..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-          <div className="space-y-1.5">
-            {ASSET_FOLDERS.map(folder => {
-              const accessible = canAccessFolder(folder);
-              const isSelected = folder.id === activeFolderId;
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          {/* Category Filter */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          >
+            <option value="all">Tất Cả Danh Mục ({assets.length})</option>
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {CATEGORY_NAMES[cat]}
+              </option>
+            ))}
+          </select>
 
-              return (
-                <button
-                  key={folder.id}
-                  onClick={() => setActiveFolderId(folder.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? 'bg-blue-50/80 border-blue-400 text-slate-900 shadow-xs'
-                      : 'bg-slate-50/50 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300 text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      accessible 
-                        ? 'bg-blue-100 text-blue-600' 
-                        : 'bg-slate-200 text-slate-500'
+          {/* Department Filter */}
+          <select
+            value={selectedBan}
+            onChange={(e) => setSelectedBan(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          >
+            <option value="all">Toàn Bộ CLB & Các Ban</option>
+            <option value="shared">Thư Mục Dùng Chung</option>
+            {Object.entries(BAN_NAMES).map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Asset Cards Grid */}
+      {isLoading ? (
+        <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="text-xs font-bold">Đang tải kho tài nguyên Google Drive...</span>
+        </div>
+      ) : filteredAssets.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-12 text-center max-w-lg mx-auto space-y-3">
+          <HardDrive className="w-12 h-12 text-slate-300 mx-auto" />
+          <h3 className="text-base font-extrabold text-slate-800">Không tìm thấy tài nguyên nào</h3>
+          <p className="text-xs text-slate-500">
+            {searchQuery || selectedCategory !== 'all' || selectedBan !== 'all'
+              ? 'Thử thay đổi từ khóa hoặc bộ lọc để xem các tài nguyên khác.'
+              : 'Hiện chưa có tài nguyên Google Drive nào được đăng ký trong hệ thống.'}
+          </p>
+          {isLead && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="mt-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Đăng ký tài nguyên đầu tiên
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredAssets.map((asset) => {
+            const isShared = !asset.department;
+            const categoryLabel = CATEGORY_NAMES[asset.category] || asset.category;
+
+            return (
+              <div
+                key={asset.id}
+                className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between group relative"
+              >
+                <div>
+                  {/* Top Tags */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 truncate">
+                      {categoryLabel}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      asset.accessLevel === 'PUBLIC'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : asset.accessLevel === 'INTERNAL_MEMBER'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : asset.accessLevel === 'EXECUTIVE_ONLY'
+                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
-                      {accessible ? <Folder className="w-5 h-5" /> : <FolderLock className="w-5 h-5" />}
+                      {asset.accessLevel === 'PUBLIC'
+                        ? 'Public'
+                        : asset.accessLevel === 'INTERNAL_MEMBER'
+                        ? 'Nội Bộ'
+                        : asset.accessLevel === 'EXECUTIVE_ONLY'
+                        ? 'Ban Chủ Nhiệm'
+                        : 'Ban Chuyên Môn'}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Folder className="w-5 h-5 text-blue-500" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold truncate text-slate-900">{folder.name}</p>
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                        {folder.banId === 'shared' ? 'Toàn CLB (Chung)' : BAN_NAMES[folder.banId as BanId]}
+                      <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                        {asset.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        {asset.department?.name || 'Tài nguyên chung toàn CLB'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="shrink-0 text-right">
-                    {accessible ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                        <Unlock className="w-2.5 h-2.5" />
-                        <span>Mở</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 flex items-center gap-1">
-                        <Lock className="w-2.5 h-2.5" />
-                        <span>Khóa</span>
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right Column: Files & Permission View */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col">
-          {/* Header of selected folder */}
-          <div className="border-b border-slate-200 pb-4 mb-4">
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono-code">
-                {selectedFolder.banId === 'shared' ? 'PUBLIC INTERNAL' : `PHẠM VI: ${selectedFolder.banId.toUpperCase()}`}
-              </span>
-              <a
-                href={selectedFolder.driveLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
-              >
-                <span>Mở thư mục trên Google Drive</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-
-            <h3 className="text-base font-extrabold text-slate-900">{selectedFolder.name}</h3>
-            <p className="text-xs text-slate-500 mt-1">{selectedFolder.description}</p>
-          </div>
-
-          {/* Access Denied View if user doesn't have permission */}
-          {!hasAccess ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50 rounded-xl border border-slate-200">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-3">
-                <Lock className="w-6 h-6" />
-              </div>
-              <h4 className="text-sm font-extrabold text-slate-900 mb-1">Thư Mục Này Được Đặt Ở Chế Độ Riêng Tư</h4>
-              <p className="text-xs text-slate-600 max-w-sm mb-4 leading-relaxed">
-                Tài nguyên này chỉ dành riêng cho thành viên trực thuộc <strong>{BAN_NAMES[selectedFolder.banId as BanId]}</strong>. Bạn hiện đang thuộc <span className="font-bold text-blue-600">{user?.banName || 'Ban khác'}</span>.
-              </p>
-              {requestSent ? (
-                <span className="px-4 py-2 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 inline-block">
-                  ✓ Đã gửi yêu cầu cấp quyền đến Chapter Lead và Trưởng Ban!
-                </span>
-              ) : (
-                <button
-                  onClick={() => setRequestSent(true)}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  Gửi Yêu Cầu Quyền Truy Cập
-                </button>
-              )}
-            </div>
-          ) : (
-            /* Files list when access is granted */
-            <div className="space-y-2 flex-1">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-2">
-                <span>Tài liệu trong thư mục ({selectedFolder.files.length})</span>
-                <a 
-                  href={selectedFolder.driveLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Tải lên tệp qua Google Drive</span>
-                </a>
-              </div>
-
-              {selectedFolder.files.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/70 rounded-xl border border-dashed border-slate-200 min-h-[220px]">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mb-3 shadow-xs">
-                    <HardDrive className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-sm font-extrabold text-slate-800 mb-1">Thư Mục Hiện Đang Trống</h4>
-                  <p className="text-xs text-slate-500 max-w-sm mb-4 leading-relaxed">
-                    Chưa có tệp tài nguyên nào được tải lên cho thư mục này trong kỳ Fall 2026.
-                  </p>
-                  <a
-                    href={selectedFolder.driveLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Mở Google Drive & Tải Tệp Lên</span>
-                  </a>
+                  {/* Description */}
+                  {asset.description && (
+                    <p className="text-xs text-slate-600 line-clamp-2 mt-2">
+                      {asset.description}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedFolder.files.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 flex items-center justify-between gap-3 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 pr-2">
-                        <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 text-slate-600">
-                          {file.type === 'doc' && <FileText className="w-4 h-4 text-blue-500" />}
-                          {file.type === 'image' && <Image className="w-4 h-4 text-pink-500" />}
-                          {file.type === 'code' && <FileCode className="w-4 h-4 text-emerald-500" />}
-                          {file.type === 'archive' && <FileArchive className="w-4 h-4 text-amber-500" />}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 truncate">{file.name}</p>
-                          <p className="text-[10px] text-slate-500">{file.size} • Cập nhật {file.updatedAt}</p>
-                        </div>
-                      </div>
 
-                      <a
-                        href={selectedFolder.driveLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-2.5 py-1 bg-white hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-300 transition-colors shrink-0 flex items-center gap-1"
+                {/* Footer Actions */}
+                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {asset.createdAt ? new Date(asset.createdAt).toLocaleDateString('vi-VN') : ''}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {isLead && (
+                      <button
+                        onClick={() => handleDeleteAsset(asset.id, asset.name)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Xóa tài nguyên"
                       >
-                        <span>Xem</span>
-                        <ExternalLink className="w-3 h-3 text-slate-400" />
-                      </a>
-                    </div>
-                  ))}
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <a
+                      href={asset.driveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-blue-600 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <span>Mở Drive</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
+
+      {/* Modal Add Asset */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <HardDrive className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Đăng Ký Tài Nguyên Drive Mới
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Lưu trữ liên kết Google Drive chính thức lên hệ thống
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAsset} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tên tài nguyên / Thư mục <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Master Brand Kit 2026, Notebooks Vertex AI"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Google Drive Link (URL) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://drive.google.com/drive/folders/..."
+                  value={newDriveUrl}
+                  onChange={(e) => setNewDriveUrl(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Danh mục tài nguyên
+                  </label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value as DriveCategory)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {CATEGORY_NAMES[cat]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Ban sở hữu
+                  </label>
+                  <select
+                    value={newBan}
+                    onChange={(e) => setNewBan(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="shared">Chung toàn CLB</option>
+                    {Object.entries(BAN_NAMES).map(([id, name]) => (
+                      <option key={id} value={id}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Cấp độ truy cập
+                </label>
+                <select
+                  value={newAccessLevel}
+                  onChange={(e) => setNewAccessLevel(e.target.value as AccessLevel)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="INTERNAL_MEMBER">Toàn bộ thành viên nội bộ (INTERNAL_MEMBER)</option>
+                  <option value="PUBLIC">Công khai khách truy cập (PUBLIC)</option>
+                  <option value="DEPARTMENT_ONLY">Chỉ thành viên trong ban (DEPARTMENT_ONLY)</option>
+                  <option value="EXECUTIVE_ONLY">Chỉ Ban Chủ Nhiệm (EXECUTIVE_ONLY)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Mô tả chi tiết (Tùy chọn)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Ghi chú nội dung các tệp chứa bên trong..."
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold cursor-pointer flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Lưu Tài Nguyên</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

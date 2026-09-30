@@ -19,8 +19,10 @@ import { EventModal } from './components/EventModal';
 import { TrackDetailModal } from './components/TrackDetailModal';
 import { Department, EventItem } from './types';
 import { DEPARTMENTS_DATA } from './data/gdgData';
+import { mapBackendUserToSession } from './types/auth.types';
 
 import { useAuthStore } from './store/useAuthStore';
+import { useLandingContentStore } from './store/useLandingContentStore';
 import { Login } from './pages/Login';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { DevUserSwitcher } from './components/dev/DevUserSwitcher';
@@ -42,6 +44,11 @@ function LandingPage() {
   const [selectedDefaultDept, setSelectedDefaultDept] = useState<string | undefined>(undefined);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [activeDepartmentDetail, setActiveDepartmentDetail] = useState<Department | null>(null);
+  const fetchPublicCms = useLandingContentStore((s) => s.fetchPublicCms);
+
+  useEffect(() => {
+    fetchPublicCms();
+  }, [fetchPublicCms]);
 
   const handleOpenJoinModal = (defaultDept?: string) => {
     setSelectedDefaultDept(defaultDept);
@@ -139,7 +146,7 @@ export default function App() {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
-          setUser(data);
+          setUser(mapBackendUserToSession(data));
         } else {
           setUser(null);
         }

@@ -45,12 +45,12 @@ export interface EventAttendee {
 export interface EventItem {
   id: string;
   title: string;
-  category: 'Showcase' | 'Flagship Event' | 'Workshop Series' | 'Campus Challenge';
+  category: 'Showcase' | 'Flagship Event' | 'Workshop Series' | 'Campus Challenge' | string;
   date: string;
   time: string;
   location: string;
   isHybrid?: boolean;
-  status: 'Upcoming' | 'Registration Open' | 'Opening Soon' | 'Completed';
+  status: 'Upcoming' | 'Registration Open' | 'Opening Soon' | 'Completed' | string;
   speaker?: {
     name: string;
     role: string;
@@ -58,22 +58,23 @@ export interface EventItem {
     company?: string;
   };
   summary: string;
-  highlights: string[];
-  accentColor: string;
-  pastelColor: string;
+  highlights?: string[];
+  accentColor?: string;
+  pastelColor?: string;
   bannerImage?: string;
+  registrationUrl?: string;
   showOnLanding?: boolean;
   attendees?: EventAttendee[];
 }
 
 export interface StatMilestone {
   value: string;
-  number: number;
-  suffix: string;
+  number?: number;
+  suffix?: string;
   label: string;
   description: string;
-  accentColor: string;
-  pastelColor: string;
+  accentColor?: string;
+  pastelColor?: string;
 }
 
 export interface RegistrationFormData {
@@ -93,13 +94,20 @@ export interface OrganizerMember {
   id: string;
   name: string;
   role: string;
-  domain: 'Leads' | 'Tech' | 'Design & Media' | 'Event Operations';
-  major: string;
-  cohort: string;
+  domain: 'Leads' | 'Tech' | 'Design & Media' | 'Event Operations' | string;
+  major?: string;
+  cohort?: string;
   bio: string;
   avatarUrl: string;
-  color: string;
-  dotColor: string;
+  color?: string;
+  dotColor?: string;
+  department?: string;
+  socials?: {
+    github?: string;
+    linkedin?: string;
+    facebook?: string;
+  };
+  featured?: boolean;
   githubUrl?: string;
   linkedinUrl?: string;
   portfolioUrl?: string;

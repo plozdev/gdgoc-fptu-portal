@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, buildQueryString } from '../client';
 
 export interface CreateGiftDto {
   name: string;
@@ -24,18 +24,8 @@ export const giftsApi = {
   redeemGift: (giftItemId: string) =>
     api.post('/api/gifts/redeem', { giftItemId }),
 
-  getRedemptions: (params?: { status?: string; page?: number; limit?: number }) => {
-    const query = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          query.append(key, String(val));
-        }
-      });
-    }
-    const queryString = query.toString();
-    return api.get(`/api/gifts/redemptions${queryString ? `?${queryString}` : ''}`);
-  },
+  getRedemptions: (params?: { status?: string; page?: number; limit?: number }) =>
+    api.get(`/api/gifts/redemptions${buildQueryString(params)}`),
 
   updateRedemptionStatus: (
     id: string,

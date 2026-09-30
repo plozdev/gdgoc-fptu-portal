@@ -1,52 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
+import { useGenerationStore } from '../store/useGenerationStore';
 import { GdgLogo } from '../components/GdgLogo';
-import { ArrowLeft, ArrowRight, Shield, Info, Lock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lock, Eye, EyeOff, Sparkles, KeyRound } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('lead@gdgfptu.dev');
+  const [password, setPassword] = useState('GDGoC@2026');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setUser } = useAuthStore();
+  const { login } = useAuthStore();
+  const { currentGen, currentSemester } = useGenerationStore();
   const navigate = useNavigate();
 
-  const performLogin = async (targetEmail: string) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError('Vui lòng nhập đầy đủ Email và Mật khẩu');
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail })
+      await login({
+        email: email.trim(),
+        password: password.trim(),
       });
-
-      if (!res.ok) {
-        throw new Error('Email không tồn tại trong danh sách thành viên');
-      }
-
-      const meRes = await fetch('/api/auth/me');
-      if (meRes.ok) {
-        const user = await meRes.json();
-        setUser(user);
-        navigate('/app');
-      } else {
-        throw new Error('Không thể đồng bộ phiên làm việc');
-      }
+      navigate('/app');
     } catch (err: any) {
-      setError(err.message || 'Đăng nhập thất bại');
+      console.error('Login error:', err);
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Email hoặc mật khẩu không chính xác. Vui lòng thử lại!'
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    performLogin(email.trim());
+  const handleFillPreset = (presetEmail: string) => {
+    setEmail(presetEmail);
+    setPassword('GDGoC@2026');
+    setError('');
   };
-
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 selection:bg-[#C3ECF6]">
@@ -60,7 +61,7 @@ export const Login: React.FC = () => {
           <span>Quay lại Trang Chủ</span>
         </Link>
         <span className="text-xs font-mono-code font-semibold text-slate-500 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-xs">
-          Niên khóa 2025 - 2026 • Gen 4.0
+          {currentSemester ? `Niên khóa ${currentSemester}` : 'Niên khóa'} • {currentGen}
         </span>
       </div>
 
@@ -95,18 +96,18 @@ export const Login: React.FC = () => {
             </div>
           )}
 
-          {/* Direct Email Form */}
+          {/* Direct Email & Password Form */}
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Email Sinh Viên FPT (@fpt.edu.vn)
+                Email Tài Khoản
               </label>
               <div className="relative">
                 <input
                   id="email"
                   type="email"
                   required
-                  placeholder="ví dụ: lead@fpt.edu.vn hoặc ban.lead@fpt.edu.vn"
+                  placeholder="ví dụ: lead@gdgfptu.dev"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#4285F4] focus:bg-white font-medium text-sm transition-all"
@@ -114,10 +115,34 @@ export const Login: React.FC = () => {
               </div>
             </div>
 
+            <div>
+              <label htmlFor="password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Mật Khẩu
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Mật khẩu đăng nhập"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#4285F4] focus:bg-white font-medium text-sm transition-all pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 px-4 bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold text-sm rounded-xl border-[2px] border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="w-full py-3 px-4 bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold text-sm rounded-xl border-[2px] border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 mt-2"
             >
               {isSubmitting ? (
                 <>
@@ -133,21 +158,69 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          {/* Dev Info Panel — Backend Integration Pending */}
-          {import.meta.env.DEV && (
-            <div className="mt-6 pt-5 border-t border-slate-200">
-              <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-amber-900">Backend chưa được kết nối</p>
-                  <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed">
-                    Hệ thống đang chạy ở chế độ development. Đăng nhập sẽ hoạt động sau khi backend API được tích hợp.
-                    Dùng <span className="font-bold">DevUserSwitcher</span> (nút tròn góc phải màn hình) để inject session test RBAC.
-                  </p>
-                </div>
-              </div>
+          {/* Quick Presets Fill for Testing */}
+          <div className="mt-6 pt-5 border-t border-slate-200">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Điền Nhanh Tài Khoản Test (Mật khẩu: <code className="text-blue-600 lowercase bg-blue-50 px-1 py-0.5 rounded font-mono font-bold">GDGoC@2026</code>)</span>
             </div>
-          )}
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => handleFillPreset('lead@gdgfptu.dev')}
+                className="text-left px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-red-900 block truncate">👑 Chapter Lead</span>
+                <span className="text-[10px] text-red-600 font-mono truncate block">lead@gdgfptu.dev</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleFillPreset('web.lead@gdgfptu.dev')}
+                className="text-left px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-blue-900 block truncate">⚡ Web Lead</span>
+                <span className="text-[10px] text-blue-600 font-mono truncate block">web.lead@gdgfptu.dev</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleFillPreset('hr.lead@gdgfptu.dev')}
+                className="text-left px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-purple-900 block truncate">🎯 HR Lead</span>
+                <span className="text-[10px] text-purple-600 font-mono truncate block">hr.lead@gdgfptu.dev</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleFillPreset('member.web@gdgfptu.dev')}
+                className="text-left px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-emerald-900 block truncate">💻 Member Web</span>
+                <span className="text-[10px] text-emerald-600 font-mono truncate block">member.web@gdgfptu.dev</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleFillPreset('member.ai@gdgfptu.dev')}
+                className="text-left px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-cyan-900 block truncate">🤖 Member AI</span>
+                <span className="text-[10px] text-cyan-600 font-mono truncate block">member.ai@gdgfptu.dev</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleFillPreset('advisor@gdgfptu.dev')}
+                className="text-left px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <span className="font-bold text-amber-900 block truncate">🎓 Cố Vấn CLB</span>
+                <span className="text-[10px] text-amber-600 font-mono truncate block">advisor@gdgfptu.dev</span>
+              </button>
+            </div>
+          </div>
 
         </div>
 

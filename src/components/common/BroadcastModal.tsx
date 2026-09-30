@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Megaphone, X, Send, AlertTriangle, Sparkles, Layers, Shield } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore, NotificationType, NotificationPriority } from '../../store/useNotificationStore';
-import { BAN_NAMES, BanId } from '../../mocks/fixtures/users';
+import { BAN_NAMES, BanId, BAN_ID_TO_DEPT_CODE } from '../../types/auth.types';
 
 interface BroadcastModalProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface BroadcastModalProps {
 
 export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuthStore();
-  const { addNotification } = useNotificationStore();
+  const { createNotification } = useNotificationStore();
 
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
 
@@ -26,19 +26,21 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
 
-    addNotification({
-      title: title.trim(),
-      message: message.trim(),
-      type,
-      priority,
-      targetScope,
-      senderName: user?.name || 'Ban Điều Hành',
-      senderRole: isOrgAdmin ? 'Chapter Lead' : `Trưởng Ban ${user?.banId?.toUpperCase() || ''}`,
-    });
+    try {
+      await createNotification({
+        title: title.trim(),
+        message: message.trim(),
+        type,
+        priority,
+        targetDepartmentCode: targetScope === 'all' ? undefined : BAN_ID_TO_DEPT_CODE[targetScope],
+      });
+    } catch (err) {
+      console.error('Failed to broadcast notification:', err);
+    }
 
     onClose();
     setTitle('');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sliders, 
   RotateCcw, 
@@ -42,6 +42,7 @@ export const GenerationSettings: React.FC = () => {
     chapterLead, 
     coChapterLead, 
     archivedSemesters, 
+    fetchConfig,
     updateConfig, 
     performTransition 
   } = useGenerationStore();
@@ -59,6 +60,20 @@ export const GenerationSettings: React.FC = () => {
   const [tasksToggle, setTasksToggle] = useState(allowTaskSubmission);
   const [rsvpToggle, setRsvpToggle] = useState(allowRsvp);
   const [freezeToggle, setFreezeToggle] = useState(freezeLeaderboard);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
+
+  useEffect(() => {
+    setGenInput(currentGen);
+    setSemesterInput(currentSemester);
+    setStartMonthInput(startMonthYear);
+    setEndMonthInput(endMonthYear);
+    setTasksToggle(allowTaskSubmission);
+    setRsvpToggle(allowRsvp);
+    setFreezeToggle(freezeLeaderboard);
+  }, [currentGen, currentSemester, startMonthYear, endMonthYear, allowTaskSubmission, allowRsvp, freezeLeaderboard]);
 
   // Wizard state for Tab 2 (Transition Wizard)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);

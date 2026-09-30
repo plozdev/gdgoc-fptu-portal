@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, buildQueryString } from '../client';
 
 export interface QueryTasksParams {
   tenureId?: string;
@@ -28,18 +28,8 @@ export interface CreateTaskDto {
 export interface UpdateTaskDto extends Partial<CreateTaskDto> {}
 
 export const tasksApi = {
-  getTasks: (params?: QueryTasksParams) => {
-    const query = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          query.append(key, String(val));
-        }
-      });
-    }
-    const queryString = query.toString();
-    return api.get(`/api/tasks${queryString ? `?${queryString}` : ''}`);
-  },
+  getTasks: (params?: QueryTasksParams) =>
+    api.get(`/api/tasks${buildQueryString(params)}`),
 
   getTask: (id: string) => api.get(`/api/tasks/${id}`),
 

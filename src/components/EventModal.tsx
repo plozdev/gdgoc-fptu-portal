@@ -3,7 +3,7 @@ import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check
 import { EventItem } from '../types';
 import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
-import { useLandingContentStore } from '../store/useLandingContentStore';
+import { eventsApi } from '../api';
 
 interface EventModalProps {
   event: EventItem | null;
@@ -11,7 +11,6 @@ interface EventModalProps {
 }
 
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
-  const { addAttendee } = useLandingContentStore();
   const [isRsvpDone, setIsRsvpDone] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
@@ -19,16 +18,22 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
 
   if (!event) return null;
 
-  const handleRsvp = (e: React.FormEvent) => {
+  const handleRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim() || !studentId.trim()) return;
-    addAttendee(event.id, {
-      name: studentName.trim(),
-      studentId: studentId.trim().toUpperCase(),
-      email: studentEmail.trim() || `${studentId.trim().toLowerCase()}@fpt.edu.vn`,
-      ban: 'Sinh viên FPTU (RSVP Web)',
-      checkedIn: false
-    });
+
+    try {
+      await eventsApi.addAttendee(event.id, {
+        guestName: studentName.trim(),
+        guestMssv: studentId.trim().toUpperCase(),
+        guestEmail: studentEmail.trim() || `${studentId.trim().toLowerCase()}@fpt.edu.vn`,
+        guestDepartment: 'Sinh viên FPTU (RSVP Web)',
+        checkinMethod: 'WEB_RSVP',
+        isVerified: false,
+      });
+    } catch (err) {
+      console.error('Failed to submit RSVP:', err);
+    }
     setIsRsvpDone(true);
   };
 

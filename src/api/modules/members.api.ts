@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, buildQueryString } from '../client';
 
 export interface QueryMembersParams {
   tenureId?: string;
@@ -40,18 +40,8 @@ export interface UpdateProfileDto {
 }
 
 export const membersApi = {
-  getMembers: (params?: QueryMembersParams) => {
-    const query = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          query.append(key, String(val));
-        }
-      });
-    }
-    const queryString = query.toString();
-    return api.get(`/api/members${queryString ? `?${queryString}` : ''}`);
-  },
+  getMembers: (params?: QueryMembersParams) =>
+    api.get(`/api/members${buildQueryString(params)}`),
 
   createMember: (dto: CreateMemberDto) => api.post('/api/members', dto),
 

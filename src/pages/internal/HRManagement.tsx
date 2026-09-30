@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import { useMemberStore, Member } from '../../store/useMemberStore';
@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   GraduationCap,
   Sparkles,
-  Layers
+  Layers,
+  Loader2
 } from 'lucide-react';
 import { MemberModal } from '../../components/hr/MemberModal';
 import { ExcelImportModal } from '../../components/hr/ExcelImportModal';
@@ -25,11 +26,15 @@ import { ExcelImportModal } from '../../components/hr/ExcelImportModal';
 export const HRManagement: React.FC = () => {
   const { user } = useAuthStore();
   const { currentGen } = useGenerationStore();
-  const { members, deleteMember, getAvailableGens } = useMemberStore();
+  const { members, isLoading, error: storeError, fetchMembers, deleteMember, getAvailableGens } = useMemberStore();
 
   const [selectedBan, setSelectedBan] = useState<string>('all');
   const [selectedGen, setSelectedGen] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   // Modals state
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
@@ -213,7 +218,16 @@ export const HRManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredMembers.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-blue-600 font-medium">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Đang đồng bộ dữ liệu nhân sự từ Database...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredMembers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
                     Không tìm thấy thành viên nào phù hợp với bộ lọc hiện tại.
@@ -222,7 +236,9 @@ export const HRManagement: React.FC = () => {
               ) : (
                 filteredMembers.map(m => {
                   const isAdmin = m.tier === 'ORG_ADMIN';
+                  const isAdvisor = m.tier === 'ADVISOR';
                   const isLead = m.tier === 'BAN_LEAD';
+                  const isCollaborator = m.tier === 'COLLABORATOR';
 
                   return (
                     <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
@@ -230,13 +246,23 @@ export const HRManagement: React.FC = () => {
                       <td className="px-4 py-3 font-semibold text-slate-900">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-xs ${
-                            isAdmin ? 'bg-[#EA4335]' : isLead ? 'bg-[#4285F4]' : 'bg-[#34A853]'
+                            isAdmin ? 'bg-[#EA4335]' : isAdvisor ? 'bg-purple-600' : isLead ? 'bg-[#4285F4]' : isCollaborator ? 'bg-amber-600' : 'bg-[#34A853]'
                           }`}>
                             {m.name.charAt(0)}
                           </div>
                           <div>
                             <p className="font-bold text-slate-900">{m.name}</p>
-                            <span className="text-[10px] text-slate-400 font-mono-code">{m.status}</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono-code ${
+                              m.status === 'ACTIVE'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : m.status === 'PROBATION'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : m.status === 'ON_LEAVE'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}>
+                              {m.status}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -257,11 +283,15 @@ export const HRManagement: React.FC = () => {
                         <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full border inline-block mt-0.5 ${
                           isAdmin 
                             ? 'bg-red-50 text-red-700 border-red-200' 
+                            : isAdvisor
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
                             : isLead 
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : isCollaborator
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         }`}>
-                          {isAdmin ? '👑 ORG_ADMIN' : isLead ? '⚡ BAN_LEAD' : 'BAN_MEMBER'}
+                          {isAdmin ? '👑 ORG_ADMIN' : isAdvisor ? '🛡️ ADVISOR' : isLead ? '⚡ BAN_LEAD' : isCollaborator ? '🤝 COLLABORATOR' : 'BAN_MEMBER'}
                         </span>
                       </td>
 

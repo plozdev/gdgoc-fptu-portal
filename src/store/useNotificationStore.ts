@@ -1,13 +1,11 @@
 /**
  * @file useNotificationStore.ts
- * @description Zustand store quản lý thông báo nội bộ CLB.
- *
- * ⚠️  MOCK DATA ĐÃ BỊ XÓA — Store bắt đầu với danh sách rỗng.
- * Khi backend được tích hợp, notifications sẽ được fetch từ GET /api/notifications.
+ * @description Zustand store quản lý thông báo nội bộ CLB kết nối API Backend.
  */
 
 import { create } from 'zustand';
-import type { BanId } from '../mocks/fixtures/users';
+import type { BanId } from '../types/auth.types';
+import { notificationsApi, CreateNotificationDto } from '../api';
 
 // ==========================================
 // TYPES
@@ -22,10 +20,10 @@ export interface AppNotification {
   message: string;
   type: NotificationType;
   priority: NotificationPriority;
-  targetScope: 'all' | BanId; // Gửi cho toàn CLB hoặc riêng 1 Ban
+  targetScope: 'all' | BanId;
   senderName: string;
   senderRole: string;
-  createdAt: string;          // dd/MM/yyyy HH:mm
+  createdAt: string;
   isRead: boolean;
   link?: string;
 }
@@ -36,62 +34,112 @@ export interface AppNotification {
 
 interface NotificationState {
   notifications: AppNotification[];
-  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  deleteNotification: (id: string) => void;
+  unreadCount: number;
+  isLoading: boolean;
+  fetchNotifications: () => Promise<void>;
+  createNotification: (dto: {
+    title: string;
+    message: string;
+    type?: string;
+    priority?: string;
+    targetDepartmentCode?: string;
+    link?: string;
+  }) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
 }
 
-// ==========================================
-// HELPERS
-// ==========================================
+function mapBackendNotifToUi(item: any): AppNotification {
+  const typeMap: Record<string, NotificationType> = {
+    TASK: 'task',
+    EVENT: 'event',
+    GEMS: 'gems',
+    BROADCAST: 'broadcast',
+    SYSTEM: 'system',
+  };
 
-function formatDateTimeVN(): string {
-  const now = new Date();
-  const d = String(now.getDate()).padStart(2, '0');
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const y = now.getFullYear();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  return `${d}/${m}/${y} ${hh}:${mm}`;
+  const priorityMap: Record<string, NotificationPriority> = {
+    NORMAL: 'normal',
+    IMPORTANT: 'important',
+    URGENT: 'urgent',
+  };
+
+  return {
+    id: item.id,
+    title: item.title,
+    message: item.message,
+    type: typeMap[item.type] || 'system',
+    priority: priorityMap[item.priority] || 'normal',
+    targetScope: 'all',
+    senderName: item.sender?.fullName || 'Ban Chủ Nhiệm',
+    senderRole: 'Ban Điều Hành',
+    createdAt: item.createdAt
+      ? new Date(item.createdAt).toLocaleDateString('vi-VN') + ' ' + new Date(item.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      : '',
+    isRead: Boolean(item.isRead),
+    link: item.link || undefined,
+  };
 }
 
-// ==========================================
-// STORE
-// ==========================================
+export const useNotificationStore = create<NotificationState>((set, get) => ({
+  notifications: [],
+  unreadCount: 0,
+  isLoading: false,
 
-export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: [], // Empty — data comes from backend
-
-  addNotification: (notif) => {
-    const newNotif: AppNotification = {
-      ...notif,
-      id: `notif-${Date.now()}`,
-      createdAt: formatDateTimeVN(),
-      isRead: false,
-    };
-    set((state) => ({
-      notifications: [newNotif, ...state.notifications],
-    }));
+  fetchNotifications: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await notificationsApi.getNotifications({ limit: 50 });
+      const rawList = (res as any)?.items || (Array.isArray(res) ? res : []);
+      const mapped = rawList.map(mapBackendNotifToUi);
+      const unread = (res as any)?.unreadCount ?? mapped.filter((n: any) => !n.isRead).length;
+      set({ notifications: mapped, unreadCount: unread, isLoading: false });
+    } catch (err) {
+      console.error('[NotificationStore] Failed to fetch notifications:', err);
+      set({ isLoading: false });
+    }
   },
 
-  markAsRead: (id) => {
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n
-      ),
-    }));
+  createNotification: async (dto) => {
+    try {
+      await notificationsApi.createNotification({
+        title: dto.title,
+        message: dto.message,
+        type: dto.type?.toUpperCase() || 'BROADCAST',
+        priority: dto.priority?.toUpperCase() || 'IMPORTANT',
+        targetDepartmentCode: dto.targetDepartmentCode,
+        link: dto.link,
+      });
+      await get().fetchNotifications();
+    } catch (err) {
+      console.error('[NotificationStore] Failed to create notification:', err);
+      throw err;
+    }
   },
 
-  markAllAsRead: () => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
-    }));
+  markAsRead: async (id) => {
+    try {
+      await notificationsApi.markAsRead(id);
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === id ? { ...n, isRead: true } : n
+        ),
+        unreadCount: Math.max(0, state.unreadCount - 1),
+      }));
+    } catch (err) {
+      console.error('[NotificationStore] Failed to mark as read:', err);
+    }
   },
 
-  deleteNotification: (id) => {
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-    }));
+  markAllAsRead: async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+        unreadCount: 0,
+      }));
+    } catch (err) {
+      console.error('[NotificationStore] Failed to mark all as read:', err);
+    }
   },
 }));

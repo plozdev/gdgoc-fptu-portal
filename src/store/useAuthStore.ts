@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { UserSession } from '../mocks/fixtures/users';
-import { authApi, LoginDto } from '../api';
+import { UserSession, mapBackendUserToSession } from '../types/auth.types';
+import { authApi, LoginDto, ChangePasswordDto } from '../api';
 
 interface AuthState {
   user: UserSession | null;
@@ -10,6 +10,7 @@ interface AuthState {
   fetchSession: () => Promise<UserSession | null>;
   login: (dto: LoginDto) => Promise<any>;
   logout: () => Promise<void>;
+  changePassword: (dto: ChangePasswordDto) => Promise<any>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -22,8 +23,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const user = await authApi.getMe();
-      set({ user: user as any, isLoading: false });
-      return user as any;
+      const mapped = mapBackendUserToSession(user);
+      set({ user: mapped, isLoading: false });
+      return mapped;
     } catch {
       set({ user: null, isLoading: false });
       return null;
@@ -36,7 +38,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const res = await authApi.login(dto);
       // Fetch profile sau khi login
       const user = await authApi.getMe();
-      set({ user: user as any, isLoading: false });
+      const mapped = mapBackendUserToSession(user);
+      set({ user: mapped, isLoading: false });
       return res;
     } catch (error) {
       set({ isLoading: false });
@@ -52,5 +55,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       set({ user: null });
     }
+  },
+
+  changePassword: async (dto: ChangePasswordDto) => {
+    return authApi.changePassword(dto);
   },
 }));

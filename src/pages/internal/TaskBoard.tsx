@@ -24,20 +24,22 @@ import {
   Layers,
   CheckCheck
 } from 'lucide-react';
-import { BAN_NAMES, BanId } from '../../mocks/fixtures/users';
+import { BAN_NAMES, BanId } from '../../types/auth.types';
 import { DateInput } from '../../components/common/DateInput';
 import { formatDateToDDMMYYYY } from '../../utils/dateUtils';
 import { useMemberStore } from '../../store/useMemberStore';
+import { useGenerationStore } from '../../store/useGenerationStore';
+import { tasksApi, generationApi } from '../../api';
 
 export type TaskLevel = 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER';
 
 export const BAN_LEADS_MAP: Record<BanId, { name: string; position: string }> = {
-  ai: { name: 'Trần Nguyên Bảo', position: 'AI Lead' },
+  ai: { name: 'Lê Hoàng Long', position: 'AI Lead' },
   cloud: { name: 'Hoàng Minh Tuấn', position: 'Cloud Lead' },
-  web: { name: 'Lê Hoàng Long', position: 'Web Lead' },
+  web: { name: 'Phạm Gia Huy', position: 'Web Lead' },
   research: { name: 'Phạm Quốc Anh', position: 'Research Lead' },
-  media: { name: 'Vũ Thị Lan Hương', position: 'Media Lead' },
-  'hr-event': { name: 'Bùi Đức Thịnh', position: 'HR-Event Lead' },
+  media: { name: 'Trần Minh Quân', position: 'Media Lead' },
+  'hr-event': { name: 'Nguyễn Thảo Vy', position: 'HR-Event Lead' },
 };
 
 export interface Task {
@@ -49,10 +51,12 @@ export interface Task {
   project: string; // Chiến dịch / Dự án / Milestone
   status: 'todo' | 'in_progress' | 'review' | 'done';
   assignee: string;
+  assigneeId?: string;
   gems: number;
   priority: 'Cao' | 'Trung bình' | 'Thấp';
   submissionProof?: string;
   deadline?: string;
+  feedback?: string;
 }
 
 const PROJECTS_LIST = [
@@ -64,25 +68,72 @@ const PROJECTS_LIST = [
   'Vận Hành Thường Nhật'
 ];
 
-const INITIAL_TASKS: Task[] = [];
+function mapBackendTaskToUi(item: any): Task {
+  const statusMap: Record<string, 'todo' | 'in_progress' | 'review' | 'done'> = {
+    BACKLOG: 'todo',
+    TODO: 'todo',
+    IN_PROGRESS: 'in_progress',
+    IN_REVIEW: 'review',
+    DONE: 'done',
+    OVERDUE: 'todo',
+  };
+
+  const priorityMap: Record<string, 'Cao' | 'Trung bình' | 'Thấp'> = {
+    URGENT: 'Cao',
+    HIGH: 'Cao',
+    MEDIUM: 'Trung bình',
+    LOW: 'Thấp',
+  };
+
+  const deptCode = item.department?.code;
+  let banId: BanId = 'web';
+  if (deptCode === 'TECH_AI') banId = 'ai';
+  else if (deptCode === 'TECH_CLOUD') banId = 'cloud';
+  else if (deptCode === 'TECH_RESEARCH') banId = 'research';
+  else if (deptCode === 'MEDIA') banId = 'media';
+  else if (deptCode === 'HR_EVENT') banId = 'hr-event';
+
+  const primaryAssignee = item.assignees?.[0]?.user;
+
+  return {
+    id: item.id,
+    title: item.title,
+    description: item.description || '',
+    banId,
+    level: 'LEAD_TO_MEMBER',
+    project: item.event?.title || 'Vận Hành Thường Nhật',
+    status: statusMap[item.status] || 'todo',
+    assignee: primaryAssignee?.fullName || 'Chưa phân công',
+    assigneeId: primaryAssignee?.id,
+    gems: item.gemsReward || 20,
+    priority: priorityMap[item.priority] || 'Trung bình',
+    submissionProof: item.submissionUrl || undefined,
+    deadline: item.deadline ? formatDateToDDMMYYYY(new Date(item.deadline)) : undefined,
+    feedback: item.feedback || undefined,
+  };
+}
 
 export const TaskBoard: React.FC = () => {
   const { user } = useAuthStore();
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('gdgoc_tasks_v2');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return [];
-      }
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    try {
+      const res: any = await tasksApi.getTasks({ limit: 100 });
+      const rawTasks = res?.items || (Array.isArray(res) ? res : []);
+      setTasks(rawTasks.map(mapBackendTaskToUi));
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+    } finally {
+      setIsLoading(false);
     }
-    return INITIAL_TASKS;
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem('gdgoc_tasks_v2', JSON.stringify(tasks));
-  }, [tasks]);
+    fetchTasks();
+  }, []);
 
   // RBAC checks
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
@@ -102,7 +153,8 @@ export const TaskBoard: React.FC = () => {
     }
   }, [user?.id, user?.tier, user?.banId, isOrgAdmin]);
 
-  const { members } = useMemberStore();
+  const { members, activeTenureId, availableTenures } = useMemberStore();
+  const { currentTenureId } = useGenerationStore();
 
   // Scalability Filters
   const [selectedProject, setSelectedProject] = useState<string>('Tất Cả Dự Án');
@@ -167,31 +219,58 @@ export const TaskBoard: React.FC = () => {
   ];
 
   // Lead actions: Approve task
-  const handleApproveTask = (taskId: string) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'done' } : t));
+  const handleApproveTask = async (taskId: string) => {
+    try {
+      await tasksApi.approveTask(taskId, { feedback: 'Hoàn thành xuất sắc!' });
+      await fetchTasks();
+    } catch (err) {
+      console.error('Failed to approve task:', err);
+    }
   };
 
   // Lead actions: Delete task
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
     if (confirm('Bạn có chắc chắn muốn xóa task này khỏi kế hoạch?')) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
+      try {
+        await tasksApi.deleteTask(taskId);
+        await fetchTasks();
+      } catch (err) {
+        console.error('Failed to delete task:', err);
+      }
     }
   };
 
   // Member action: Submit task report
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
     if (!submitModalTask) return;
-    setTasks(prev => prev.map(t => 
-      t.id === submitModalTask.id 
-        ? { ...t, status: 'review', submissionProof: submissionLink } 
-        : t
-    ));
-    setSubmitModalTask(null);
-    setSubmissionLink('');
+    try {
+      await tasksApi.submitTask(submitModalTask.id, { submissionUrl: submissionLink });
+      await fetchTasks();
+      setSubmitModalTask(null);
+      setSubmissionLink('');
+    } catch (err) {
+      console.error('Failed to submit task:', err);
+    }
+  };
+
+  // Move status handler
+  const handleMoveStatus = async (taskId: string, newStatus: 'todo' | 'in_progress' | 'review' | 'done') => {
+    const statusMap: Record<string, string> = {
+      todo: 'TODO',
+      in_progress: 'IN_PROGRESS',
+      review: 'IN_REVIEW',
+      done: 'DONE',
+    };
+    try {
+      await tasksApi.updateStatus(taskId, { status: statusMap[newStatus] || 'TODO' });
+      await fetchTasks();
+    } catch (err) {
+      console.error('Failed to move task status:', err);
+    }
   };
 
   // Lead / BCN action: Create task
-  const handleCreateTask = (e: React.FormEvent) => {
+  const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
@@ -200,37 +279,65 @@ export const TaskBoard: React.FC = () => {
       ? selectedCreateBan
       : (user?.banId || 'ai');
 
-    // Hierarchy Level & Assignee Enforcement:
-    // - BCN (ORG_ADMIN) giao việc cho LEAD -> level = 'BCN_TO_LEAD'
-    // - LEAD giao việc cho MEMBER -> level = 'LEAD_TO_MEMBER'
-    const taskLevel: TaskLevel = isOrgAdmin ? 'BCN_TO_LEAD' : 'LEAD_TO_MEMBER';
-
-    let chosenAssignee = '';
-    if (isOrgAdmin) {
-      const lead = BAN_LEADS_MAP[targetBan];
-      chosenAssignee = `${lead.name} (${lead.position})`;
-    } else {
-      chosenAssignee = selectedMemberAssignee || (user?.name ? `${user.name} (Tự phụ trách)` : 'Thành viên Ban');
-    }
-
-    const newTask: Task = {
-      id: `T-${Math.floor(200 + Math.random() * 800)}`,
-      title: newTitle.trim(),
-      description: newDesc.trim(),
-      banId: targetBan,
-      level: taskLevel,
-      project: newProject,
-      status: 'todo',
-      assignee: chosenAssignee,
-      gems: newGems,
-      priority: newPriority,
-      deadline: newDeadline,
+    const deptCodeMap: Record<BanId, string> = {
+      ai: 'TECH_AI',
+      cloud: 'TECH_CLOUD',
+      web: 'TECH_WEB',
+      research: 'TECH_RESEARCH',
+      media: 'MEDIA',
+      'hr-event': 'HR_EVENT',
     };
 
-    setTasks(prev => [newTask, ...prev]);
-    setShowCreateModal(false);
-    setNewTitle('');
-    setNewDesc('');
+    const priorityMap: Record<string, string> = {
+      'Cao': 'HIGH',
+      'Trung bình': 'MEDIUM',
+      'Thấp': 'LOW',
+    };
+
+    let assigneeIds: string[] = [];
+    if (selectedMemberAssignee) {
+      const match = members.find(m => m.name === selectedMemberAssignee || m.id === selectedMemberAssignee);
+      if (match) assigneeIds = [match.id];
+    } else if (user?.id) {
+      assigneeIds = [user.id];
+    }
+
+    let targetTenureId = activeTenureId || currentTenureId || availableTenures[0]?.id;
+
+    if (!targetTenureId) {
+      try {
+        const cfg: any = await generationApi.getGenerationConfig();
+        targetTenureId = cfg?.currentTenure?.id;
+      } catch (e) {
+        console.error('Failed to get tenure for task:', e);
+      }
+    }
+
+    if (!targetTenureId) {
+      alert('Không tìm thấy thông tin nhiệm kỳ hoạt động. Vui lòng tải lại trang!');
+      return;
+    }
+
+    try {
+      await tasksApi.createTask({
+        title: newTitle.trim(),
+        description: newDesc.trim(),
+        departmentCode: deptCodeMap[targetBan] || 'TECH_WEB',
+        priority: priorityMap[newPriority] || 'MEDIUM',
+        gemsReward: Number(newGems) || 20,
+        deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        tenureId: targetTenureId,
+        assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
+      });
+
+      await fetchTasks();
+      setShowCreateModal(false);
+      setNewTitle('');
+      setNewDesc('');
+    } catch (err: any) {
+      console.error('Failed to create task:', err);
+      alert(err.message || 'Lỗi khi tạo công việc');
+    }
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useInventoryStore, InventoryItem, InventoryCategory } from '../../store/useInventoryStore';
 import { useMemberStore } from '../../store/useMemberStore';
@@ -17,14 +17,19 @@ import {
   X,
   Phone,
   Tag,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 export const InventoryManagement: React.FC = () => {
   const { user } = useAuthStore();
-  const { items, addItem, updateItem, deleteItem } = useInventoryStore();
+  const { items, isLoading, fetchItems, addItem, updateItem, deleteItem } = useInventoryStore();
   const { members } = useMemberStore();
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   // 🚨 CRITICAL RULE: Chỉ Ban Chủ Nhiệm (Chapter Lead & Co-Chapter Lead) mới có quyền truy cập.
   if (user?.tier !== 'ORG_ADMIN') {
@@ -82,7 +87,7 @@ export const InventoryManagement: React.FC = () => {
     setShowItemModal(true);
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim() || itemQuantity <= 0) return;
 
@@ -106,7 +111,7 @@ export const InventoryManagement: React.FC = () => {
     }
 
     if (itemToEdit) {
-      updateItem(itemToEdit.id, {
+      await updateItem(itemToEdit.id, {
         name: itemName.trim(),
         category: itemCategory,
         quantity: itemQuantity,
@@ -116,7 +121,7 @@ export const InventoryManagement: React.FC = () => {
         notes: itemNotes.trim()
       });
     } else {
-      addItem({
+      await addItem({
         name: itemName.trim(),
         category: itemCategory,
         quantity: itemQuantity,
@@ -130,9 +135,9 @@ export const InventoryManagement: React.FC = () => {
     setShowItemModal(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (itemToDelete) {
-      deleteItem(itemToDelete.id);
+      await deleteItem(itemToDelete.id);
       setItemToDelete(null);
     }
   };

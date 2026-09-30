@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
-import { BAN_NAMES } from '../../mocks/fixtures/users';
+import { BAN_NAMES } from '../../types/auth.types';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuthStore();

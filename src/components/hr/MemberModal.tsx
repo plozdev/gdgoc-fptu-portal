@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, UserPlus, UserCheck, Shield, Award } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, UserPlus, UserCheck, Shield, Award, Calendar, GraduationCap } from 'lucide-react';
 import { Member, useMemberStore } from '../../store/useMemberStore';
-import { Tier, BanId, BAN_NAMES } from '../../mocks/fixtures/users';
+import { Tier, BanId, BAN_NAMES } from '../../types/auth.types';
 
 interface MemberModalProps {
   isOpen: boolean;
@@ -16,66 +16,56 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   onClose,
   memberToEdit,
   availableGens,
-  currentGen
+  currentGen,
 }) => {
-  const { addMember, updateMember, members } = useMemberStore();
+  const { addMember, updateMember, availableTenures, activeTenureId } = useMemberStore();
 
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [academicYear, setAcademicYear] = useState('K20');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [position, setPosition] = useState('');
   const [tier, setTier] = useState<Tier>('BAN_MEMBER');
   const [banId, setBanId] = useState<BanId | 'none'>('ai');
-  const [gen, setGen] = useState(currentGen || 'Gen 4.0');
-  const [customGen, setCustomGen] = useState('');
-  const [isCustomGen, setIsCustomGen] = useState(false);
-  const [status, setStatus] = useState<'ACTIVE' | 'ALUMNI' | 'ON_LEAVE'>('ACTIVE');
+  const [selectedTenureId, setSelectedTenureId] = useState<string>('');
+  const [status, setStatus] = useState<'ACTIVE' | 'PROBATION' | 'ALUMNI' | 'ON_LEAVE'>('ACTIVE');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Tự động suy luận Khóa sinh viên từ MSSV (ví dụ SE180123 -> K18, SE200456 -> K20)
+  const inferredCohort = useMemo(() => {
+    const match = studentId.trim().toUpperCase().match(/^(?:SE|SS|IA|IB|GD|CS|IT|HE)?(\d{2})/);
+    return match ? `K${match[1]}` : null;
+  }, [studentId]);
 
   useEffect(() => {
     if (memberToEdit) {
       setName(memberToEdit.name);
       setStudentId(memberToEdit.studentId);
-      setAcademicYear(memberToEdit.academicYear || 'K20');
       setEmail(memberToEdit.email);
       setPhone(memberToEdit.phone || '');
       setPosition(memberToEdit.position || '');
       setTier(memberToEdit.tier);
       setBanId(memberToEdit.banId || 'none');
-      
-      if (availableGens.includes(memberToEdit.gen)) {
-        setGen(memberToEdit.gen);
-        setIsCustomGen(false);
-      } else {
-        setIsCustomGen(true);
-        setCustomGen(memberToEdit.gen);
-      }
+      setSelectedTenureId(memberToEdit.tenureId || activeTenureId || availableTenures[0]?.id || '');
       setStatus(memberToEdit.status || 'ACTIVE');
     } else {
-      // Default new
       setName('');
       setStudentId('');
-      setAcademicYear('K20');
       setEmail('');
       setPhone('');
       setPosition('Thành Viên');
       setTier('BAN_MEMBER');
       setBanId('ai');
-      setGen(currentGen || 'Gen 4.0');
-      setIsCustomGen(false);
-      setCustomGen('');
+      setSelectedTenureId(activeTenureId || availableTenures[0]?.id || '');
       setStatus('ACTIVE');
     }
     setError('');
-  }, [memberToEdit, isOpen, currentGen, availableGens]);
+  }, [memberToEdit, isOpen, activeTenureId, availableTenures]);
 
   if (!isOpen) return null;
 
-  const resolvedGen = isCustomGen && customGen.trim() ? customGen.trim() : gen;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -92,59 +82,68 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       return;
     }
 
-    // Check duplicate email
-    const duplicateEmail = members.find(m => 
-      m.email.toLowerCase() === email.trim().toLowerCase() && m.id !== memberToEdit?.id
-    );
-    if (duplicateEmail) {
-      setError(`Email "${email}" đã được sử dụng bởi ${duplicateEmail.name}`);
-      return;
-    }
-
-    const selectedBanId = banId === 'none' ? null : (banId as BanId);
-    const banName = selectedBanId ? BAN_NAMES[selectedBanId] : 'Ban Chủ Nhiệm';
+    const selectedBanId = tier === 'ORG_ADMIN' || tier === 'ADVISOR' ? null : (banId === 'none' ? null : (banId as BanId));
+    const banName = selectedBanId ? BAN_NAMES[selectedBanId] : (tier === 'ADVISOR' ? 'Ban Cố Vấn' : 'Ban Chủ Nhiệm');
 
     let finalPosition = position.trim();
     if (!finalPosition) {
-      if (tier === 'ORG_ADMIN') finalPosition = 'Ban Chủ Nhiệm';
+      if (tier === 'ORG_ADMIN') finalPosition = 'Chapter Lead';
+      else if (tier === 'ADVISOR') finalPosition = 'Cố Vấn CLB';
       else if (tier === 'BAN_LEAD') finalPosition = `${selectedBanId?.toUpperCase()} Lead`;
+      else if (tier === 'COLLABORATOR') finalPosition = `${selectedBanId?.toUpperCase()} Cộng Tác Viên`;
       else finalPosition = `${selectedBanId?.toUpperCase()} Member`;
     }
 
-    if (memberToEdit) {
-      updateMember(memberToEdit.id, {
-        name: name.trim(),
-        studentId: studentId.trim().toUpperCase(),
-        academicYear: academicYear.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        position: finalPosition,
-        tier,
-        banId: selectedBanId,
-        banName,
-        gen: resolvedGen,
-        status,
-      });
-    } else {
-      addMember({
-        name: name.trim(),
-        studentId: studentId.trim().toUpperCase(),
-        academicYear: academicYear.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim() || 'Chưa cập nhật',
-        position: finalPosition,
-        tier,
-        banId: selectedBanId,
-        banName,
-        gen: resolvedGen,
-        status,
-        joinedDate: new Date().toLocaleDateString('vi-VN'),
-        bio: `${finalPosition} tại GDG on Campus FPT University HCMC.`,
-        skills: []
-      });
-    }
+    const chosenTenure = availableTenures.find(t => t.id === selectedTenureId);
+    const resolvedGen = chosenTenure?.genLabel || chosenTenure?.name || currentGen;
 
-    onClose();
+    setIsSubmitting(true);
+    try {
+      if (memberToEdit) {
+        await updateMember(memberToEdit.id, {
+          name: name.trim(),
+          studentId: studentId.trim().toUpperCase(),
+          academicYear: inferredCohort || 'K20',
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          position: finalPosition,
+          tier,
+          banId: selectedBanId,
+          banName,
+          gen: resolvedGen,
+          tenureId: selectedTenureId || undefined,
+          status,
+        });
+      } else {
+        await addMember({
+          name: name.trim(),
+          studentId: studentId.trim().toUpperCase(),
+          academicYear: inferredCohort || 'K20',
+          email: email.trim().toLowerCase(),
+          phone: phone.trim() || 'Chưa cập nhật',
+          position: finalPosition,
+          tier,
+          banId: selectedBanId,
+          banName,
+          gen: resolvedGen,
+          tenureId: selectedTenureId || undefined,
+          status,
+          joinedDate: new Date().toLocaleDateString('vi-VN'),
+          bio: `${finalPosition} tại GDG on Campus FPT University HCMC.`,
+          skills: [],
+        });
+      }
+      onClose();
+    } catch (err: any) {
+      console.error('Member submit error:', err);
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Có lỗi xảy ra khi lưu thành viên xuống cơ sở dữ liệu. Vui lòng kiểm tra lại!'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -194,11 +193,19 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               />
             </div>
 
-            {/* MSSV */}
+            {/* MSSV (Tự động nhận diện Khóa K) */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Mã Số Sinh Viên (MSSV) <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Mã Số Sinh Viên (MSSV) <span className="text-red-500">*</span>
+                </label>
+                {inferredCohort && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1 font-mono-code">
+                    <GraduationCap className="w-3 h-3" />
+                    <span>Khóa {inferredCohort}</span>
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 required
@@ -207,24 +214,6 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                 onChange={(e) => setStudentId(e.target.value)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono-code font-bold text-slate-900 focus:outline-none focus:border-blue-500"
               />
-            </div>
-
-            {/* Khóa Đại Học (K19, K20...) */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Khóa Sinh Viên
-              </label>
-              <select
-                value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
-                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500"
-              >
-                <option value="K18">Khóa K18 (Fall 2022)</option>
-                <option value="K19">Khóa K19 (Fall 2023)</option>
-                <option value="K20">Khóa K20 (Fall 2024)</option>
-                <option value="K21">Khóa K21 (Fall 2025)</option>
-                <option value="K22">Khóa K22 (Fall 2026)</option>
-              </select>
             </div>
 
             {/* Email FPT */}
@@ -270,17 +259,34 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               />
             </div>
 
-            {/* Cấp bậc (Tier) */}
+            {/* Trạng thái hoạt động (Status) */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Cấp Bậc Phân Quyền (Tier)
+                Trạng Thái Thành Viên
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+              >
+                <option value="ACTIVE">ACTIVE (Đang Hoạt Động)</option>
+                <option value="PROBATION">PROBATION (Thử Việc / Tân Thành Viên)</option>
+                <option value="ON_LEAVE">ON_LEAVE (Tạm Nghỉ Hoạt Động)</option>
+                <option value="ALUMNI">ALUMNI (Cựu Thành Viên)</option>
+              </select>
+            </div>
+
+            {/* Cấp bậc (Tier / Role) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Cấp Bậc Phân Quyền (Tier / Role)
               </label>
               <select
                 value={tier}
                 onChange={(e) => {
                   const newTier = e.target.value as Tier;
                   setTier(newTier);
-                  if (newTier === 'ORG_ADMIN') {
+                  if (newTier === 'ORG_ADMIN' || newTier === 'ADVISOR') {
                     setBanId('none');
                   }
                 }}
@@ -289,6 +295,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                 <option value="BAN_MEMBER">BAN_MEMBER (Thành Viên Thường)</option>
                 <option value="BAN_LEAD">BAN_LEAD (Trưởng Ban Chuyên Môn)</option>
                 <option value="ORG_ADMIN">ORG_ADMIN (Ban Chủ Nhiệm - Toàn Quyền)</option>
+                <option value="ADVISOR">ADVISOR (Ban Cố Vấn - View Only)</option>
+                <option value="COLLABORATOR">COLLABORATOR (Cộng Tác Viên)</option>
               </select>
             </div>
 
@@ -299,12 +307,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               </label>
               <select
                 value={banId}
-                disabled={tier === 'ORG_ADMIN'}
+                disabled={tier === 'ORG_ADMIN' || tier === 'ADVISOR'}
                 onChange={(e) => setBanId(e.target.value as any)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500 disabled:bg-slate-100"
               >
                 {tier === 'ORG_ADMIN' ? (
                   <option value="none">Ban Chủ Nhiệm</option>
+                ) : tier === 'ADVISOR' ? (
+                  <option value="none">Ban Cố Vấn</option>
                 ) : (
                   <>
                     <option value="ai">Ban Trí Tuệ Nhân Tạo (AI)</option>
@@ -319,52 +329,27 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             </div>
           </div>
 
-          {/* Khóa Gen (Hỗ trợ Gen lẻ) */}
+          {/* Nhiệm Kỳ Hoạt Động (Tenure UUID từ BE) */}
           <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
-            <label className="block text-xs font-bold text-slate-700">
-              Khóa Gen Hoạt Động (CLB):
-            </label>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {availableGens.map(g => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => {
-                    setGen(g);
-                    setIsCustomGen(false);
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    !isCustomGen && gen === g
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setIsCustomGen(true)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  isCustomGen
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                + Gen Khác
-              </button>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                <span>Nhiệm Kỳ Hoạt Động (Tenure):</span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono-code">Khớp 100% với Backend Database</span>
             </div>
 
-            {isCustomGen && (
-              <input
-                type="text"
-                placeholder="Nhập Gen (ví dụ: Gen 2.5, Gen 3.5, Gen 4.5...)"
-                value={customGen}
-                onChange={(e) => setCustomGen(e.target.value)}
-                className="mt-1 px-3 py-1.5 bg-white border border-blue-400 rounded-lg text-xs font-medium focus:outline-none w-full max-w-xs"
-              />
-            )}
+            <select
+              value={selectedTenureId}
+              onChange={(e) => setSelectedTenureId(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+            >
+              {availableTenures.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} — {t.genLabel} {t.id === activeTenureId ? '(Đang hoạt động)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Modal Footer */}
@@ -378,10 +363,20 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              disabled={isSubmitting}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
             >
-              {memberToEdit ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-              <span>{memberToEdit ? 'Lưu Thay Đổi' : 'Thêm Vào Danh Sách'}</span>
+              {isSubmitting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span>Đang Lưu Xuống DB...</span>
+                </>
+              ) : (
+                <>
+                  {memberToEdit ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                  <span>{memberToEdit ? 'Lưu Thay Đổi' : 'Thêm Vào Danh Sách'}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

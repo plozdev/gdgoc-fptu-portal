@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, buildQueryString } from '../client';
 
 export interface QueryEventsParams {
   tenureId?: string;
@@ -34,19 +34,16 @@ export interface AddAttendeeDto {
   notes?: string;
 }
 
+export interface ToggleCheckinDto {
+  checkedIn?: boolean;
+  isVerified?: boolean;
+  evidenceImageUrl?: string;
+  notes?: string;
+}
+
 export const eventsApi = {
-  getEvents: (params?: QueryEventsParams) => {
-    const query = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          query.append(key, String(val));
-        }
-      });
-    }
-    const queryString = query.toString();
-    return api.get(`/api/events${queryString ? `?${queryString}` : ''}`);
-  },
+  getEvents: (params?: QueryEventsParams) =>
+    api.get(`/api/events${buildQueryString(params)}`),
 
   getEvent: (id: string) => api.get(`/api/events/${id}`),
 
@@ -66,7 +63,7 @@ export const eventsApi = {
   toggleCheckin: (
     eventId: string,
     attendeeId: string,
-    dto: { checkedIn: boolean; evidenceImageUrl?: string; notes?: string },
+    dto: ToggleCheckinDto,
   ) =>
     api.patch(
       `/api/events/${eventId}/attendees/${attendeeId}/checkin`,
@@ -75,4 +72,16 @@ export const eventsApi = {
 
   deleteAttendee: (eventId: string, attendeeId: string) =>
     api.delete(`/api/events/${eventId}/attendees/${attendeeId}`),
+
+  addOrganizer: (eventId: string, dto: { userId: string; roleInEvent?: string }) =>
+    api.post(`/api/events/${eventId}/organizers`, dto),
+
+  getOrganizers: (eventId: string) =>
+    api.get(`/api/events/${eventId}/organizers`),
+
+  removeOrganizer: (eventId: string, userId: string) =>
+    api.delete(`/api/events/${eventId}/organizers/${userId}`),
+
+  settleOrganizerGems: (eventId: string) =>
+    api.post(`/api/events/${eventId}/organizers/settle-gems`),
 };

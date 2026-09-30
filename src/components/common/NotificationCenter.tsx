@@ -21,10 +21,14 @@ import { BroadcastModal } from './BroadcastModal';
 
 export const NotificationCenter: React.FC = () => {
   const { user } = useAuthStore();
-  const { notifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const containerRef = useRef<HTMLDivElement>(null);
 

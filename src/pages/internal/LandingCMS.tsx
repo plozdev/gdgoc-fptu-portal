@@ -38,6 +38,7 @@ export const LandingCMS: React.FC = () => {
     addOrganizer, 
     deleteOrganizer, 
     updateStats,
+    saveStatsToBackend,
     resetToDefaults 
   } = useLandingContentStore();
 
@@ -54,7 +55,12 @@ export const LandingCMS: React.FC = () => {
     return <Navigate to="/app/dashboard" replace />;
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      await saveStatsToBackend();
+    } catch (e) {
+      console.error(e);
+    }
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };

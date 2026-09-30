@@ -34,25 +34,32 @@ const SUGGESTED_SKILLS = [
 
 export const MyProfile: React.FC = () => {
   const { user, setUser } = useAuthStore();
-  const { members, updateSelfProfile } = useMemberStore();
+  const { members, updateSelfProfile, fetchMembers } = useMemberStore();
+
+  useEffect(() => {
+    if (members.length === 0) {
+      fetchMembers();
+    }
+  }, [members.length, fetchMembers]);
 
   // Find member matching current user session
-  const currentMember = members.find(m => m.email.toLowerCase() === user?.email.toLowerCase()) || {
+  const memberFromList = members.find(m => m.email.toLowerCase() === user?.email.toLowerCase() || m.id === user?.id);
+  const currentMember = memberFromList || {
     id: user?.id || 'current',
     name: user?.name || 'Thành Viên GDG',
-    studentId: 'SE180000',
-    academicYear: 'K20',
-    email: user?.email || 'member@fpt.edu.vn',
-    phone: '0901234567',
-    position: user?.tier === 'ORG_ADMIN' ? 'Ban Chủ Nhiệm' : user?.tier === 'BAN_LEAD' ? 'Trưởng Ban' : 'Thành Viên',
+    studentId: user?.mssv || 'CHƯA CẬP NHẬT',
+    academicYear: user?.mssv?.replace(/[^\d]/g, '').slice(0, 2) ? `K${user.mssv.replace(/[^\d]/g, '').slice(0, 2)}` : 'K20',
+    email: user?.email || '',
+    phone: '',
+    position: user?.position || (user?.tier === 'ORG_ADMIN' ? 'Ban Chủ Nhiệm' : user?.tier === 'BAN_LEAD' ? 'Trưởng Ban' : 'Thành Viên'),
     tier: user?.tier || 'BAN_MEMBER',
     banId: user?.banId || null,
     banName: user?.banName || 'Ban Thành Viên',
-    gen: 'Gen 4.0',
+    gen: user?.gen || '',
     status: 'ACTIVE',
-    joinedDate: '15/09/2024',
-    bio: 'Thành viên nhiệt huyết của GDG on Campus FPT University HCMC! 🚀',
-    skills: ['Teamwork', 'Communication']
+    joinedDate: new Date().toLocaleDateString('vi-VN'),
+    bio: '',
+    skills: []
   };
 
   // Editable Form State
@@ -77,7 +84,7 @@ export const MyProfile: React.FC = () => {
       setDiscord(currentMember.socials?.discord || '');
       setSkills(currentMember.skills || []);
     }
-  }, [currentMember.id]);
+  }, [currentMember.id, memberFromList]);
 
   const handleAddSkill = (skillToAdd: string) => {
     const trimmed = skillToAdd.trim();
@@ -92,27 +99,41 @@ export const MyProfile: React.FC = () => {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+    setErrorMessage(null);
 
-    const socialsData: MemberSocials = {
-      facebook: facebook.trim(),
-      github: github.trim(),
-      linkedin: linkedin.trim(),
-      discord: discord.trim()
-    };
+    try {
+      const socialsData: MemberSocials = {
+        facebook: facebook.trim(),
+        github: github.trim(),
+        linkedin: linkedin.trim(),
+        discord: discord.trim()
+      };
 
-    updateSelfProfile(currentMember.id, {
-      bio: bio.trim(),
-      phone: phone.trim(),
-      socials: socialsData,
-      skills
-    });
+      await updateSelfProfile(currentMember.id, {
+        bio: bio.trim(),
+        phone: phone.trim(),
+        socials: socialsData,
+        skills
+      });
 
-    setIsSavedToast(true);
-    setTimeout(() => {
-      setIsSavedToast(false);
-    }, 4000);
+      setIsSavedToast(true);
+      setTimeout(() => {
+        setIsSavedToast(false);
+      }, 4000);
+    } catch (err: any) {
+      console.error('Failed to update profile:', err);
+      setErrorMessage(err.message || 'Có lỗi xảy ra khi cập nhật hồ sơ');
+      setTimeout(() => setErrorMessage(null), 5000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isLead = currentMember.tier === 'BAN_LEAD';

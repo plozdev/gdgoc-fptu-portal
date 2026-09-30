@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, buildQueryString } from '../client';
 
 export interface CreateInventoryItemDto {
   name: string;
@@ -10,18 +10,8 @@ export interface CreateInventoryItemDto {
 }
 
 export const inventoryApi = {
-  getInventory: (params?: { category?: string; search?: string; page?: number; limit?: number }) => {
-    const query = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          query.append(key, String(val));
-        }
-      });
-    }
-    const queryString = query.toString();
-    return api.get(`/api/inventory${queryString ? `?${queryString}` : ''}`);
-  },
+  getInventory: (params?: { category?: string; search?: string; page?: number; limit?: number }) =>
+    api.get(`/api/inventory${buildQueryString(params)}`),
 
   getInventoryItem: (id: string) => api.get(`/api/inventory/${id}`),
 

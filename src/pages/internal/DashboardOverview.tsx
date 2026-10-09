@@ -1,57 +1,108 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useLandingContentStore } from '../../store/useLandingContentStore';
+import { tasksApi } from '../../api/tasks.api';
+import { eventsApi } from '../../api/events.api';
 import { 
   Users, 
   CheckSquare, 
   Calendar, 
   Award, 
-  Sparkles,
-  ArrowRight,
-  FolderGit2
+  Sparkles, 
+  ArrowRight, 
+  FolderGit2 
 } from 'lucide-react';
-import { BAN_NAMES, BanId } from '../../mocks/fixtures/users';
-
-interface StoredTask {
-  id: string;
-  banId: string;
-  status: string;
-  gems: number;
-}
+import { BanId } from '../../mocks/fixtures/users';
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuthStore();
-  const { members } = useMemberStore();
-  const { events } = useLandingContentStore();
+  const { members, fetchMembers } = useMemberStore();
+  const { events: fallbackEvents } = useLandingContentStore();
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
 
-  // Read actual tasks from storage
-  const tasks: StoredTask[] = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('gdgoc_tasks_v2');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }, []);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [backendEvents, setBackendEvents] = useState<any[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
+
+  // Fetch actual data from backend
+  useEffect(() => {
+    let isMounted = true;
+    fetchMembers();
+
+    const loadData = async () => {
+      try {
+        const [tasksRes, eventsRes] = await Promise.allSettled([
+          tasksApi.getTasks({ limit: 100 }),
+          eventsApi.getEvents(),
+        ]);
+
+        if (!isMounted) return;
+
+        if (tasksRes.status === 'fulfilled' && tasksRes.value) {
+          const raw = tasksRes.value;
+          const list = Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.items)
+            ? raw.items
+            : Array.isArray(raw?.data)
+            ? raw.data
+            : [];
+
+          if (list.length > 0) {
+            setTasks(list);
+          } else {
+            const rawLocal = localStorage.getItem('gdgoc_tasks_v2');
+            setTasks(rawLocal ? JSON.parse(rawLocal) : []);
+          }
+        } else {
+          const rawLocal = localStorage.getItem('gdgoc_tasks_v2');
+          setTasks(rawLocal ? JSON.parse(rawLocal) : []);
+        }
+
+        if (eventsRes.status === 'fulfilled' && eventsRes.value) {
+          const evList = Array.isArray(eventsRes.value)
+            ? eventsRes.value
+            : Array.isArray(eventsRes.value?.data)
+            ? eventsRes.value.data
+            : [];
+          setBackendEvents(evList);
+        }
+      } catch (err) {
+        console.warn('[DashboardOverview] Error loading data:', err);
+      } finally {
+        if (isMounted) setIsLoadingData(false);
+      }
+    };
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchMembers]);
 
   const activeMembersCount = members.filter(m => m.status === 'ACTIVE').length;
-  const runningTasksCount = tasks.filter(t => t.status !== 'done').length;
-  const reviewTasksCount = tasks.filter(t => t.status === 'review').length;
+  const runningTasksCount = tasks.filter(t => t.status !== 'DONE' && t.status !== 'done' && t.status !== 'CANCELLED').length;
+  const reviewTasksCount = tasks.filter(t => t.status === 'IN_REVIEW' || t.status === 'review').length;
   const totalGemsEarned = tasks
-    .filter(t => t.status === 'done')
-    .reduce((sum, t) => sum + (Number(t.gems) || 0), 0);
+    .filter(t => t.status === 'DONE' || t.status === 'done')
+    .reduce((sum, t) => sum + (Number(t.gemsReward || t.gems) || 0), 0);
 
-  const upcomingEvents = events.filter(e => e.status !== 'Completed');
+  const allEvents = backendEvents.length > 0 ? backendEvents : fallbackEvents;
+  const upcomingEvents = allEvents.filter((e: any) => {
+    if (e.endTime) return new Date(e.endTime) >= new Date();
+    if (e.startTime) return new Date(e.startTime) >= new Date();
+    return e.status !== 'Completed';
+  });
 
   const BAN_CONFIGS = [
-    { id: 'ai' as BanId, name: 'Ban Trí Tuệ Nhân Tạo (AI)', division: 'Khối Tech', defaultLead: 'Trần Nguyên Bảo', color: 'border-l-amber-400' },
-    { id: 'cloud' as BanId, name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', defaultLead: 'Hoàng Minh Tuấn', color: 'border-l-blue-500' },
-    { id: 'web' as BanId, name: 'Ban Phát Triển Web', division: 'Khối Tech', defaultLead: 'Lê Hoàng Long', color: 'border-l-emerald-500' },
-    { id: 'research' as BanId, name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', defaultLead: 'Phạm Quốc Anh', color: 'border-l-red-500' },
-    { id: 'media' as BanId, name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', defaultLead: 'Vũ Thị Lan Hương', color: 'border-l-pink-500' },
-    { id: 'hr-event' as BanId, name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', defaultLead: 'Bùi Đức Thịnh', color: 'border-l-teal-500' },
+    { id: 'ai' as BanId, code: 'TECH_AI', name: 'Ban Trí Tuệ Nhân Tạo (AI)', division: 'Khối Tech', defaultLead: 'Võ Cao Minh', color: 'border-l-amber-400' },
+    { id: 'cloud' as BanId, code: 'TECH_CLOUD', name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', defaultLead: 'Võ Trần Ngọc Hữu', color: 'border-l-blue-500' },
+    { id: 'web' as BanId, code: 'TECH_WEB', name: 'Ban Phát Triển Web', division: 'Khối Tech', defaultLead: 'Bùi Phạm Chí Nhân', color: 'border-l-emerald-500' },
+    { id: 'research' as BanId, code: 'TECH_RESEARCH', name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', defaultLead: 'Bùi Anh Huy', color: 'border-l-red-500' },
+    { id: 'media' as BanId, code: 'MEDIA', name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', defaultLead: 'Hồ Ngọc Bảo Trân', color: 'border-l-pink-500' },
+    { id: 'hr-event' as BanId, code: 'HR_EVENT', name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', defaultLead: 'Mai Anh Hoàng', color: 'border-l-teal-500' },
   ];
 
   return (
@@ -81,7 +132,7 @@ export const DashboardOverview: React.FC = () => {
 
       {/* 4 Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-shadow">
+        <Link to="/app/hr" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md hover:border-blue-300 transition-all block">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Tổng Nhân Sự Active</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -93,12 +144,12 @@ export const DashboardOverview: React.FC = () => {
             {activeMembersCount > 0 ? (
               <span className="text-emerald-600 font-bold">Đã phân ban hoạt động</span>
             ) : (
-              <span className="text-slate-400">Chưa có thành viên nào trong danh bạ</span>
+              <span className="text-slate-400">Đang tải danh bạ từ máy chủ...</span>
             )}
           </p>
-        </div>
+        </Link>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-shadow">
+        <Link to="/app/tasks" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md hover:border-emerald-300 transition-all block">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Nhiệm Vụ Đang Chạy</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -109,9 +160,9 @@ export const DashboardOverview: React.FC = () => {
           <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
             <span className="text-amber-600 font-bold">{reviewTasksCount} tasks</span> đang chờ duyệt kết quả
           </p>
-        </div>
+        </Link>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-shadow">
+        <Link to="/app/events" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all block">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Sự Kiện Trọng Điểm</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -126,9 +177,9 @@ export const DashboardOverview: React.FC = () => {
               <span className="text-slate-400">Chưa có lịch sự kiện kỳ Fall 2026</span>
             )}
           </p>
-        </div>
+        </Link>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-shadow">
+        <Link to="/app/gems" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md hover:border-yellow-300 transition-all block">
           <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Quỹ Gems Tích Lũy</span>
             <div className="w-8 h-8 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center">
@@ -139,7 +190,7 @@ export const DashboardOverview: React.FC = () => {
           <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
             <span className="text-emerald-600 font-bold">Từ các task hoàn thành</span>
           </p>
-        </div>
+        </Link>
       </div>
 
       {/* 6 Ban Chuyên Môn Status Grid */}
@@ -156,8 +207,12 @@ export const DashboardOverview: React.FC = () => {
           {BAN_CONFIGS.map((ban) => {
             const isUserBan = user?.banId === ban.id;
             const banMembersCount = members.filter(m => m.banId === ban.id && m.status === 'ACTIVE').length;
-            const banTasksCount = tasks.filter(t => t.banId === ban.id && t.status !== 'done').length;
-            const designatedLead = members.find(m => m.banId === ban.id && m.tier === 'BAN_LEAD')?.name || ban.defaultLead;
+            const banTasksCount = tasks.filter(t => {
+              const inBan = t.department?.code === ban.code || t.departmentCode === ban.code || t.banId === ban.id;
+              const isRunning = t.status !== 'DONE' && t.status !== 'done' && t.status !== 'CANCELLED';
+              return inBan && isRunning;
+            }).length;
+            const designatedLead = members.find(m => m.banId === ban.id && (m.tier === 'BAN_LEAD' || m.position.toLowerCase().includes('trưởng ban') || m.position.toLowerCase().includes('lead')))?.name || ban.defaultLead;
 
             return (
               <div 

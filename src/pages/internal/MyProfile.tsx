@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useMemberStore, MemberSocials } from '../../store/useMemberStore';
+import { useMemberStore, Member, MemberSocials } from '../../store/useMemberStore';
+import { tasksApi } from '../../api/tasks.api';
+import { eventsApi } from '../../api/events.api';
 import { 
   User, 
   Mail, 
@@ -23,7 +25,8 @@ import {
   Calendar,
   Layers,
   Flame,
-  Check
+  Check,
+  Image as ImageIcon
 } from 'lucide-react';
 
 const SUGGESTED_SKILLS = [
@@ -34,16 +37,22 @@ const SUGGESTED_SKILLS = [
 
 export const MyProfile: React.FC = () => {
   const { user, setUser } = useAuthStore();
-  const { members, updateSelfProfile } = useMemberStore();
+  const { members, fetchMembers, updateSelfProfile, isLoading: isMembersLoading } = useMemberStore();
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   // Find member matching current user session
-  const currentMember = members.find(m => m.email.toLowerCase() === user?.email.toLowerCase()) || {
+  const currentMember: Member = members.find(
+    m => (user?.id && m.id === user.id) || (user?.email && m.email.toLowerCase() === user.email.toLowerCase())
+  ) || {
     id: user?.id || 'current',
     name: user?.name || 'Thành Viên GDG',
-    studentId: 'SE180000',
+    studentId: user?.mssv || 'SE180000',
     academicYear: 'K20',
     email: user?.email || 'member@fpt.edu.vn',
-    phone: '0901234567',
+    phone: user?.phoneNumber || user?.phone || '0901234567',
     position: user?.tier === 'ORG_ADMIN' ? 'Ban Chủ Nhiệm' : user?.tier === 'BAN_LEAD' ? 'Trưởng Ban' : 'Thành Viên',
     tier: user?.tier || 'BAN_MEMBER',
     banId: user?.banId || null,
@@ -52,12 +61,15 @@ export const MyProfile: React.FC = () => {
     status: 'ACTIVE',
     joinedDate: '15/09/2024',
     bio: 'Thành viên nhiệt huyết của GDG on Campus FPT University HCMC! 🚀',
-    skills: ['Teamwork', 'Communication']
+    skills: ['Teamwork', 'Communication'],
+    socials: {} as MemberSocials,
+    gemsBalance: user?.gemsBalance ?? 0
   };
 
   // Editable Form State
   const [bio, setBio] = useState(currentMember.bio || '');
   const [phone, setPhone] = useState(currentMember.phone || '');
+  const [avatarUrl, setAvatarUrl] = useState(currentMember.avatar || user?.avatarUrl || '');
   const [facebook, setFacebook] = useState(currentMember.socials?.facebook || '');
   const [github, setGithub] = useState(currentMember.socials?.github || '');
   const [linkedin, setLinkedin] = useState(currentMember.socials?.linkedin || '');
@@ -66,18 +78,74 @@ export const MyProfile: React.FC = () => {
   const [skills, setSkills] = useState<string[]>(currentMember.skills || []);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSavedToast, setIsSavedToast] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Stats from backend
+  const [userTasks, setUserTasks] = useState<any[]>([]);
+  const [eventsCount, setEventsCount] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUserStats = async () => {
+      try {
+        const [tasksRes, eventsRes] = await Promise.allSettled([
+          tasksApi.getTasks({ limit: 100 }),
+          eventsApi.getEvents(),
+        ]);
+
+        if (!isMounted) return;
+
+        if (tasksRes.status === 'fulfilled' && tasksRes.value) {
+          const raw = tasksRes.value;
+          const list = Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.items)
+            ? raw.items
+            : Array.isArray(raw?.data)
+            ? raw.data
+            : [];
+          if (list.length > 0) {
+            setUserTasks(list);
+          } else {
+            const saved = localStorage.getItem('gdgoc_tasks_v2');
+            setUserTasks(saved ? JSON.parse(saved) : []);
+          }
+        } else {
+          const saved = localStorage.getItem('gdgoc_tasks_v2');
+          setUserTasks(saved ? JSON.parse(saved) : []);
+        }
+
+        if (eventsRes.status === 'fulfilled' && eventsRes.value) {
+          const evList = Array.isArray(eventsRes.value)
+            ? eventsRes.value
+            : Array.isArray(eventsRes.value?.data)
+            ? eventsRes.value.data
+            : [];
+          setEventsCount(evList.length);
+        }
+      } catch (err) {
+        console.warn('[MyProfile] Failed to fetch stats:', err);
+      }
+    };
+
+    fetchUserStats();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (currentMember) {
       setBio(currentMember.bio || '');
       setPhone(currentMember.phone || '');
+      setAvatarUrl(currentMember.avatar || user?.avatarUrl || '');
       setFacebook(currentMember.socials?.facebook || '');
       setGithub(currentMember.socials?.github || '');
       setLinkedin(currentMember.socials?.linkedin || '');
       setDiscord(currentMember.socials?.discord || '');
       setSkills(currentMember.skills || []);
     }
-  }, [currentMember.id]);
+  }, [currentMember.id, members.length]);
 
   const handleAddSkill = (skillToAdd: string) => {
     const trimmed = skillToAdd.trim();
@@ -92,8 +160,9 @@ export const MyProfile: React.FC = () => {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
 
     const socialsData: MemberSocials = {
       facebook: facebook.trim(),
@@ -102,21 +171,52 @@ export const MyProfile: React.FC = () => {
       discord: discord.trim()
     };
 
-    updateSelfProfile(currentMember.id, {
-      bio: bio.trim(),
-      phone: phone.trim(),
-      socials: socialsData,
-      skills
-    });
+    const targetUserId = currentMember.id !== 'current' ? currentMember.id : (user?.id || '');
 
-    setIsSavedToast(true);
-    setTimeout(() => {
-      setIsSavedToast(false);
-    }, 4000);
+    try {
+      await updateSelfProfile(targetUserId, {
+        bio: bio.trim(),
+        phone: phone.trim(),
+        socials: socialsData,
+        skills,
+        avatar: avatarUrl.trim() || undefined,
+      });
+
+      if (user) {
+        setUser({
+          ...user,
+          phone: phone.trim(),
+          phoneNumber: phone.trim(),
+          avatarUrl: avatarUrl.trim() || user.avatarUrl,
+        });
+      }
+
+      setIsSavedToast(true);
+      setTimeout(() => {
+        setIsSavedToast(false);
+      }, 4000);
+    } catch (err) {
+      console.error('Lỗi khi lưu profile:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isLead = currentMember.tier === 'BAN_LEAD';
   const isAdmin = currentMember.tier === 'ORG_ADMIN';
+
+  // Calculate completed tasks
+  const completedTasksCount = userTasks.filter((t: any) => {
+    const isDone = t.status === 'DONE' || t.status === 'done';
+    const isAssigned = 
+      t.assignees?.some((a: any) => a.userId === user?.id || a.user?.id === user?.id) ||
+      t.assigneeId === user?.id ||
+      t.assigneeIds?.includes(user?.id);
+    return isDone && (isAssigned || isAdmin);
+  }).length;
+
+  const currentGems = currentMember.gemsBalance ?? user?.gemsBalance ?? 0;
+  const currentAvatar = avatarUrl || currentMember.avatar || user?.avatarUrl;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto select-none pb-12">
@@ -128,7 +228,7 @@ export const MyProfile: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-bold">Lưu Thành Công!</p>
-            <p className="text-[11px] text-slate-300">Thông tin cá nhân và Bio của bạn đã được cập nhật.</p>
+            <p className="text-[11px] text-slate-300">Thông tin cá nhân và Bio của bạn đã được cập nhật trực tiếp vào hệ thống.</p>
           </div>
         </div>
       )}
@@ -151,8 +251,12 @@ export const MyProfile: React.FC = () => {
         <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
           <div className="flex items-end gap-4 sm:gap-6">
             {/* Avatar with Ring */}
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none">
-              {currentMember.name.charAt(0)}
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
+              {currentAvatar ? (
+                <img src={currentAvatar} alt={currentMember.name} className="w-full h-full object-cover" />
+              ) : (
+                currentMember.name.charAt(0)
+              )}
             </div>
 
             <div className="pt-2">
@@ -264,16 +368,16 @@ export const MyProfile: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-xs">
-                <p className="text-lg font-extrabold text-yellow-400">450</p>
+                <p className="text-lg font-extrabold text-yellow-400">{currentGems}</p>
                 <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Gems 💎</p>
               </div>
               <div className="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-xs">
-                <p className="text-lg font-extrabold text-emerald-400">12</p>
+                <p className="text-lg font-extrabold text-emerald-400">{completedTasksCount}</p>
                 <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Tasks Xong</p>
               </div>
               <div className="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-xs">
-                <p className="text-lg font-extrabold text-blue-400">6</p>
-                <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Events Điểm Danh</p>
+                <p className="text-lg font-extrabold text-blue-400">{eventsCount}</p>
+                <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Events CLB</p>
               </div>
             </div>
           </div>
@@ -314,20 +418,38 @@ export const MyProfile: React.FC = () => {
               />
             </div>
 
-            {/* 2. SỐ ĐIỆN THOẠI */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold text-slate-800">
-                Số Điện Thoại Liên Hệ (Zalo / Call)
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="tel"
-                  placeholder="Ví dụ: 0901234567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all"
-                />
+            {/* 2. SỐ ĐIỆN THOẠI & AVATAR */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-800">
+                  Số Điện Thoại Liên Hệ (Zalo / Call)
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    placeholder="Ví dụ: 0901234567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-800">
+                  Link Ảnh Đại Diện (Avatar URL)
+                </label>
+                <div className="relative">
+                  <ImageIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    placeholder="https://example.com/avatar.png"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all"
+                  />
+                </div>
               </div>
             </div>
 
@@ -464,10 +586,15 @@ export const MyProfile: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer"
+                disabled={isSaving}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <Check className="w-4 h-4" />
-                <span>Lưu Thay Đổi Hồ Sơ</span>
+                {isSaving ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>{isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi Hồ Sơ'}</span>
               </button>
             </div>
           </form>

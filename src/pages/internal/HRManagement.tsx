@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import { useMemberStore, Member } from '../../store/useMemberStore';
@@ -25,7 +25,7 @@ import { ExcelImportModal } from '../../components/hr/ExcelImportModal';
 export const HRManagement: React.FC = () => {
   const { user } = useAuthStore();
   const { currentGen } = useGenerationStore();
-  const { members, deleteMember, getAvailableGens } = useMemberStore();
+  const { members, isLoading, fetchMembers, deleteMember, getAvailableGens } = useMemberStore();
 
   const [selectedBan, setSelectedBan] = useState<string>('all');
   const [selectedGen, setSelectedGen] = useState<string>('all');
@@ -38,6 +38,10 @@ export const HRManagement: React.FC = () => {
   
   // Delete confirm state
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   // 🚨 CRITICAL RULE: Phân quyền truy cập cho BCN (ORG_ADMIN) và toàn bộ Ban HR-Event (Lead & Member)
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
@@ -52,15 +56,23 @@ export const HRManagement: React.FC = () => {
 
   // Filter members
   const filteredMembers = members.filter(m => {
-    const matchesBan = selectedBan === 'all' || m.banId === selectedBan;
-    const matchesGen = selectedGen === 'all' || m.gen === selectedGen;
+    const posLower = (m.position || '').toLowerCase();
+    const matchesBan =
+      selectedBan === 'all' ||
+      (selectedBan === 'bcn' && (m.tier === 'ORG_ADMIN' || !m.banId || posLower.includes('chapter lead'))) ||
+      (selectedBan === 'alumni' && (m.status === 'ALUMNI' || posLower.includes('alumni'))) ||
+      (selectedBan === 'cloud' && (m.banId === 'cloud' || posLower.includes('cloud'))) ||
+      (selectedBan === 'research' && (m.banId === 'research' || posLower.includes('research'))) ||
+      m.banId === selectedBan;
+
+    const matchesGen = selectedGen === 'all' || m.gen.toUpperCase() === selectedGen.toUpperCase();
     const query = searchQuery.toLowerCase().trim();
     const matchesSearch = !query || 
       m.name.toLowerCase().includes(query) ||
       m.studentId.toLowerCase().includes(query) ||
       m.email.toLowerCase().includes(query) ||
       (m.phone && m.phone.includes(query)) ||
-      (m.position && m.position.toLowerCase().includes(query));
+      (m.position && posLower.includes(query));
 
     return matchesBan && matchesGen && matchesSearch;
   });
@@ -68,11 +80,13 @@ export const HRManagement: React.FC = () => {
   const banTabs = [
     { id: 'all', label: 'Tất Cả Các Ban', count: members.length },
     { id: 'ai', label: 'Ban AI', count: members.filter(u => u.banId === 'ai').length },
-    { id: 'cloud', label: 'Ban Cloud', count: members.filter(u => u.banId === 'cloud').length },
+    { id: 'cloud', label: 'Ban Cloud', count: members.filter(u => u.banId === 'cloud' || (u.position || '').toLowerCase().includes('cloud')).length },
     { id: 'web', label: 'Ban Web', count: members.filter(u => u.banId === 'web').length },
-    { id: 'research', label: 'Ban Research', count: members.filter(u => u.banId === 'research').length },
+    { id: 'research', label: 'Ban Research', count: members.filter(u => u.banId === 'research' || (u.position || '').toLowerCase().includes('research')).length },
     { id: 'media', label: 'Ban Media', count: members.filter(u => u.banId === 'media').length },
     { id: 'hr-event', label: 'Ban HR-Event', count: members.filter(u => u.banId === 'hr-event').length },
+    { id: 'bcn', label: 'Ban Chủ Nhiệm', count: members.filter(u => u.tier === 'ORG_ADMIN' || !u.banId).length },
+    { id: 'alumni', label: 'Alumni', count: members.filter(u => u.status === 'ALUMNI' || (u.position || '').toLowerCase().includes('alumni')).length },
   ];
 
   const handleOpenAddModal = () => {
@@ -118,6 +132,16 @@ export const HRManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => fetchMembers()}
+            disabled={isLoading}
+            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Đồng bộ danh sách từ server"
+          >
+            <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Làm Mới</span>
+          </button>
+
           <button
             onClick={() => setIsExcelModalOpen(true)}
             className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"

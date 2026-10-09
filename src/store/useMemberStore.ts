@@ -2,13 +2,13 @@
  * @file useMemberStore.ts
  * @description Zustand store quản lý danh sách thành viên CLB.
  * 
- * ⚠️  MOCK DATA ĐÃ BỊ XÓA — Store bắt đầu với danh sách rỗng.
- * Khi backend được tích hợp, data sẽ được fetch từ GET /api/members.
- * localStorage chỉ dùng để cache local, không phải nguồn dữ liệu chính.
+ * Dữ liệu được fetch trực tiếp từ API backend (GET /api/members).
+ * Hỗ trợ cache vào localStorage và đồng bộ hóa trạng thái hai chiều.
  */
 
 import { create } from 'zustand';
 import { Tier, BanId, BAN_NAMES } from '../mocks/fixtures/users';
+import { membersApi, QueryMembersParams } from '../api/members.api';
 
 // ==========================================
 // TYPES
@@ -32,15 +32,16 @@ export interface Member {
   tier: Tier;                // Cấp bậc: ADVISOR | ORG_ADMIN | BAN_LEAD | BAN_MEMBER
   banId: BanId | null;       // Ban trực thuộc
   banName: string;           // Tên ban đầy đủ
-  gen: string;               // Kỳ hoạt động: 'Gen 4.0', 'Gen 3.5', v.v.
+  gen: string;               // Kỳ hoạt động: 'GEN 2.0', 'GEN 2.1', 'GEN 3.0', 'Gen 4.0'
   status: 'ACTIVE' | 'ALUMNI' | 'ON_LEAVE';
   joinedDate: string;        // dd/MM/yyyy
 
-  // Dữ liệu cá nhân (thành viên tự cập nhật)
+  // Dữ liệu cá nhân
   bio?: string;
   avatar?: string;
   socials?: MemberSocials;
   skills?: string[];
+  gemsBalance?: number;
 }
 
 export interface ExcelImportRow {
@@ -58,9 +59,12 @@ export interface ExcelImportRow {
 
 interface MemberState {
   members: Member[];
-  addMember: (member: Omit<Member, 'id'>) => void;
-  updateMember: (id: string, updates: Partial<Member>) => void;
-  deleteMember: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  fetchMembers: (params?: QueryMembersParams) => Promise<void>;
+  addMember: (member: Omit<Member, 'id'>) => Promise<void>;
+  updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
   updateSelfProfile: (id: string, profile: {
     bio?: string;
     phone?: string;
@@ -107,8 +111,8 @@ const saveToStorage = (members: Member[]): void => {
 // HELPERS — Derive tier/ban from position string
 // ==========================================
 
-function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; banName: string } {
-  const posLower = position.toLowerCase();
+export function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; banName: string } {
+  const posLower = (position || '').toLowerCase();
 
   if (posLower.includes('advisor') || posLower.includes('cố vấn')) {
     return { tier: 'ADVISOR', banId: null, banName: 'Cố Vấn CLB' };
@@ -136,7 +140,89 @@ function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; 
   }
 
   // Default fallback
-  return { tier: 'BAN_MEMBER', banId: null, banName: 'Ban Thành Viên' };
+  return { tier: 'BAN_MEMBER', banId: null, banName: 'Ban Chủ Nhiệm / Thành Viên' };
+}
+
+export function mapBackendMemberToMember(raw: any): Member {
+  const role = raw.tenure?.role;
+  let tier: Tier = 'BAN_MEMBER';
+  if (role === 'ADVISOR') {
+    tier = 'ADVISOR';
+  } else if (role === 'LEAD') {
+    tier = 'ORG_ADMIN';
+  } else if (role === 'DEPARTMENT_LEAD') {
+    tier = 'BAN_LEAD';
+  }
+
+  const deptCode = raw.tenure?.departmentCode;
+  const deptMap: Record<string, { banId: BanId | null; banName: string }> = {
+    TECH_AI: { banId: 'ai', banName: BAN_NAMES['ai'] },
+    TECH_CLOUD: { banId: 'cloud', banName: BAN_NAMES['cloud'] },
+    TECH_WEB: { banId: 'web', banName: BAN_NAMES['web'] },
+    TECH_RESEARCH: { banId: 'research', banName: BAN_NAMES['research'] },
+    MEDIA: { banId: 'media', banName: BAN_NAMES['media'] },
+    HR_EVENT: { banId: 'hr-event', banName: BAN_NAMES['hr-event'] },
+    EXECUTIVE: { banId: null, banName: 'Ban Chủ Nhiệm' },
+  };
+
+  const derived = deriveTierAndBan(raw.tenure?.position || raw.position || '');
+  const banInfo = deptCode && deptMap[deptCode] ? deptMap[deptCode] : derived;
+
+  // Extract academicYear: e.g. K21
+  let academicYear = raw.academicYear;
+  if (!academicYear) {
+    const kSkill = raw.skills?.find((s: string) => /^K\d+$/i.test(s));
+    if (kSkill) {
+      academicYear = kSkill;
+    } else {
+      const match = (raw.mssv || '').match(/^[A-Za-z]+(\d{2})/);
+      academicYear = match ? `K${match[1]}` : 'K20';
+    }
+  }
+
+  // Extract gen: e.g. GEN 2.1
+  let gen = raw.gen;
+  if (!gen) {
+    const genSkill = raw.skills?.find((s: string) => /^GEN/i.test(s));
+    gen = genSkill || raw.tenure?.genLabel || 'Gen 4.0';
+  }
+
+  // Joined date: dd/MM/yyyy
+  let joinedDate = 'Chưa cập nhật';
+  if (raw.tenure?.joinedAt) {
+    const d = new Date(raw.tenure.joinedAt);
+    if (!isNaN(d.getTime())) {
+      joinedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+  }
+
+  const socials: MemberSocials = raw.socials || {
+    facebook: raw.facebookUrl || '',
+    github: raw.githubUrl || '',
+    linkedin: raw.linkedinUrl || '',
+    discord: raw.discordUsername || '',
+  };
+
+  return {
+    id: raw.id,
+    name: raw.fullName || raw.name,
+    studentId: raw.mssv || raw.studentId,
+    academicYear,
+    email: raw.email,
+    phone: raw.phoneNumber || raw.phone || 'Chưa cập nhật',
+    position: raw.tenure?.position || raw.position || 'Thành Viên',
+    tier: raw.tier || tier,
+    banId: banInfo.banId,
+    banName: banInfo.banName,
+    gen,
+    status: raw.tenure?.status || raw.status || 'ACTIVE',
+    joinedDate,
+    bio: raw.bio || '',
+    avatar: raw.avatarUrl || raw.avatar,
+    socials,
+    skills: raw.skills || [],
+    gemsBalance: raw.gemsBalance ?? raw.user?.gemsBalance ?? 0,
+  };
 }
 
 // ==========================================
@@ -145,20 +231,104 @@ function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; 
 
 export const useMemberStore = create<MemberState>((set, get) => ({
   members: loadMembersFromStorage(),
+  isLoading: false,
+  error: null,
 
-  addMember: (memberData) => {
-    const newMember: Member = {
-      ...memberData,
-      id: `mem-${Date.now()}`,
-    };
-    set((state) => {
-      const updated = [newMember, ...state.members];
-      saveToStorage(updated);
-      return { members: updated };
-    });
+  fetchMembers: async (params?: QueryMembersParams) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res: any = await membersApi.getMembers({ limit: 100, ...params });
+      const rawList = res.items || res.data?.items || (Array.isArray(res) ? res : Array.isArray(res.data) ? res.data : []);
+      const mapped = rawList.map(mapBackendMemberToMember);
+      set({ members: mapped, isLoading: false });
+      saveToStorage(mapped);
+    } catch (err: any) {
+      console.error('[MemberStore] Failed to fetch members from API:', err);
+      set({ error: err.message || 'Lỗi tải danh sách thành viên', isLoading: false });
+    }
   },
 
-  updateMember: (id, updates) => {
+  addMember: async (memberData) => {
+    try {
+      const deptCodeMap: Record<string, string> = {
+        ai: 'TECH_AI',
+        cloud: 'TECH_CLOUD',
+        web: 'TECH_WEB',
+        research: 'TECH_RESEARCH',
+        media: 'MEDIA',
+        'hr-event': 'HR_EVENT',
+      };
+      const deptCode = memberData.banId ? deptCodeMap[memberData.banId] || 'EXECUTIVE' : 'EXECUTIVE';
+
+      const roleMap: Record<Tier, string> = {
+        ORG_ADMIN: 'LEAD',
+        ADVISOR: 'ADVISOR',
+        BAN_LEAD: 'DEPARTMENT_LEAD',
+        BAN_MEMBER: 'MEMBER',
+      };
+
+      const res: any = await membersApi.createMember({
+        mssv: memberData.studentId,
+        fullName: memberData.name,
+        email: memberData.email,
+        phoneNumber: memberData.phone,
+        departmentCode: deptCode,
+        role: roleMap[memberData.tier] || 'MEMBER',
+        position: memberData.position,
+      });
+
+      const newMember: Member = res ? mapBackendMemberToMember(res) : {
+        ...memberData,
+        id: `mem-${Date.now()}`,
+      };
+
+      set((state) => {
+        const updated = [newMember, ...state.members.filter((m) => m.id !== newMember.id)];
+        saveToStorage(updated);
+        return { members: updated };
+      });
+    } catch (error) {
+      console.error('[MemberStore] Failed to create member on backend:', error);
+      // Fallback local
+      const fallbackMember: Member = {
+        ...memberData,
+        id: `mem-${Date.now()}`,
+      };
+      set((state) => {
+        const updated = [fallbackMember, ...state.members];
+        saveToStorage(updated);
+        return { members: updated };
+      });
+    }
+  },
+
+  updateMember: async (id, updates) => {
+    try {
+      const deptCodeMap: Record<string, string> = {
+        ai: 'TECH_AI',
+        cloud: 'TECH_CLOUD',
+        web: 'TECH_WEB',
+        research: 'TECH_RESEARCH',
+        media: 'MEDIA',
+        'hr-event': 'HR_EVENT',
+      };
+      const roleMap: Record<Tier, string> = {
+        ORG_ADMIN: 'LEAD',
+        ADVISOR: 'ADVISOR',
+        BAN_LEAD: 'DEPARTMENT_LEAD',
+        BAN_MEMBER: 'MEMBER',
+      };
+
+      await membersApi.updateMember(id, {
+        position: updates.position,
+        status: updates.status,
+        departmentCode: updates.banId ? deptCodeMap[updates.banId] : undefined,
+        role: updates.tier ? roleMap[updates.tier] : undefined,
+      });
+    } catch (error) {
+      console.warn('[MemberStore] Backend update failed, updating local state:', error);
+    }
+
     set((state) => {
       const updated = state.members.map((m) =>
         m.id === id ? { ...m, ...updates } : m
@@ -168,7 +338,13 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     });
   },
 
-  deleteMember: (id) => {
+  deleteMember: async (id) => {
+    try {
+      await membersApi.deleteMember(id);
+    } catch (error) {
+      console.warn('[MemberStore] Backend delete failed, updating local state:', error);
+    }
+
     set((state) => {
       const updated = state.members.filter((m) => m.id !== id);
       saveToStorage(updated);
@@ -176,7 +352,22 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     });
   },
 
-  updateSelfProfile: (id, profile) => {
+  updateSelfProfile: async (id, profile) => {
+    try {
+      await membersApi.updateProfile(id, {
+        bio: profile.bio,
+        phoneNumber: profile.phone,
+        skills: profile.skills,
+        facebookUrl: profile.socials?.facebook,
+        githubUrl: profile.socials?.github,
+        linkedinUrl: profile.socials?.linkedin,
+        discordUsername: profile.socials?.discord,
+        avatarUrl: profile.avatar,
+      });
+    } catch (error) {
+      console.warn('[MemberStore] Failed to update profile on backend, falling back to local state:', error);
+    }
+
     set((state) => {
       const updated = state.members.map((m) => {
         if (m.id !== id) return m;
@@ -200,7 +391,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     const currentMembers = get().members;
 
     rows.forEach((row, index) => {
-      const rowNum = index + 2; // 1-indexed, row 1 = header
+      const rowNum = index + 2;
       const name = (row['Họ và tên'] ?? '').trim();
       const studentId = (row['MSSV'] ?? '').trim().toUpperCase();
       const email = (row['Email'] ?? '').trim().toLowerCase();
@@ -270,8 +461,8 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   getAvailableGens: () => {
-    const genSet = new Set(get().members.map((m) => m.gen));
-    const standardGens = ['Gen 4.0', 'Gen 3.5', 'Gen 3.0', 'Gen 2.5', 'Gen 2.0', 'Gen 1.0'];
+    const genSet = new Set(get().members.map((m) => m.gen).filter(Boolean));
+    const standardGens = ['GEN 3.0', 'GEN 2.1', 'GEN 2.0', 'GEN 1.0', 'Gen 4.0'];
     standardGens.forEach((g) => genSet.add(g));
 
     return Array.from(genSet).sort((a, b) => {

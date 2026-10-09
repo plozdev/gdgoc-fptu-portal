@@ -96,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
 
         {/* Desktop Action Area (Strict 1-line, No Emoji) */}
         <div className="hidden md:flex items-center gap-2 shrink-0 whitespace-nowrap">
-          {user ? (
+          {user && (
             <Link
               to="/app"
               id="navbar-app-link"
@@ -105,15 +105,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
               <span className="w-2 h-2 rounded-full bg-[#34A853] animate-pulse"></span>
               <LayoutDashboard className="w-4 h-4 text-[#4285F4]" />
               <span>Vào GDGoC-OS</span>
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              id="navbar-login-link"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#FFFFFF] hover:bg-[#F0F0F0] text-[#1E1E1E] font-bold text-xs lg:text-sm rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow-hover brutal-shadow-sm cursor-pointer whitespace-nowrap"
-            >
-              <LogIn className="w-4 h-4 text-[#4285F4]" />
-              <span>Đăng Nhập Nội Bộ</span>
             </Link>
           )}
 
@@ -129,20 +120,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
 
         {/* Mobile Hamburger Button */}
         <div className="flex lg:hidden items-center gap-2 shrink-0">
-          {user ? (
+          {user && (
             <Link
               to="/app"
               className="px-2.5 py-1.5 bg-[#1E1E1E] text-white text-xs font-bold rounded-full border-[2px] border-[#1E1E1E] flex items-center gap-1 whitespace-nowrap"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#34A853]"></span>
               <span>OS</span>
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              className="px-2.5 py-1.5 bg-white text-[#1E1E1E] text-xs font-bold rounded-full border-[2px] border-[#1E1E1E] whitespace-nowrap"
-            >
-              Login
             </Link>
           )}
           <button
@@ -186,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
           </div>
 
           <div className="pt-2 border-t border-[#1E1E1E]/15 space-y-2.5">
-            {user ? (
+            {user && (
               <Link
                 to="/app"
                 onClick={() => setMobileMenuOpen(false)}
@@ -195,15 +179,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
                 <span className="w-2 h-2 rounded-full bg-[#34A853]"></span>
                 <LayoutDashboard className="w-4 h-4 text-[#4285F4]" />
                 <span>Vào Cổng Nội Bộ GDGoC-OS</span>
-              </Link>
-            ) : (
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-white text-[#1E1E1E] font-bold text-sm rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow-sm"
-              >
-                <LogIn className="w-4 h-4 text-[#4285F4]" />
-                <span>Đăng Nhập Thành Viên CLB</span>
               </Link>
             )}
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { GdgLogo } from './GdgLogo';
 import { Github, Linkedin, Facebook, MessageSquare, ArrowUp, MapPin, Mail, Globe, BookOpen, ArrowRight, Trophy } from 'lucide-react';
 import { CHAPTER_INFO } from '../data/gdgData';
@@ -77,12 +78,22 @@ export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandboo
             <ul className="space-y-2">
               {quickLinks.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-xs sm:text-sm text-[#1E1E1E]/85 hover:text-[#4285F4] hover:underline transition-colors font-medium"
-                  >
-                    {link.name}
-                  </a>
+                  {link.href.startsWith('/') ? (
+                    <Link
+                      to={link.href}
+                      className="text-xs sm:text-sm text-[#1E1E1E]/85 hover:text-[#4285F4] hover:underline transition-colors font-medium inline-flex items-center gap-1.5"
+                    >
+                      <span>{link.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-mono-code border border-blue-200">OS</span>
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      className="text-xs sm:text-sm text-[#1E1E1E]/85 hover:text-[#4285F4] hover:underline transition-colors font-medium"
+                    >
+                      {link.name}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

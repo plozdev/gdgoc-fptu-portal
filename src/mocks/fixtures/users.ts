@@ -27,6 +27,13 @@ export interface UserSession {
   tier: Tier;
   banId: BanId | null;
   banName?: string;
+  mssv?: string;
+  phoneNumber?: string;
+  phone?: string;
+  avatarUrl?: string;
+  avatar?: string;
+  gemsBalance?: number;
+  [key: string]: any;
 }
 
 export const BAN_NAMES: Record<BanId, string> = {

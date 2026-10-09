@@ -23,7 +23,6 @@ import { DEPARTMENTS_DATA } from './data/gdgData';
 import { useAuthStore } from './store/useAuthStore';
 import { Login } from './pages/Login';
 import { DashboardLayout } from './components/layout/DashboardLayout';
-import { DevUserSwitcher } from './components/dev/DevUserSwitcher';
 
 // Internal Member Portal Pages
 import { DashboardOverview } from './pages/internal/DashboardOverview';
@@ -131,26 +130,11 @@ function LandingPage() {
 }
 
 export default function App() {
-  const { user, isLoading, setUser, setLoading } = useAuthStore();
+  const { user, isLoading, fetchSession } = useAuthStore();
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-        } else {
-          setUser(null);
-        }
-      } catch (e) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initAuth();
-  }, [setUser, setLoading]);
+    fetchSession();
+  }, [fetchSession]);
 
   if (isLoading) {
     return (
@@ -307,9 +291,6 @@ export default function App() {
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-
-      {/* Floating Dev User Switcher for RBAC testing */}
-      <DevUserSwitcher />
     </Router>
   );
 }

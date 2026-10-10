@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useLandingContentStore } from '../../store/useLandingContentStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -16,7 +16,9 @@ import {
   Edit3, 
   CheckCircle2, 
   Sparkles,
-  Eye
+  Eye,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { EventItem, OrganizerMember } from '../../types';
 import { DateInput } from '../../components/common/DateInput';
@@ -29,6 +31,10 @@ export const LandingCMS: React.FC = () => {
     events, 
     organizers, 
     stats, 
+    isLoading,
+    isSaving,
+    fetchCmsData,
+    saveCmsPublish,
     updateChapterInfo, 
     updateEvent, 
     addEvent, 
@@ -43,36 +49,48 @@ export const LandingCMS: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'events' | 'organizers' | 'stats' | 'info'>('events');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Edit Event state
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [editingOrganizer, setEditingOrganizer] = useState<OrganizerMember | null>(null);
   const [showEventPickerModal, setShowEventPickerModal] = useState(false);
 
+  // Fetch CMS live data on component mount
+  useEffect(() => {
+    fetchCmsData();
+  }, [fetchCmsData]);
+
   // 🚨 Chỉ BCN (ORG_ADMIN - Chapter Lead & Co-Chapter Lead) mới có quyền truy cập Landing CMS
   if (user?.tier !== 'ORG_ADMIN') {
     return <Navigate to="/app/dashboard" replace />;
   }
 
-  const handleSave = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleSave = async () => {
+    setSaveError(null);
+    try {
+      await saveCmsPublish();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Có lỗi xảy ra khi lưu & xuất bản nội dung.');
+    }
   };
 
-  const handleUpdateEditingEvent = (e: React.FormEvent) => {
+  const handleUpdateEditingEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
     updateEvent(editingEvent.id, editingEvent);
     setEditingEvent(null);
-    handleSave();
+    await handleSave();
   };
 
-  const handleUpdateEditingOrganizer = (e: React.FormEvent) => {
+  const handleUpdateEditingOrganizer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrganizer) return;
     updateOrganizer(editingOrganizer.id, editingOrganizer);
     setEditingOrganizer(null);
-    handleSave();
+    await handleSave();
   };
 
   return (
@@ -103,7 +121,8 @@ export const LandingCMS: React.FC = () => {
                 handleSave();
               }
             }}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+            disabled={isSaving}
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Khôi Phục Gốc</span>
@@ -122,10 +141,20 @@ export const LandingCMS: React.FC = () => {
 
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            disabled={isSaving}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            <Save className="w-3.5 h-3.5" />
-            <span>Lưu & Xuất Bản</span>
+            {isSaving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang Lưu...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                <span>Lưu & Xuất Bản</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -135,6 +164,14 @@ export const LandingCMS: React.FC = () => {
         <div className="bg-emerald-50 border-2 border-emerald-300 text-emerald-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>Đã lưu và xuất bản thành công! Nội dung mới đã được cập nhật trực tiếp lên Landing Page ngoài trang chủ.</span>
+        </div>
+      )}
+
+      {/* Save Error Alert */}
+      {saveError && (
+        <div className="bg-red-50 border-2 border-red-300 text-red-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>{saveError}</span>
         </div>
       )}
 

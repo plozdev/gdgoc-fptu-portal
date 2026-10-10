@@ -21,6 +21,7 @@ import { Department, EventItem } from './types';
 import { DEPARTMENTS_DATA } from './data/gdgData';
 
 import { useAuthStore } from './store/useAuthStore';
+import { useLandingContentStore } from './store/useLandingContentStore';
 import { Login } from './pages/Login';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 
@@ -37,10 +38,15 @@ import { InventoryManagement } from './pages/internal/InventoryManagement';
 import { MyProfile } from './pages/internal/MyProfile';
 
 function LandingPage() {
+  const { fetchCmsData } = useLandingContentStore();
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [selectedDefaultDept, setSelectedDefaultDept] = useState<string | undefined>(undefined);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [activeDepartmentDetail, setActiveDepartmentDetail] = useState<Department | null>(null);
+
+  useEffect(() => {
+    fetchCmsData();
+  }, [fetchCmsData]);
 
   const handleOpenJoinModal = (defaultDept?: string) => {
     setSelectedDefaultDept(defaultDept);

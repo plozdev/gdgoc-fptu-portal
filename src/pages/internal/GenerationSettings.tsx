@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sliders, 
   RotateCcw, 
@@ -42,6 +42,8 @@ export const GenerationSettings: React.FC = () => {
     chapterLead, 
     coChapterLead, 
     archivedSemesters, 
+    isLoading,
+    fetchGenerationConfig,
     updateConfig, 
     performTransition 
   } = useGenerationStore();
@@ -50,6 +52,7 @@ export const GenerationSettings: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'current' | 'wizard' | 'archives'>('current');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Local form state for Tab 1 (Current Config)
   const [genInput, setGenInput] = useState(currentGen);
@@ -71,48 +74,78 @@ export const GenerationSettings: React.FC = () => {
   const [sendBroadcast, setSendBroadcast] = useState(true);
   const [transitionSuccess, setTransitionSuccess] = useState(false);
 
-  const handleSaveCurrent = (e: React.FormEvent) => {
+  // Fetch initial config from backend on mount
+  useEffect(() => {
+    fetchGenerationConfig();
+  }, [fetchGenerationConfig]);
+
+  // Sync local inputs when store data arrives from backend
+  useEffect(() => {
+    setGenInput(currentGen);
+    setSemesterInput(currentSemester);
+    setStartMonthInput(startMonthYear);
+    setEndMonthInput(endMonthYear);
+    setTasksToggle(allowTaskSubmission);
+    setRsvpToggle(allowRsvp);
+    setFreezeToggle(freezeLeaderboard);
+  }, [currentGen, currentSemester, startMonthYear, endMonthYear, allowTaskSubmission, allowRsvp, freezeLeaderboard]);
+
+  const handleSaveCurrent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isOrgAdmin) return;
+    setIsSaving(true);
 
-    updateConfig({
-      currentGen: genInput.trim(),
-      currentSemester: semesterInput.trim(),
-      startMonthYear: startMonthInput.trim(),
-      endMonthYear: endMonthInput.trim(),
-      allowTaskSubmission: tasksToggle,
-      allowRsvp: rsvpToggle,
-      freezeLeaderboard: freezeToggle,
-    });
+    try {
+      await updateConfig({
+        currentGen: genInput.trim(),
+        currentSemester: semesterInput.trim(),
+        startMonthYear: startMonthInput.trim(),
+        endMonthYear: endMonthInput.trim(),
+        allowTaskSubmission: tasksToggle,
+        allowRsvp: rsvpToggle,
+        freezeLeaderboard: freezeToggle,
+      });
 
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Lỗi lưu cấu hình niên khóa:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleExecuteTransition = () => {
+  const handleExecuteTransition = async () => {
     if (!isOrgAdmin) return;
+    setIsSaving(true);
 
-    performTransition({
-      targetType: transitionType,
-      newGen: newGenInput.trim(),
-      newSemester: newSemesterInput.trim(),
-      startMonthYear: newStartMonth.trim(),
-      endMonthYear: newEndMonth.trim(),
-      carryOverCoreTeam: carryOverTeam,
-      notifyAllMembers: sendBroadcast,
-    });
+    try {
+      await performTransition({
+        targetType: transitionType,
+        newGen: newGenInput.trim(),
+        newSemester: newSemesterInput.trim(),
+        startMonthYear: newStartMonth.trim(),
+        endMonthYear: newEndMonth.trim(),
+        carryOverCoreTeam: carryOverTeam,
+        notifyAllMembers: sendBroadcast,
+      });
 
-    setGenInput(newGenInput.trim());
-    setSemesterInput(newSemesterInput.trim());
-    setStartMonthInput(newStartMonth.trim());
-    setEndMonthInput(newEndMonth.trim());
+      setGenInput(newGenInput.trim());
+      setSemesterInput(newSemesterInput.trim());
+      setStartMonthInput(newStartMonth.trim());
+      setEndMonthInput(newEndMonth.trim());
 
-    setTransitionSuccess(true);
-    setWizardStep(1);
-    setTimeout(() => {
-      setTransitionSuccess(false);
-      setActiveTab('current');
-    }, 4000);
+      setTransitionSuccess(true);
+      setTimeout(() => {
+        setTransitionSuccess(false);
+        setWizardStep(1);
+        setActiveTab('current');
+      }, 3000);
+    } catch (err) {
+      console.error('Lỗi chuyển giao nhiệm kỳ:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

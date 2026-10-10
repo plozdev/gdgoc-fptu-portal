@@ -140,7 +140,7 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
       const [statsRes, eventsRes, organizersRes] = await Promise.allSettled([
         cmsApi.getStats(),
         eventsApi.getEvents(),
-        membersApi.getOrganizers(),
+        cmsApi.getOrganizers(),
       ]);
 
       // 1. Sync Impact Stats from backend
@@ -180,13 +180,16 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
               date: e.startTime ? e.startTime.slice(0, 10) : new Date().toISOString().slice(0, 10),
               time: startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
               location: e.location || 'FPT University HCMC',
-              status: isPast ? 'Completed' : 'Registration Open',
+              status: e.status || (isPast ? 'Completed' : 'Registration Open'),
               summary: e.description || '',
               highlights: [],
               accentColor: colors.accentColor,
               pastelColor: colors.pastelColor,
               showOnLanding: e.isPublic !== false,
               bannerImage: e.bannerImageUrl,
+              registrationUrl: e.registrationUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/',
+              tenureId: e.tenureId,
+              tenureName: e.tenureName,
               attendees: [],
             };
           });
@@ -194,7 +197,7 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
         }
       }
 
-      // 3. Sync Organizers from backend
+      // 3. Sync Organizers from backend (Persistent in DB)
       if (organizersRes.status === 'fulfilled' && Array.isArray(organizersRes.value)) {
         if (organizersRes.value.length > 0) {
           const colors = [
@@ -204,11 +207,15 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
             { color: '#EA4335', dotColor: '#EA4335' },
           ];
 
+          const getInitialsAvatar = (fullName: string) =>
+            `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName || 'Member')}&backgroundColor=4285F4,34A853,FBBC04,EA4335&textColor=ffffff`;
+
           const mappedOrganizers: OrganizerMember[] = organizersRes.value.map((org: any, idx: number) => {
             const colorPair = colors[idx % colors.length];
+            const name = org.name || org.fullName || 'Core Member';
 
-            let domain: OrganizerMember['domain'] = 'Leads';
-            const orgDomainStr = `${org.domain || ''} ${org.position || ''}`.toLowerCase();
+            let domain: OrganizerMember['domain'] = org.domain || 'Leads';
+            const orgDomainStr = `${org.domain || ''} ${org.position || org.role || ''}`.toLowerCase();
             if (
               orgDomainStr.includes('tech') ||
               orgDomainStr.includes('kỹ thuật') ||
@@ -230,19 +237,21 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
               domain = 'Event Operations';
             }
 
+            // Nếu avatar trống hoặc là placeholder unsplash cũ, tự động đổi sang avatar chữ cái theo tên
+            const isGenericUnsplash = org.avatarUrl && org.avatarUrl.includes('photo-1534528741775-53994a69daeb');
+            const avatarUrl = !org.avatarUrl || isGenericUnsplash ? getInitialsAvatar(name) : org.avatarUrl;
+
             return {
               id: org.id,
-              name: org.fullName || org.name || 'Core Member',
-              role: org.position || org.role || 'Core Team',
+              name,
+              role: org.role || org.position || 'Core Team',
               domain,
               major: org.major || 'Kỹ thuật phần mềm',
               cohort: org.cohort || 'K18',
               bio: org.bio || 'Core Team Leader @ GDG on Campus FPT University HCMC',
-              avatarUrl:
-                org.avatarUrl ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-              color: colorPair.color,
-              dotColor: colorPair.dotColor,
+              avatarUrl,
+              color: org.color || colorPair.color,
+              dotColor: org.dotColor || colorPair.dotColor,
               githubUrl: org.githubUrl,
               linkedinUrl: org.linkedinUrl,
             };
@@ -260,10 +269,10 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
 
   saveCmsPublish: async () => {
     set({ isSaving: true, error: null });
-    const { stats, events } = get();
+    const { stats, events, organizers } = get();
 
     try {
-      // 1. Cập nhật Stats lên backend qua /api/cms/stats
+      // 1. Cập nhật Stats lên backend qua /api/cms/stats (lưu bền vững vào PostgreSQL)
       await cmsApi.updateStats(
         stats.map((s) => ({
           label: s.label,
@@ -273,13 +282,19 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
         }))
       );
 
-      // 2. Đồng bộ trạng thái isPublic của các Events
+      // 2. Cập nhật Core Team Organizers lên backend qua /api/cms/organizers (lưu bền vững vào PostgreSQL)
+      await cmsApi.updateOrganizers(organizers);
+
+      // 3. Đồng bộ trạng thái và thông tin của các Events lên PostgreSQL
       await Promise.allSettled(
         events.map((ev) =>
           eventsApi.updateEvent(ev.id, {
             isPublic: ev.showOnLanding !== false,
+            status: ev.status,
             title: ev.title,
             location: ev.location,
+            description: ev.summary,
+            registrationUrl: ev.registrationUrl,
           })
         )
       );
@@ -318,6 +333,23 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
       saveState(next);
       return next;
     });
+
+    // Tự động đồng bộ ngay lập tức vào database PostgreSQL
+    const target = get().events.find((ev) => ev.id === id);
+    if (target) {
+      eventsApi
+        .updateEvent(id, {
+          isPublic: target.showOnLanding !== false,
+          status: target.status,
+          title: target.title,
+          location: target.location,
+          description: target.summary,
+          registrationUrl: target.registrationUrl,
+        })
+        .catch((err) => {
+          console.warn('[LandingContentStore] Auto sync updateEvent error:', err);
+        });
+    }
   },
 
   addEvent: (newEvent) => {
@@ -419,6 +451,9 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
       saveState(next);
       return next;
     });
+    cmsApi.updateOrganizers(organizers).catch((err) => {
+      console.warn('[LandingContentStore] Auto sync setOrganizers error:', err);
+    });
   },
 
   updateOrganizer: (id, updated) => {
@@ -433,33 +468,56 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
   },
 
   addOrganizer: (newOrg) => {
+    const organizers = [...get().organizers, newOrg];
     set((state) => {
-      const organizers = [...state.organizers, newOrg];
       const next = { ...state, organizers };
       saveState(next);
       return next;
+    });
+    cmsApi.updateOrganizers(organizers).catch((err) => {
+      console.warn('[LandingContentStore] Auto sync addOrganizer error:', err);
     });
   },
 
   deleteOrganizer: (id) => {
+    const organizers = get().organizers.filter((org) => org.id !== id);
     set((state) => {
-      const organizers = state.organizers.filter((org) => org.id !== id);
       const next = { ...state, organizers };
       saveState(next);
       return next;
     });
+    cmsApi.updateOrganizers(organizers).catch((err) => {
+      console.warn('[LandingContentStore] Auto sync deleteOrganizer error:', err);
+    });
   },
 
   updateStats: (index, updated) => {
+    let nextStats: StatMilestone[] = [];
     set((state) => {
       const stats = [...state.stats];
       if (stats[index]) {
         stats[index] = { ...stats[index], ...updated };
       }
+      nextStats = stats;
       const next = { ...state, stats };
       saveState(next);
       return next;
     });
+
+    if (nextStats.length > 0) {
+      cmsApi
+        .updateStats(
+          nextStats.map((s) => ({
+            label: s.label,
+            value: s.value,
+            description: s.description || '',
+            accentColor: s.accentColor || '#4285F4',
+          }))
+        )
+        .catch((err) => {
+          console.warn('[LandingContentStore] Auto sync updateStats error:', err);
+        });
+    }
   },
 
   updateDepartment: (id, updated) => {

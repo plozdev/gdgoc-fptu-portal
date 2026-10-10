@@ -39,16 +39,6 @@ export const About: React.FC<AboutProps> = ({ onOpenJoinModal }) => {
               Cộng đồng học thuật chính thức tại <strong>Đại học FPT TP.HCM</strong>, cầu nối giúp sinh viên tiếp cận hệ sinh thái công nghệ Google và cùng nhau kiến tạo các giải pháp có sức ảnh hưởng.
             </p>
           </div>
-
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <span className="font-mono-code text-xs font-semibold text-[#1E1E1E]/80">
-              Học kỳ: {CHAPTER_INFO.term}
-            </span>
-            <div className="h-4 w-px bg-[#1E1E1E]/20" />
-            <span className="font-mono-code text-xs font-bold text-[#4285F4]">
-              {CHAPTER_INFO.hashtag}
-            </span>
-          </div>
         </div>
 
         {/* 4 Core Pillars Grid */}

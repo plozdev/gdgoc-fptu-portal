@@ -4,14 +4,9 @@ import { useLandingContentStore } from '../store/useLandingContentStore';
 
 export const Impact: React.FC = () => {
   const stats = useLandingContentStore((s) => s.stats);
-  const [counts, setCounts] = useState<{ [key: number]: number }>({
-    0: 0,
-    1: 0,
-    2: 0,
-    3: 0,
-  });
+  const [counts, setCounts] = useState<{ [key: number]: number }>({});
 
-  // Animated counter effect on mount
+  // Animated counter effect on mount or when stats change
   useEffect(() => {
     const duration = 1200;
     const steps = 30;
@@ -20,12 +15,19 @@ export const Impact: React.FC = () => {
 
     const timer = setInterval(() => {
       step++;
-      setCounts({
-        0: Math.min(10, Math.round((10 / steps) * step)),
-        1: Math.min(100, Math.round((100 / steps) * step)),
-        2: Math.min(30, Math.round((30 / steps) * step)),
-        3: Math.min(1, Math.round((1 / steps) * step)),
+      const progress = Math.min(1, step / steps);
+
+      const newCounts: { [key: number]: number } = {};
+      stats.forEach((stat, idx) => {
+        const numMatch = String(stat.value || '').match(/\d+/);
+        if (numMatch) {
+          const target = parseInt(numMatch[0], 10);
+          newCounts[idx] = Math.round(target * progress);
+        } else {
+          newCounts[idx] = 0;
+        }
       });
+      setCounts(newCounts);
 
       if (step >= steps) {
         clearInterval(timer);
@@ -33,7 +35,23 @@ export const Impact: React.FC = () => {
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [stats]);
+
+  const renderStatValue = (stat: any, idx: number) => {
+    const rawVal = String(stat.value || '').trim();
+    const numMatch = rawVal.match(/\d+/);
+    if (!numMatch) {
+      // Trường hợp chuỗi text thuần túy (ví dụ: "Impact Maker")
+      return rawVal;
+    }
+
+    const targetNum = parseInt(numMatch[0], 10);
+    const currentCount = counts[idx] !== undefined ? counts[idx] : targetNum;
+    const prefix = rawVal.slice(0, numMatch.index);
+    const suffix = rawVal.slice((numMatch.index || 0) + numMatch[0].length);
+
+    return `${prefix}${currentCount.toLocaleString('vi-VN')}${suffix}`;
+  };
 
   return (
     <section id="impact" className="py-20 sm:py-28 bg-[#FFFFFF] relative">
@@ -83,14 +101,7 @@ export const Impact: React.FC = () => {
 
                 {/* Animated Stat Value */}
                 <div className="font-mono-code text-4xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight mb-2">
-                  {idx === 3 ? (
-                    <span className="text-2xl sm:text-3xl">Impact Maker</span>
-                  ) : (
-                    <span>
-                      {counts[idx]?.toLocaleString()}
-                      {stat.suffix}
-                    </span>
-                  )}
+                  <span>{renderStatValue(stat, idx)}</span>
                 </div>
 
                 <div className="font-extrabold text-base sm:text-lg text-[#1E1E1E] mb-2 leading-snug">

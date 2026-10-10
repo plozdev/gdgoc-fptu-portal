@@ -76,7 +76,7 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
             </div>
             <div className="pt-2">
               <a
-                href="https://facebook.com/gdgoc.fptu"
+                href="https://www.facebook.com/gdg.fptu.hcmc"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-mono-code font-bold text-xs rounded-full border-2 border-[#1E1E1E] transition-colors"
@@ -115,7 +115,9 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                             ? 'bg-[#CCF6C5] text-[#1E1E1E]'
                             : event.status === 'Opening Soon'
                             ? 'bg-[#FFE7A5] text-[#1E1E1E]'
-                            : 'bg-[#F0F0F0] text-[#1E1E1E]'
+                            : event.status === 'Upcoming'
+                            ? 'bg-[#C3ECF6] text-[#1E1E1E]'
+                            : 'bg-[#F0F0F0] text-[#555555]'
                         }`}
                       >
                         {event.status}
@@ -125,13 +127,23 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
 
                   {/* Event Title */}
                   <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E1E1E] tracking-tight leading-snug">
-                    {event.title}
+                    <a
+                      href={event.registrationUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#4285F4] transition-colors inline-flex items-center gap-2 group/title"
+                    >
+                      <span>{event.title}</span>
+                      <ExternalLink className="w-4 h-4 opacity-0 group-hover/title:opacity-100 transition-opacity text-[#4285F4] shrink-0" />
+                    </a>
                   </h3>
 
-                  {/* Summary */}
-                  <p className="text-xs sm:text-sm text-[#1E1E1E]/80 leading-relaxed font-normal">
-                    {event.summary}
-                  </p>
+                  {/* Summary / Description */}
+                  {event.summary && (
+                    <p className="text-xs sm:text-sm text-[#1E1E1E]/80 leading-relaxed font-normal line-clamp-2">
+                      {event.summary}
+                    </p>
+                  )}
 
                   {/* Event Meta Box (Gray rounded box with Date, Time, Location) */}
                   <div className="p-4 bg-[#F8F9FA] border border-[#1E1E1E]/20 rounded-2xl space-y-2 text-xs font-mono-code text-[#1E1E1E]">
@@ -148,25 +160,6 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                       <span className="truncate text-[#1E1E1E]/90">{event.location}</span>
                     </div>
                   </div>
-
-                  {/* Speaker row with circular avatar */}
-                  {event.speaker && (
-                    <div className="pt-2 flex items-center gap-3">
-                      <img
-                        src={event.speaker.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-                        alt={event.speaker.name}
-                        className="w-10 h-10 rounded-full border-2 border-[#1E1E1E] object-cover shrink-0 shadow-xs"
-                      />
-                      <div className="min-w-0">
-                        <div className="font-extrabold text-xs sm:text-sm text-[#1E1E1E] truncate">
-                          {event.speaker.name}
-                        </div>
-                        <div className="text-[11px] text-[#1E1E1E]/75 font-mono-code truncate">
-                          {event.speaker.role}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Bottom Action Bar */}
@@ -176,13 +169,15 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                     <span>Free Student Pass</span>
                   </div>
 
-                  <button
-                    onClick={() => onSelectEvent(event)}
+                  <a
+                    href={event.registrationUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="px-5 py-2.5 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-bold text-xs sm:text-sm font-mono-code rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span>Xem Chi Tiết Sự Kiện</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                    <span>Xem Chi Tiết & Đăng Ký (Bevy)</span>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
                 </div>
 
               </div>

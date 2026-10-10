@@ -17,6 +17,7 @@ export interface CreateEventDto {
   endTime: string;
   attendeeGems?: number;
   organizerGems?: number;
+  status?: string;
   isPublic?: boolean;
   bannerImageUrl?: string;
   registrationUrl?: string;

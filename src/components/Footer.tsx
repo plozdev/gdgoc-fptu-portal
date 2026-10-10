@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { GdgLogo } from './GdgLogo';
-import { Github, Linkedin, Facebook, MessageSquare, ArrowUp, MapPin, Mail, Globe, BookOpen, ArrowRight, Trophy } from 'lucide-react';
+import { Github, Linkedin, Facebook, ArrowUp, MapPin, Mail, Globe, BookOpen, ArrowRight, Trophy } from 'lucide-react';
 import { CHAPTER_INFO } from '../data/gdgData';
 
 interface FooterProps {
@@ -15,10 +15,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandboo
   };
 
   const socialLinks = [
-    { name: 'Facebook', href: 'https://facebook.com', icon: Facebook, color: '#4285F4' },
-    { name: 'LinkedIn', href: 'https://linkedin.com', icon: Linkedin, color: '#57CAFF' },
-    { name: 'GitHub', href: 'https://github.com', icon: Github, color: '#1E1E1E' },
-    { name: 'Discord', href: 'https://discord.com', icon: MessageSquare, color: '#34A853' },
+    { name: 'Facebook', href: 'https://www.facebook.com/gdg.fptu.hcmc', icon: Facebook, color: '#4285F4' },
+    { name: 'LinkedIn', href: 'https://www.linkedin.com/company/gdg-fptu-hcmc/home/', icon: Linkedin, color: '#57CAFF' },
+    { name: 'GitHub', href: 'https://github.com/gdgc-fptu-hcmc', icon: Github, color: '#1E1E1E' },
   ];
 
   const quickLinks = [

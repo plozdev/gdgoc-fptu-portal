@@ -26,6 +26,8 @@ import {
   Layers,
   Flame,
   Check,
+  Camera,
+  UploadCloud,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -70,10 +72,16 @@ export const MyProfile: React.FC = () => {
   const [bio, setBio] = useState(currentMember.bio || '');
   const [phone, setPhone] = useState(currentMember.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(currentMember.avatar || user?.avatarUrl || '');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string>(() => {
+    const key = `gdgoc_cover_${user?.id || 'default'}`;
+    return localStorage.getItem(key) || '';
+  });
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+
   const [facebook, setFacebook] = useState(currentMember.socials?.facebook || '');
   const [github, setGithub] = useState(currentMember.socials?.github || '');
   const [linkedin, setLinkedin] = useState(currentMember.socials?.linkedin || '');
-  const [discord, setDiscord] = useState(currentMember.socials?.discord || '');
   
   const [skills, setSkills] = useState<string[]>(currentMember.skills || []);
   const [newSkillInput, setNewSkillInput] = useState('');
@@ -142,7 +150,6 @@ export const MyProfile: React.FC = () => {
       setFacebook(currentMember.socials?.facebook || '');
       setGithub(currentMember.socials?.github || '');
       setLinkedin(currentMember.socials?.linkedin || '');
-      setDiscord(currentMember.socials?.discord || '');
       setSkills(currentMember.skills || []);
     }
   }, [currentMember.id, members.length]);
@@ -160,6 +167,33 @@ export const MyProfile: React.FC = () => {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setAvatarUrl(preview);
+    setAvatarFile(file);
+  };
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setCoverUrl(preview);
+    setCoverFile(file);
+    if (user?.id) {
+      localStorage.setItem(`gdgoc_cover_${user.id}`, preview);
+    }
+  };
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -167,19 +201,39 @@ export const MyProfile: React.FC = () => {
     const socialsData: MemberSocials = {
       facebook: facebook.trim(),
       github: github.trim(),
-      linkedin: linkedin.trim(),
-      discord: discord.trim()
+      linkedin: linkedin.trim()
     };
 
     const targetUserId = currentMember.id !== 'current' ? currentMember.id : (user?.id || '');
 
     try {
+      let finalAvatar = avatarUrl.trim() || undefined;
+      if (avatarFile) {
+        try {
+          const base64Avatar = await fileToBase64(avatarFile);
+          finalAvatar = base64Avatar;
+        } catch (err) {
+          console.warn('Failed to convert avatar to base64:', err);
+        }
+      }
+
+      if (coverFile) {
+        try {
+          const base64Cover = await fileToBase64(coverFile);
+          if (user?.id) {
+            localStorage.setItem(`gdgoc_cover_${user.id}`, base64Cover);
+          }
+        } catch (err) {
+          console.warn('Failed to convert cover to base64:', err);
+        }
+      }
+
       await updateSelfProfile(targetUserId, {
         bio: bio.trim(),
         phone: phone.trim(),
         socials: socialsData,
         skills,
-        avatar: avatarUrl.trim() || undefined,
+        avatar: finalAvatar,
       });
 
       if (user) {
@@ -187,7 +241,7 @@ export const MyProfile: React.FC = () => {
           ...user,
           phone: phone.trim(),
           phoneNumber: phone.trim(),
-          avatarUrl: avatarUrl.trim() || user.avatarUrl,
+          avatarUrl: finalAvatar || user.avatarUrl,
         });
       }
 
@@ -235,8 +289,16 @@ export const MyProfile: React.FC = () => {
 
       {/* Hero Header Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden relative">
-        {/* Cover Gradient with Google Colors Accent */}
-        <div className="h-36 sm:h-44 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+        {/* Cover Gradient or Image with Google Colors Accent */}
+        <div 
+          className="h-36 sm:h-48 relative overflow-hidden bg-cover bg-center transition-all"
+          style={{
+            backgroundImage: coverUrl 
+              ? `url(${coverUrl})` 
+              : 'linear-gradient(to right, #2563eb, #4f46e5, #9333ea)',
+          }}
+        >
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px]"></div>
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
           
           <div className="absolute top-4 right-6 flex items-center gap-2">
@@ -245,18 +307,52 @@ export const MyProfile: React.FC = () => {
               <span>{currentMember.gen}</span>
             </span>
           </div>
+
+          {/* Nút Upload Ảnh Bìa */}
+          <div className="absolute bottom-3 right-6">
+            <label 
+              title="Tải ảnh bìa mới từ máy tính"
+              className="cursor-pointer px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl border border-white/30 backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md hover:scale-105"
+            >
+              <Camera className="w-3.5 h-3.5 text-blue-300" />
+              <span>{coverUrl ? 'Đổi Ảnh Bìa' : 'Tải Ảnh Bìa Lên'}</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleCoverFileChange} 
+              />
+            </label>
+          </div>
         </div>
 
         {/* Profile Lockup Row */}
         <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
           <div className="flex items-end gap-4 sm:gap-6">
-            {/* Avatar with Ring */}
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
-              {currentAvatar ? (
-                <img src={currentAvatar} alt={currentMember.name} className="w-full h-full object-cover" />
-              ) : (
-                currentMember.name.charAt(0)
-              )}
+            {/* Avatar with Ring & Upload Overlay */}
+            <div className="relative group">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
+                {currentAvatar ? (
+                  <img src={currentAvatar} alt={currentMember.name} className="w-full h-full object-cover" />
+                ) : (
+                  currentMember.name.charAt(0)
+                )}
+              </div>
+
+              {/* Upload Avatar Overlay Button */}
+              <label 
+                title="Tải ảnh đại diện mới từ máy tính"
+                className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer backdrop-blur-[1px]"
+              >
+                <Camera className="w-6 h-6 mb-0.5 text-white" />
+                <span className="text-[10px] font-bold">Đổi Avt</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleAvatarFileChange} 
+                />
+              </label>
             </div>
 
             <div className="pt-2">
@@ -418,8 +514,8 @@ export const MyProfile: React.FC = () => {
               />
             </div>
 
-            {/* 2. SỐ ĐIỆN THOẠI & AVATAR */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 2. SỐ ĐIỆN THOẠI & UPLOAD AVATAR / ẢNH BÌA */}
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-extrabold text-slate-800">
                   Số Điện Thoại Liên Hệ (Zalo / Call)
@@ -436,20 +532,65 @@ export const MyProfile: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold text-slate-800">
-                  Link Ảnh Đại Diện (Avatar URL)
-                </label>
-                <div className="relative">
-                  <ImageIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="url"
-                    placeholder="https://example.com/avatar.png"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all"
-                  />
+              {/* Tải Lên Ảnh Đại Diện & Ảnh Bìa */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <UploadCloud className="w-4 h-4 text-blue-600" />
+                    <span>Tải Lên Ảnh Đại Diện & Ảnh Bìa</span>
+                  </label>
+                  <span className="text-[10px] font-mono-code text-slate-400">
+                    PNG, JPG, WEBP (Tự động nén)
+                  </span>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Up Avt Box */}
+                  <label className="p-3 bg-white rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500 cursor-pointer transition-all flex items-center gap-3 group shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <Camera className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 truncate">
+                        {avatarFile ? avatarFile.name : 'Tải Lên Ảnh Đại Diện (Avt)'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {avatarFile ? '✓ Đã chọn ảnh mới' : 'Chọn ảnh mới từ máy'}
+                      </p>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleAvatarFileChange} 
+                    />
+                  </label>
+
+                  {/* Up Bìa Box */}
+                  <label className="p-3 bg-white rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-500 cursor-pointer transition-all flex items-center gap-3 group shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <ImageIcon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">
+                        {coverFile ? coverFile.name : 'Tải Lên Ảnh Bìa (Cover)'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {coverFile ? '✓ Đã chọn ảnh bìa mới' : 'Chọn ảnh bìa từ máy'}
+                      </p>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleCoverFileChange} 
+                    />
+                  </label>
+                </div>
+
+                <p className="text-[10px] text-slate-500 font-medium">
+                  ⚡ Ảnh đã chọn sẽ hiển thị xem trước tức thì trên hồ sơ của bạn. Tính năng đẩy file lên Cloudinary sẽ tự động kích hoạt sau khi backend hoàn tất cấu hình.
+                </p>
               </div>
             </div>
 
@@ -459,7 +600,7 @@ export const MyProfile: React.FC = () => {
                 Mạng Xã Hội & Hồ Sơ Lập Trình
               </label>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Facebook */}
                 <div className="relative">
                   <Facebook className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -492,18 +633,6 @@ export const MyProfile: React.FC = () => {
                     placeholder="Link LinkedIn profile"
                     value={linkedin}
                     onChange={(e) => setLinkedin(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
-                  />
-                </div>
-
-                {/* Discord */}
-                <div className="relative">
-                  <MessageSquare className="w-4 h-4 text-indigo-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Discord username / tag"
-                    value={discord}
-                    onChange={(e) => setDiscord(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>

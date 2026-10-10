@@ -63,6 +63,9 @@ export interface EventItem {
   pastelColor: string;
   bannerImage?: string;
   showOnLanding?: boolean;
+  registrationUrl?: string;
+  tenureId?: string;
+  tenureName?: string;
   attendees?: EventAttendee[];
 }
 

@@ -14,7 +14,7 @@ import {
   ArrowRight, 
   FolderGit2 
 } from 'lucide-react';
-import { BanId } from '../../mocks/fixtures/users';
+import { BanId } from '../../types/auth';
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuthStore();
@@ -50,16 +50,8 @@ export const DashboardOverview: React.FC = () => {
             ? raw.data
             : [];
 
-          if (list.length > 0) {
-            setTasks(list);
-          } else {
-            const rawLocal = localStorage.getItem('gdgoc_tasks_v2');
-            setTasks(rawLocal ? JSON.parse(rawLocal) : []);
-          }
-        } else {
-          const rawLocal = localStorage.getItem('gdgoc_tasks_v2');
-          setTasks(rawLocal ? JSON.parse(rawLocal) : []);
-        }
+          setTasks(list);
+        } else { setTasks([]); }
 
         if (eventsRes.status === 'fulfilled' && eventsRes.value) {
           const evList = Array.isArray(eventsRes.value)
@@ -76,9 +68,12 @@ export const DashboardOverview: React.FC = () => {
       }
     };
 
+    const refresh = () => void loadData();
+    window.addEventListener('gdgoc:refresh', refresh);
     loadData();
     return () => {
       isMounted = false;
+      window.removeEventListener('gdgoc:refresh', refresh);
     };
   }, [fetchMembers]);
 
@@ -89,7 +84,7 @@ export const DashboardOverview: React.FC = () => {
     .filter(t => t.status === 'DONE' || t.status === 'done')
     .reduce((sum, t) => sum + (Number(t.gemsReward || t.gems) || 0), 0);
 
-  const allEvents = backendEvents.length > 0 ? backendEvents : fallbackEvents;
+  const allEvents = backendEvents;
   const upcomingEvents = allEvents.filter((e: any) => {
     if (e.endTime) return new Date(e.endTime) >= new Date();
     if (e.startTime) return new Date(e.startTime) >= new Date();
@@ -97,12 +92,12 @@ export const DashboardOverview: React.FC = () => {
   });
 
   const BAN_CONFIGS = [
-    { id: 'ai' as BanId, code: 'TECH_AI', name: 'Ban Trí Tuệ Nhân Tạo (AI)', division: 'Khối Tech', defaultLead: 'Võ Cao Minh', color: 'border-l-amber-400' },
-    { id: 'cloud' as BanId, code: 'TECH_CLOUD', name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', defaultLead: 'Võ Trần Ngọc Hữu', color: 'border-l-blue-500' },
-    { id: 'web' as BanId, code: 'TECH_WEB', name: 'Ban Phát Triển Web', division: 'Khối Tech', defaultLead: 'Bùi Phạm Chí Nhân', color: 'border-l-emerald-500' },
-    { id: 'research' as BanId, code: 'TECH_RESEARCH', name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', defaultLead: 'Bùi Anh Huy', color: 'border-l-red-500' },
-    { id: 'media' as BanId, code: 'MEDIA', name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', defaultLead: 'Hồ Ngọc Bảo Trân', color: 'border-l-pink-500' },
-    { id: 'hr-event' as BanId, code: 'HR_EVENT', name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', defaultLead: 'Mai Anh Hoàng', color: 'border-l-teal-500' },
+    { id: 'ai' as BanId, code: 'TECH_AI', name: 'Ban Trí Tuệ Nhân Tạo (AI)', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-amber-400' },
+    { id: 'cloud' as BanId, code: 'TECH_CLOUD', name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-blue-500' },
+    { id: 'web' as BanId, code: 'TECH_WEB', name: 'Ban Phát Triển Web', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-emerald-500' },
+    { id: 'research' as BanId, code: 'TECH_RESEARCH', name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-red-500' },
+    { id: 'media' as BanId, code: 'MEDIA', name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-pink-500' },
+    { id: 'hr-event' as BanId, code: 'HR_EVENT', name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-teal-500' },
   ];
 
   return (

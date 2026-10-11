@@ -10,6 +10,9 @@ export interface QueryMembersParams {
 }
 
 export interface CreateMemberDto {
+  status?: string;
+  academicYear?: string;
+  gen?: string;
   mssv: string;
   fullName: string;
   email: string;
@@ -22,6 +25,9 @@ export interface CreateMemberDto {
 }
 
 export interface UpdateMemberDto {
+  academicYear?: string;
+  gen?: string;
+  fullName?: string; mssv?: string; email?: string;
   role?: string;
   status?: string;
   position?: string;

@@ -24,7 +24,8 @@ import {
   UserPlus,
   GripVertical,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 import { EventItem, OrganizerMember } from '../../types';
 import { DateInput } from '../../components/common/DateInput';
@@ -38,6 +39,7 @@ export const LandingCMS: React.FC = () => {
     stats, 
     isLoading,
     isSaving,
+    error,
     fetchCmsData,
     saveCmsPublish,
     updateEvent, 
@@ -48,7 +50,6 @@ export const LandingCMS: React.FC = () => {
     addOrganizer, 
     deleteOrganizer, 
     updateStats,
-    resetToDefaults 
   } = useLandingContentStore();
 
   const { members, fetchMembers } = useMemberStore();
@@ -230,6 +231,7 @@ export const LandingCMS: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto select-none">
+      {error && <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-xl">{error}</div>}
       {/* Top Banner & Control Bar */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -251,16 +253,26 @@ export const LandingCMS: React.FC = () => {
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             onClick={() => {
-              if (confirm('Bạn có chắc muốn khôi phục về dữ liệu mặc định ban đầu?')) {
-                resetToDefaults();
-                handleSave();
-              }
+              fetchCmsData();
+              fetchMembers();
+            }}
+            disabled={isLoading || isSaving}
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Đồng bộ nội dung CMS từ cơ sở dữ liệu PostgreSQL"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-blue-600' : ''}`} />
+            <span>Đồng bộ</span>
+          </button>
+
+          <button
+            onClick={() => {
+              void fetchCmsData();
             }}
             disabled={isSaving}
             className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Khôi Phục Gốc</span>
+            <span>Tải Lại Bản Đã Lưu</span>
           </button>
 
           <a

@@ -3,11 +3,11 @@
  * @description Zustand store quản lý danh sách thành viên CLB.
  * 
  * Dữ liệu được fetch trực tiếp từ API backend (GET /api/members).
- * Hỗ trợ cache vào localStorage và đồng bộ hóa trạng thái hai chiều.
+ * Chỉ cập nhật trạng thái sau khi backend lưu thành công.
  */
 
 import { create } from 'zustand';
-import { Tier, BanId, BAN_NAMES } from '../mocks/fixtures/users';
+import { Tier, BanId, BAN_NAMES } from '../types/auth';
 import { membersApi, QueryMembersParams } from '../api/members.api';
 
 // ==========================================
@@ -33,7 +33,7 @@ export interface Member {
   banId: BanId | null;       // Ban trực thuộc
   banName: string;           // Tên ban đầy đủ
   gen: string;               // Kỳ hoạt động: 'GEN 2.0', 'GEN 2.1', 'GEN 3.0', 'Gen 4.0'
-  status: 'ACTIVE' | 'ALUMNI' | 'ON_LEAVE';
+  status: 'ACTIVE' | 'PROBATION' | 'ALUMNI' | 'ON_LEAVE';
   joinedDate: string;        // dd/MM/yyyy
 
   // Dữ liệu cá nhân
@@ -71,8 +71,7 @@ interface MemberState {
     socials?: MemberSocials;
     skills?: string[];
     avatar?: string;
-  }) => void;
-  importFromExcel: (rows: ExcelImportRow[], defaultGen: string) => { added: number; errors: string[] };
+  }) => Promise<void>;
   getMemberById: (id: string) => Member | undefined;
   getMemberByEmail: (email: string) => Member | undefined;
   getAvailableGens: () => string[];
@@ -82,30 +81,7 @@ interface MemberState {
 // STORAGE
 // ==========================================
 
-const STORAGE_KEY = 'gdgoc_members_directory_v1';
 
-const loadMembersFromStorage = (): Member[] => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      const parsed: unknown = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as Member[];
-      }
-    }
-  } catch (error) {
-    console.error('[MemberStore] Failed to load members from localStorage:', error);
-  }
-  return [];
-};
-
-const saveToStorage = (members: Member[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(members));
-  } catch (error) {
-    console.error('[MemberStore] Failed to save members to localStorage:', error);
-  }
-};
 
 // ==========================================
 // HELPERS — Derive tier/ban from position string
@@ -148,7 +124,7 @@ export function mapBackendMemberToMember(raw: any): Member {
   let tier: Tier = 'BAN_MEMBER';
   if (role === 'ADVISOR') {
     tier = 'ADVISOR';
-  } else if (role === 'LEAD') {
+  } else if (role === 'LEAD' || role === 'ADMIN') {
     tier = 'ORG_ADMIN';
   } else if (role === 'DEPARTMENT_LEAD') {
     tier = 'BAN_LEAD';
@@ -176,7 +152,7 @@ export function mapBackendMemberToMember(raw: any): Member {
       academicYear = kSkill;
     } else {
       const match = (raw.mssv || '').match(/^[A-Za-z]+(\d{2})/);
-      academicYear = match ? `K${match[1]}` : 'K20';
+      academicYear = match ? `K${match[1]}` : ''; 
     }
   }
 
@@ -184,7 +160,7 @@ export function mapBackendMemberToMember(raw: any): Member {
   let gen = raw.gen;
   if (!gen) {
     const genSkill = raw.skills?.find((s: string) => /^GEN/i.test(s));
-    gen = genSkill || raw.tenure?.genLabel || 'Gen 4.0';
+    gen = genSkill || raw.tenure?.genLabel || '';
   }
 
   // Joined date: dd/MM/yyyy
@@ -230,7 +206,7 @@ export function mapBackendMemberToMember(raw: any): Member {
 // ==========================================
 
 export const useMemberStore = create<MemberState>((set, get) => ({
-  members: loadMembersFromStorage(),
+  members: [],
   isLoading: false,
   error: null,
 
@@ -241,7 +217,6 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       const rawList = res.items || res.data?.items || (Array.isArray(res) ? res : Array.isArray(res.data) ? res.data : []);
       const mapped = rawList.map(mapBackendMemberToMember);
       set({ members: mapped, isLoading: false });
-      saveToStorage(mapped);
     } catch (err: any) {
       console.error('[MemberStore] Failed to fetch members from API:', err);
       set({ error: err.message || 'Lỗi tải danh sách thành viên', isLoading: false });
@@ -275,30 +250,21 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         departmentCode: deptCode,
         role: roleMap[memberData.tier] || 'MEMBER',
         position: memberData.position,
+        academicYear: memberData.academicYear,
+        gen: memberData.gen,
+        status: memberData.status,
       });
 
-      const newMember: Member = res ? mapBackendMemberToMember(res) : {
-        ...memberData,
-        id: `mem-${Date.now()}`,
-      };
+      if (!res?.id) throw new Error('Backend không trả về ID thành viên.');
+      const newMember = mapBackendMemberToMember(res);
 
       set((state) => {
         const updated = [newMember, ...state.members.filter((m) => m.id !== newMember.id)];
-        saveToStorage(updated);
-        return { members: updated };
+          return { members: updated };
       });
     } catch (error) {
       console.error('[MemberStore] Failed to create member on backend:', error);
-      // Fallback local
-      const fallbackMember: Member = {
-        ...memberData,
-        id: `mem-${Date.now()}`,
-      };
-      set((state) => {
-        const updated = [fallbackMember, ...state.members];
-        saveToStorage(updated);
-        return { members: updated };
-      });
+      throw error;
     }
   },
 
@@ -319,35 +285,28 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         BAN_MEMBER: 'MEMBER',
       };
 
-      await membersApi.updateMember(id, {
+      const saved: any = await membersApi.updateMember(id, {
+        academicYear: updates.academicYear,
+        gen: updates.gen,
+        fullName: updates.name, mssv: updates.studentId, email: updates.email,
         position: updates.position,
         status: updates.status,
-        departmentCode: updates.banId ? deptCodeMap[updates.banId] : undefined,
+        departmentCode: updates.banId === null ? 'EXECUTIVE' : updates.banId ? deptCodeMap[updates.banId] : undefined,
         role: updates.tier ? roleMap[updates.tier] : undefined,
       });
-    } catch (error) {
-      console.warn('[MemberStore] Backend update failed, updating local state:', error);
-    }
-
-    set((state) => {
-      const updated = state.members.map((m) =>
-        m.id === id ? { ...m, ...updates } : m
-      );
-      saveToStorage(updated);
-      return { members: updated };
-    });
+      set((state) => ({ members: state.members.map((member) => member.id === id ? mapBackendMemberToMember(saved) : member) }));
+    } catch (error) { throw error; }
   },
 
   deleteMember: async (id) => {
     try {
       await membersApi.deleteMember(id);
     } catch (error) {
-      console.warn('[MemberStore] Backend delete failed, updating local state:', error);
+      throw error;
     }
 
     set((state) => {
       const updated = state.members.filter((m) => m.id !== id);
-      saveToStorage(updated);
       return { members: updated };
     });
   },
@@ -365,7 +324,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         avatarUrl: profile.avatar,
       });
     } catch (error) {
-      console.warn('[MemberStore] Failed to update profile on backend, falling back to local state:', error);
+      throw error;
     }
 
     set((state) => {
@@ -380,77 +339,8 @@ export const useMemberStore = create<MemberState>((set, get) => ({
           ...(profile.avatar !== undefined && { avatar: profile.avatar }),
         };
       });
-      saveToStorage(updated);
       return { members: updated };
     });
-  },
-
-  importFromExcel: (rows, defaultGen) => {
-    const errors: string[] = [];
-    const newMembers: Member[] = [];
-    const currentMembers = get().members;
-
-    rows.forEach((row, index) => {
-      const rowNum = index + 2;
-      const name = (row['Họ và tên'] ?? '').trim();
-      const studentId = (row['MSSV'] ?? '').trim().toUpperCase();
-      const email = (row['Email'] ?? '').trim().toLowerCase();
-      const academicYear = (row['Khóa'] ?? 'K20').trim().toUpperCase();
-      const phone = (row['Số điện thoại'] ?? '').trim();
-      const position = (row['Position'] ?? 'Thành Viên').trim();
-
-      if (!name) {
-        errors.push(`Dòng ${rowNum}: Thiếu Họ và tên`);
-        return;
-      }
-      if (!studentId) {
-        errors.push(`Dòng ${rowNum} (${name}): Thiếu MSSV`);
-        return;
-      }
-      if (!email) {
-        errors.push(`Dòng ${rowNum} (${name}): Thiếu Email FPT`);
-        return;
-      }
-
-      const emailExists =
-        currentMembers.some((m) => m.email.toLowerCase() === email) ||
-        newMembers.some((m) => m.email.toLowerCase() === email);
-
-      if (emailExists) {
-        errors.push(`Dòng ${rowNum}: Email ${email} đã tồn tại trong hệ thống`);
-        return;
-      }
-
-      const { tier, banId, banName } = deriveTierAndBan(position);
-
-      newMembers.push({
-        id: `mem-import-${Date.now()}-${index}`,
-        name,
-        studentId,
-        academicYear,
-        email,
-        phone: phone || 'Chưa cập nhật',
-        position,
-        tier,
-        banId,
-        banName,
-        gen: defaultGen || 'Gen 4.0',
-        status: 'ACTIVE',
-        joinedDate: new Date().toLocaleDateString('vi-VN'),
-        bio: `${position} tại GDG on Campus FPT University HCMC.`,
-        skills: [],
-      });
-    });
-
-    if (newMembers.length > 0) {
-      set((state) => {
-        const updated = [...newMembers, ...state.members];
-        saveToStorage(updated);
-        return { members: updated };
-      });
-    }
-
-    return { added: newMembers.length, errors };
   },
 
   getMemberById: (id) => get().members.find((m) => m.id === id),
@@ -462,8 +352,6 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
   getAvailableGens: () => {
     const genSet = new Set(get().members.map((m) => m.gen).filter(Boolean));
-    const standardGens = ['GEN 3.0', 'GEN 2.1', 'GEN 2.0', 'GEN 1.0', 'Gen 4.0'];
-    standardGens.forEach((g) => genSet.add(g));
 
     return Array.from(genSet).sort((a, b) => {
       const numA = parseFloat(a.replace(/[^\d.]/g, '')) || 0;

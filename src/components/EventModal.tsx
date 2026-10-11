@@ -3,7 +3,7 @@ import { X, Calendar, Clock, MapPin, CheckCircle2, Ticket, Sparkles, User, Check
 import { EventItem } from '../types';
 import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
-import { useLandingContentStore } from '../store/useLandingContentStore';
+
 
 interface EventModalProps {
   event: EventItem | null;
@@ -11,27 +11,9 @@ interface EventModalProps {
 }
 
 export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
-  const { addAttendee } = useLandingContentStore();
-  const [isRsvpDone, setIsRsvpDone] = useState(false);
-  const [studentName, setStudentName] = useState('');
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentId, setStudentId] = useState('');
-
   if (!event) return null;
-
-  const handleRsvp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!studentName.trim() || !studentId.trim()) return;
-    addAttendee(event.id, {
-      name: studentName.trim(),
-      studentId: studentId.trim().toUpperCase(),
-      email: studentEmail.trim() || `${studentId.trim().toLowerCase()}@fpt.edu.vn`,
-      ban: 'Sinh viên FPTU (RSVP Web)',
-      checkedIn: false
-    });
-    setIsRsvpDone(true);
-  };
-
+  let registrationUrl: string | undefined;
+  try { const url = new URL(event.registrationUrl || ''); if (url.protocol === 'https:') registrationUrl = url.href; } catch { /* Registration has no external form. */ }
   return (
     <div
       onClick={onClose}
@@ -67,7 +49,7 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-          {!isRsvpDone ? (
+          {(
             <>
               {/* Event Title & Summary */}
               <div className="space-y-3">
@@ -136,86 +118,10 @@ export const EventModal: React.FC<EventModalProps> = ({ event, onClose }) => {
               )}
 
 
-              {/* Quick RSVP Form */}
-              <form onSubmit={handleRsvp} className="pt-2 space-y-3 border-t-2 border-[#1E1E1E]/10">
-                <div className="space-y-1">
-                  <h4 className="font-extrabold text-base text-[#1E1E1E]">
-                    Đăng Ký Nhanh Tại Đây (Nhận Vé QR Điện Tử)
-                  </h4>
-                  <p className="text-xs text-[#1E1E1E]/70">
-                    Dành cho tất cả sinh viên FPT University và cộng đồng công nghệ. Ban Tổ Chức sẽ gửi vé check-in điện tử qua email.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Họ và tên *"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-sans focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Mã số sinh viên (MSSV) *"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
-                  />
-                  <input
-                    type="email"
-                    required
-                    placeholder="student@fpt.edu.vn *"
-                    value={studentEmail}
-                    onChange={(e) => setStudentEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#F0F0F0] border-2 border-[#1E1E1E] rounded-xl text-xs sm:text-sm font-mono-code focus:bg-[#FFFFFF] focus:ring-2 focus:ring-[#4285F4] outline-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3.5 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-sm rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Ticket className="w-4 h-4" />
-                  <span>Xác Nhận Giữ Chỗ Tham Dự</span>
-                </button>
-              </form>
+              <div className="pt-4 border-t-2 border-slate-200">
+                {registrationUrl ? <a href={registrationUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full font-bold">Đăng ký tham dự<ExternalLink className="w-4 h-4" /></a> : <p className="text-sm text-slate-500">Sự kiện chưa mở đăng ký trực tuyến.</p>}
+              </div>
             </>
-          ) : (
-            /* RSVP Success Screen */
-            <div className="text-center py-6 space-y-5">
-              <div className="w-14 h-14 rounded-full bg-[#CCF6C5] border-2 border-[#1E1E1E] mx-auto flex items-center justify-center text-[#34A853]">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-2xl font-extrabold text-[#1E1E1E]">
-                  Đăng Ký Thành Công!
-                </h3>
-                <p className="text-xs sm:text-sm text-[#1E1E1E]/80 max-w-md mx-auto">
-                  Ban Tổ Chức đã ghi nhận đăng ký của bạn <strong>{studentName || 'Sinh viên'}</strong> ({studentId || 'FPTU'}). Thông tin vé tham dự đã được lưu trữ cho email <strong>{studentEmail || 'email của bạn'}</strong>.
-                </p>
-              </div>
-
-              <div className="bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-2xl p-4 max-w-md mx-auto text-left text-xs font-mono-code space-y-1.5">
-                <div className="font-bold text-[#1E1E1E] truncate">{event.title}</div>
-                <div className="text-[#1E1E1E]/80">{formatDateToDDMMYYYY(event.date)} • {event.time}</div>
-                <div className="text-[#1E1E1E]/80">{event.location}</div>
-                <div className="text-[#34A853] font-bold">Mã vé: GDGOC-{Math.floor(100000 + Math.random() * 900000)}</div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setIsRsvpDone(false);
-                  onClose();
-                }}
-                className="px-6 py-2.5 bg-[#1E1E1E] text-[#FFFFFF] font-bold text-xs font-mono-code rounded-full border-2 border-[#1E1E1E] cursor-pointer"
-              >
-                Đóng & Quay Lại
-              </button>
-            </div>
           )}
         </div>
 

@@ -11,6 +11,8 @@ import {
   RefreshCw,
   Sparkles
 } from 'lucide-react';
+import { membersApi } from '../../api/members.api';
+import { generationApi } from '../../api/generation.api';
 import { useMemberStore, ExcelImportRow } from '../../store/useMemberStore';
 
 interface ExcelImportModalProps {
@@ -26,7 +28,9 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   availableGens,
   currentGen
 }) => {
-  const { importFromExcel, members } = useMemberStore();
+  const { fetchMembers, members } = useMemberStore();
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedGen, setSelectedGen] = useState<string>(currentGen || 'Gen 4.0');
@@ -44,14 +48,8 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
 
   // Generate and download standard Excel template
   const handleDownloadTemplate = () => {
-    const headers = ['Họ và tên', 'Khóa', 'MSSV', 'Email', 'Số điện thoại', 'Position'];
-    const sampleData = [
-      headers,
-      ['Nguyễn Hoàng Nam', 'K21', 'SE184567', 'namnhse184567@fpt.edu.vn', '0912345678', 'AI Member'],
-      ['Trần Thị Bích Trâm', 'K20', 'SE173890', 'tramttbse173890@fpt.edu.vn', '0934567890', 'Media Lead'],
-      ['Lê Quốc Huy', 'K22', 'SE190112', 'huylqse190112@fpt.edu.vn', '0987654321', 'Cloud Member'],
-      ['Phan Thanh Hà', 'K19', 'SE160234', 'haptse160234@fpt.edu.vn', '0978123456', 'HR-Event Member']
-    ];
+    const headers = ['Họ và tên', 'MSSV', 'Email', 'Số điện thoại', 'Ban', 'Role', 'Position'];
+    const sampleData = [headers];
 
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
@@ -74,6 +72,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploadFile(file);
     setFileName(file.name);
     setParsingError('');
     setImportResult(null);
@@ -113,13 +112,23 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     reader.readAsArrayBuffer(file);
   };
 
-  const handleConfirmImport = () => {
-    if (parsedRows.length === 0) return;
-    const result = importFromExcel(parsedRows, targetGen);
-    setImportResult(result);
+  const handleConfirmImport = async () => {
+    if (!uploadFile || isImporting) return;
+    setIsImporting(true);
+    try {
+      const config: any = await generationApi.getGenerationConfig();
+      const tenure = config.currentTenure;
+      if (!tenure || tenure.isFrozen || tenure.genLabel.toLowerCase() !== targetGen.toLowerCase()) throw new Error('Chỉ import vào Gen đang hoạt động đã được cấu hình.');
+      const form = new FormData(); form.append('file', uploadFile); form.append('tenureId', tenure.id);
+      const result: any = await membersApi.importMembers(form);
+      setImportResult({ added: result.added, errors: result.errors || [] });
+      await fetchMembers();
+    } catch (err: any) { setParsingError(err?.message || 'Không thể import thành viên'); }
+    finally { setIsImporting(false); }
   };
 
   const handleReset = () => {
+    setUploadFile(null);
     setFileName('');
     setParsedRows([]);
     setParsingError('');
@@ -369,7 +378,8 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             {!importResult && parsedRows.length > 0 && (
               <button
                 type="button"
-                onClick={handleConfirmImport}
+                disabled={isImporting}
+                  onClick={handleConfirmImport}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4" />

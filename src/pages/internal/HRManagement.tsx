@@ -1,23 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { matchesMemberGroup } from '../../utils/memberGroups';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import { useMemberStore, Member } from '../../store/useMemberStore';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { 
   Users, 
   Plus, 
   Search, 
-  Filter, 
   RotateCcw,
   FileSpreadsheet,
   Edit2,
   Trash2,
-  ShieldCheck,
-  CheckCircle2,
   AlertTriangle,
-  GraduationCap,
+  Layers,
+  LayoutGrid,
+  Table as TableIcon,
+  Shield,
   Sparkles,
-  Layers
+  Phone,
+  Mail,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 import { MemberModal } from '../../components/hr/MemberModal';
 import { ExcelImportModal } from '../../components/hr/ExcelImportModal';
@@ -30,6 +34,7 @@ export const HRManagement: React.FC = () => {
   const [selectedBan, setSelectedBan] = useState<string>('all');
   const [selectedGen, setSelectedGen] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Modals state
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
@@ -44,50 +49,50 @@ export const HRManagement: React.FC = () => {
   }, [fetchMembers]);
 
   // 🚨 CRITICAL RULE: Phân quyền truy cập cho BCN (ORG_ADMIN) và toàn bộ Ban HR-Event (Lead & Member)
-  const isOrgAdmin = user?.tier === 'ORG_ADMIN';
+  const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';
   const isHRBan = user?.banId === 'hr-event';
-  const hasHRAccess = isOrgAdmin || isHRBan;
+  const hasHRAccess = !user?.readOnly && (isOrgAdmin || isHRBan);
+
+  const clubMembers = members;
+
+  const availableGens = useMemo(() => {
+    const set = new Set<string>();
+    clubMembers.forEach(m => {
+      if (m.gen) set.add(m.gen);
+    });
+    return Array.from(set).sort();
+  }, [clubMembers]);
+
+  // Filter members
+  const filteredMembers = useMemo(() => {
+    return clubMembers.filter(m => {
+      const posLower = (m.position || '').toLowerCase();
+      const matchesBan = matchesMemberGroup(m, selectedBan);
+
+      const matchesGen = selectedGen === 'all' || m.gen.toUpperCase() === selectedGen.toUpperCase();
+      const query = searchQuery.toLowerCase().trim();
+      const matchesSearch = !query || 
+        m.name.toLowerCase().includes(query) ||
+        m.studentId.toLowerCase().includes(query) ||
+        m.email.toLowerCase().includes(query) ||
+        (m.phone && m.phone.includes(query)) ||
+        (m.position && posLower.includes(query));
+
+      return matchesBan && matchesGen && matchesSearch;
+    });
+  }, [clubMembers, selectedBan, selectedGen, searchQuery]);
+
+  const banTabs = useMemo(() => [
+    ['all', 'Tất Cả'], ['ai', 'Ban AI'], ['cloud', 'Ban Cloud'], ['web', 'Ban Web'],
+    ['research', 'Ban Research'], ['media', 'Ban Media'], ['hr-event', 'Ban HR-Event'],
+    ['bcn', 'Ban Chủ Nhiệm'], ['alumni', 'Alumni'],
+  ].map(([id, label]) => ({ id, label, count: clubMembers.filter(m =>
+    matchesMemberGroup(m, id) && (selectedGen === 'all' || m.gen.toUpperCase() === selectedGen.toUpperCase())
+  ).length })), [clubMembers, selectedGen]);
 
   if (!hasHRAccess) {
     return <Navigate to="/app/dashboard" replace />;
   }
-
-  const availableGens = getAvailableGens();
-
-  // Filter members
-  const filteredMembers = members.filter(m => {
-    const posLower = (m.position || '').toLowerCase();
-    const matchesBan =
-      selectedBan === 'all' ||
-      (selectedBan === 'bcn' && (m.tier === 'ORG_ADMIN' || !m.banId || posLower.includes('chapter lead'))) ||
-      (selectedBan === 'alumni' && (m.status === 'ALUMNI' || posLower.includes('alumni'))) ||
-      (selectedBan === 'cloud' && (m.banId === 'cloud' || posLower.includes('cloud'))) ||
-      (selectedBan === 'research' && (m.banId === 'research' || posLower.includes('research'))) ||
-      m.banId === selectedBan;
-
-    const matchesGen = selectedGen === 'all' || m.gen.toUpperCase() === selectedGen.toUpperCase();
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query || 
-      m.name.toLowerCase().includes(query) ||
-      m.studentId.toLowerCase().includes(query) ||
-      m.email.toLowerCase().includes(query) ||
-      (m.phone && m.phone.includes(query)) ||
-      (m.position && posLower.includes(query));
-
-    return matchesBan && matchesGen && matchesSearch;
-  });
-
-  const banTabs = [
-    { id: 'all', label: 'Tất Cả Các Ban', count: members.length },
-    { id: 'ai', label: 'Ban AI', count: members.filter(u => u.banId === 'ai').length },
-    { id: 'cloud', label: 'Ban Cloud', count: members.filter(u => u.banId === 'cloud' || (u.position || '').toLowerCase().includes('cloud')).length },
-    { id: 'web', label: 'Ban Web', count: members.filter(u => u.banId === 'web').length },
-    { id: 'research', label: 'Ban Research', count: members.filter(u => u.banId === 'research' || (u.position || '').toLowerCase().includes('research')).length },
-    { id: 'media', label: 'Ban Media', count: members.filter(u => u.banId === 'media').length },
-    { id: 'hr-event', label: 'Ban HR-Event', count: members.filter(u => u.banId === 'hr-event').length },
-    { id: 'bcn', label: 'Ban Chủ Nhiệm', count: members.filter(u => u.tier === 'ORG_ADMIN' || !u.banId).length },
-    { id: 'alumni', label: 'Alumni', count: members.filter(u => u.status === 'ALUMNI' || (u.position || '').toLowerCase().includes('alumni')).length },
-  ];
 
   const handleOpenAddModal = () => {
     setMemberToEdit(null);
@@ -99,114 +104,159 @@ export const HRManagement: React.FC = () => {
     setIsMemberModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (memberToDelete) {
-      deleteMember(memberToDelete.id);
-      setMemberToDelete(null);
+      try {
+        await deleteMember(memberToDelete.id);
+        setMemberToDelete(null);
+      } catch (err: any) { alert(err?.message || 'Không thể xóa thành viên'); }
+    }
+  };
+
+  // Helper cho màu avatar theo ban
+  const getBanColor = (banId?: string, tier?: string) => {
+    if (tier === 'ORG_ADMIN') return 'bg-amber-500 text-white';
+    switch (banId) {
+      case 'ai': return 'bg-emerald-600 text-white';
+      case 'cloud': return 'bg-blue-600 text-white';
+      case 'web': return 'bg-indigo-600 text-white';
+      case 'research': return 'bg-purple-600 text-white';
+      case 'media': return 'bg-rose-500 text-white';
+      case 'hr-event': return 'bg-teal-600 text-white';
+      default: return 'bg-slate-700 text-white';
     }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto select-none pb-12">
-      {/* Top Banner: Niên khóa & Quyền Quản Trị */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto select-none pb-12 animate-fadeIn">
+      {/* Google 4-Color Accent Bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#4285F4] via-[#EA4335] to-[#34A853] rounded-full shadow-xs mb-2" />
+
+      {/* Top Banner: Thống kê & Quản lý */}
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-mono-code">
-              HR & TALENT DIRECTORY
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 font-mono-code uppercase tracking-wider">
+              Talent Directory
             </span>
-            <span className="text-xs text-slate-400">•</span>
+            <span className="text-xs text-slate-300">•</span>
             <span className="text-xs text-slate-500 font-medium">
-              {isOrgAdmin ? 'Ban Chủ Nhiệm quản trị toàn diện' : 'Phân hệ phụ trách bởi Ban Nhân Sự & Sự Kiện'}
+              {isOrgAdmin ? 'Ban Chủ Nhiệm Quản trị' : 'Ban Nhân Sự & Sự Kiện phụ trách'}
             </span>
           </div>
-          <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-            <span>Quản Lý Nhân Sự & Khóa Hoạt Động</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono-code">
-              {members.length} thành viên
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+            <span>Danh Sách Nhân Sự CLB</span>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono-code">
+              {clubMembers.length} thành viên
             </span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Theo dõi, phân quyền, cập nhật khóa Gen và quản lý toàn bộ hồ sơ thành viên GDG on Campus FPTU HCMC.
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Quản lý hồ sơ, phân quyền và khóa Gen hoạt động của các thành viên GDG on Campus FPTU HCMC.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Action Buttons */}
+        <div className="flex items-center flex-wrap gap-2 shrink-0">
           <button
             onClick={() => fetchMembers()}
             disabled={isLoading}
-            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="Đồng bộ danh sách từ server"
+            className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Tải lại danh sách từ server"
           >
-            <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Làm Mới</span>
           </button>
 
-          <button
-            onClick={() => setIsExcelModalOpen(true)}
-            className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Nhập từ Excel (.xlsx)</span>
-          </button>
+          {isOrgAdmin && (
+            <button
+              onClick={() => setIsExcelModalOpen(true)}
+              className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Nhập Excel</span>
+            </button>
+          )}
 
-          <button
-            onClick={handleOpenAddModal}
-            className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Thành Viên</span>
-          </button>
+          {isOrgAdmin && (
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 bg-[#4285F4] hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Thành Viên</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Directory Main Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {/* Search & Gen Filter Bar */}
-        <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/60">
+      {/* Directory Main Container */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+        {/* Search, Gen Filter & View Switcher Bar */}
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
           {/* Search Input */}
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Tìm theo Tên, MSSV (SE...), Email hoặc Số điện thoại..."
+              placeholder="Tìm theo Tên, MSSV, Email hoặc Số điện thoại..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-medium"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-medium transition-all"
             />
           </div>
 
-          {/* Gen Filter Dropdown (Hỗ trợ Gen lẻ) */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 whitespace-nowrap flex items-center gap-1">
+          <div className="flex items-center gap-3">
+            {/* Gen Filter Dropdown */}
+            <div className="flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-purple-600" />
-              <span>Khóa Gen:</span>
-            </span>
-            <select
-              value={selectedGen}
-              onChange={(e) => setSelectedGen(e.target.value)}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">Tất Cả Các Gen ({members.length})</option>
-              {availableGens.map(g => {
-                const count = members.filter(m => m.gen === g).length;
-                return (
-                  <option key={g} value={g}>
-                    {g} ({count} thành viên)
-                  </option>
-                );
-              })}
-            </select>
+              <select
+                value={selectedGen}
+                onChange={(e) => setSelectedGen(e.target.value)}
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer shadow-xs"
+              >
+                <option value="all">Tất Cả Khóa Gen ({clubMembers.length})</option>
+                {availableGens.map(g => {
+                  const count = clubMembers.filter(m => m.gen === g).length;
+                  return (
+                    <option key={g} value={g}>
+                      {g} ({count} thành viên)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* View Mode Switcher */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  viewMode === 'table' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Dạng bảng gọn"
+              >
+                <TableIcon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  viewMode === 'cards' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Dạng thẻ trực quan"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Ban Filter Tabs */}
-        <div className="flex overflow-x-auto px-4 border-b border-slate-200 bg-white gap-2 py-2.5 custom-scrollbar">
+        <div className="flex overflow-x-auto px-4 border-b border-slate-100 bg-white gap-1.5 py-2.5 custom-scrollbar">
           {banTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setSelectedBan(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                 selectedBan === tab.id
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -222,108 +272,115 @@ export const HRManagement: React.FC = () => {
           ))}
         </div>
 
-        {/* Members Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3">Thành Viên</th>
-                <th className="px-4 py-3">MSSV & Khóa</th>
-                <th className="px-4 py-3">Chức Vụ & Cấp Bậc</th>
-                <th className="px-4 py-3">Ban Chuyên Môn</th>
-                <th className="px-4 py-3">Khóa Gen</th>
-                <th className="px-4 py-3">Email FPT & SĐT</th>
-                <th className="px-4 py-3 text-right">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredMembers.length === 0 ? (
+        {/* Content View: Table or Cards */}
+        {filteredMembers.length === 0 ? (
+          <div className="py-16 text-center text-slate-400 space-y-2">
+            <Users className="w-10 h-10 mx-auto text-slate-300 opacity-60" />
+            <p className="text-sm font-medium text-slate-500">
+              Không tìm thấy thành viên nào phù hợp với bộ lọc hiện tại.
+            </p>
+          </div>
+        ) : viewMode === 'table' ? (
+          /* TABLE VIEW: Tinh gọn, chỉ 5 cột, không tràn chữ Gen */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50/70 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                    Không tìm thấy thành viên nào phù hợp với bộ lọc hiện tại.
-                  </td>
+                  <th className="px-5 py-3.5">Thành Viên & MSSV</th>
+                  <th className="px-5 py-3.5">Ban & Vai Trò</th>
+                  <th className="px-5 py-3.5">Khóa Hoạt Động</th>
+                  <th className="px-5 py-3.5">Liên Hệ</th>
+                  <th className="px-5 py-3.5 text-right">Thao Tác</th>
                 </tr>
-              ) : (
-                filteredMembers.map(m => {
-                  const isAdmin = m.tier === 'ORG_ADMIN';
-                  const isLead = m.tier === 'BAN_LEAD';
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredMembers.map(m => {
+                  const isAdmin = m.status !== 'ALUMNI' && ['ORG_ADMIN', 'ADVISOR'].includes(m.tier);
+                  const isLead = m.status !== 'ALUMNI' && m.tier === 'BAN_LEAD';
 
                   return (
-                    <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
-                      {/* Tên & Avatar */}
-                      <td className="px-4 py-3 font-semibold text-slate-900">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-xs ${
-                            isAdmin ? 'bg-[#EA4335]' : isLead ? 'bg-[#4285F4]' : 'bg-[#34A853]'
-                          }`}>
+                    <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Cột 1: Tên & MSSV */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getBanColor(m.banId, m.tier)}`}>
                             {m.name.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900">{m.name}</p>
-                            <span className="text-[10px] text-slate-400 font-mono-code">{m.status}</span>
+                            <p className="font-extrabold text-slate-900 text-sm">{m.name}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono-code text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
+                                {m.studentId}
+                              </span>
+                              <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                                {m.academicYear || 'K20'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* MSSV & Khóa */}
-                      <td className="px-4 py-3">
-                        <div className="font-mono-code font-bold text-slate-900">
-                          {m.studentId}
+                      {/* Cột 2: Ban & Cấp bậc */}
+                      <td className="px-5 py-3.5">
+                        <p className="font-bold text-slate-800 text-xs">{m.status === 'ALUMNI' ? 'Alumni' : m.banName || 'Chưa phân ban'}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
+                            isAdmin 
+                              ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                              : isLead 
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          }`}>
+                            {isAdmin ? '👑 BCN' : isLead ? '⚡ LEAD' : 'MEMBER'}
+                          </span>
+                          <span className="text-slate-500 text-[11px] font-medium truncate max-w-[140px]">
+                            {m.position || 'Thành Viên'}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                          {m.academicYear || 'K20'}
-                        </span>
                       </td>
 
-                      {/* Position & Cấp bậc */}
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-slate-800">{m.position || 'Thành Viên'}</p>
-                        <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full border inline-block mt-0.5 ${
-                          isAdmin 
-                            ? 'bg-red-50 text-red-700 border-red-200' 
-                            : isLead 
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                          {isAdmin ? '👑 ORG_ADMIN' : isLead ? '⚡ BAN_LEAD' : 'BAN_MEMBER'}
-                        </span>
+                      {/* Cột 3: Khóa Gen (Fix hoàn toàn lỗi tràn chữ) */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full font-mono-code text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200/80 whitespace-nowrap shadow-2xs">
+                            {m.gen || 'Gen 4.0'}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full border whitespace-nowrap ${
+                            m.status === 'ACTIVE' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : m.status === 'PROBATION'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {m.status}
+                          </span>
+                        </div>
                       </td>
 
-                      {/* Ban Chuyên Môn */}
-                      <td className="px-4 py-3 font-medium text-slate-700">
-                        {m.banName || 'Ban Chủ Nhiệm'}
+                      {/* Cột 4: Liên hệ */}
+                      <td className="px-5 py-3.5 font-mono-code text-slate-600">
+                        <p className="text-slate-800 text-xs font-medium truncate max-w-[210px]">{m.email}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">{m.phone || 'Chưa cập nhật SĐT'}</p>
                       </td>
 
-                      {/* Khóa Gen */}
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-md font-mono-code text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                          {m.gen}
-                        </span>
-                      </td>
-
-                      {/* Email & SĐT */}
-                      <td className="px-4 py-3 font-mono-code text-slate-600">
-                        <p className="text-slate-800 text-[11px]">{m.email}</p>
-                        <p className="text-[10px] text-slate-400">{m.phone || 'Chưa có SĐT'}</p>
-                      </td>
-
-                      {/* Thao tác */}
-                      <td className="px-4 py-3 text-right">
+                      {/* Cột 5: Thao tác */}
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEditModal(m)}
-                            title="Sửa thông tin hoặc phân quyền"
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
+                          {isOrgAdmin && (
+                            <button
+                              onClick={() => handleOpenEditModal(m)}
+                              title="Sửa thông tin hoặc phân quyền"
+                              className="p-1.5 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
 
-                          {/* Xóa thành viên: chỉ BCN hoặc HR Lead */}
-                          {(isOrgAdmin || (isHRBan && user?.tier === 'BAN_LEAD')) && (
+                          {isOrgAdmin && (
                             <button
                               onClick={() => setMemberToDelete(m)}
                               title="Xóa thành viên khỏi danh sách"
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -332,17 +389,89 @@ export const HRManagement: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* CARD GRID VIEW: Thẻ hồ sơ cá nhân hiện đại */
+          <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredMembers.map(m => {
+              const isAdmin = m.status !== 'ALUMNI' && ['ORG_ADMIN', 'ADVISOR'].includes(m.tier);
+              const isLead = m.status !== 'ALUMNI' && m.tier === 'BAN_LEAD';
+
+              return (
+                <div key={m.id} className="bg-slate-50/60 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all hover:shadow-xs space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black shadow-xs ${getBanColor(m.banId, m.tier)}`}>
+                        {m.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-slate-900 text-sm">{m.name}</h3>
+                        <p className="text-xs text-slate-500 font-medium">{m.status === 'ALUMNI' ? 'Alumni' : m.banName || 'Chưa phân ban'}</p>
+                      </div>
+                    </div>
+
+                    {isOrgAdmin && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEditModal(m)}
+                          className="p-1.5 rounded-lg text-blue-600 hover:bg-white transition-colors cursor-pointer"
+                          title="Sửa"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setMemberToDelete(m)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-white transition-colors cursor-pointer"
+                          title="Xóa"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex items-center flex-wrap gap-1.5 pt-1">
+                    <span className="font-mono-code text-[11px] font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-lg shadow-2xs">
+                      {m.studentId} • {m.academicYear || 'K20'}
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono-code text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/80 whitespace-nowrap">
+                      {m.gen || 'Gen 4.0'}
+                    </span>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                      isAdmin ? 'bg-amber-50 text-amber-700 border-amber-200' : isLead ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {m.position || 'Thành Viên'}
+                    </span>
+                  </div>
+
+                  {/* Contact */}
+                  <div className="pt-2 border-t border-slate-200/60 text-xs font-mono-code text-slate-500 space-y-1">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span className="truncate">{m.email}</span>
+                    </div>
+                    {m.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{m.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
       {memberToDelete && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white max-w-md w-full rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4 text-center">
+          <div className="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4 text-center">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>

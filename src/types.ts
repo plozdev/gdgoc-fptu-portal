@@ -31,16 +31,6 @@ export interface LeadRole {
   requirements: string[];
 }
 
-export interface EventAttendee {
-  id: string;
-  name: string;
-  studentId: string;
-  email: string;
-  ban?: string;
-  checkedIn: boolean;
-  checkedInAt?: string;
-  registeredAt?: string;
-}
 
 export interface EventItem {
   id: string;
@@ -66,7 +56,6 @@ export interface EventItem {
   registrationUrl?: string;
   tenureId?: string;
   tenureName?: string;
-  attendees?: EventAttendee[];
 }
 
 export interface StatMilestone {

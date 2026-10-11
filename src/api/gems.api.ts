@@ -1,12 +1,14 @@
 import { api } from './client';
 
 export interface QueryLeaderboardParams {
+  semesterId?: string;
   tenureId?: string;
   departmentCode?: string;
   limit?: number;
 }
 
 export interface QueryTransactionsParams {
+  semesterId?: string;
   userId?: string;
   page?: number;
   limit?: number;

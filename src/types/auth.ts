@@ -1,9 +1,4 @@
-/**
- * @file users.ts
- * @description Core auth types & user session interface.
- * Mock user list removed — authentication is handled by real backend.
- * For dev testing, user switching is managed via MSW handler (/api/auth/switch-user).
- */
+/** Authentication types and permissions. */
 
 // ==========================================
 // TYPES & ENUMS
@@ -11,7 +6,7 @@
 
 /**
  * Tier system (cấp bậc trong CLB):
- * - ADVISOR      : Cố vấn CLB (ngang cấp BCN, quyền xem toàn bộ, không thao tác)
+ * - ADVISOR      : Cố vấn CLB (quyền cấp 1, ngang LEAD và ADMIN)
  * - ORG_ADMIN    : Ban Chủ Nhiệm (Chapter Lead, Co-Chapter Lead) — quyền cao nhất
  * - BAN_LEAD     : Trưởng Ban các ban (AI Lead, Cloud Lead, v.v.)
  * - BAN_MEMBER   : Thành viên ban
@@ -48,20 +43,20 @@ export const BAN_NAMES: Record<BanId, string> = {
 /**
  * Helper: Kiểm tra user có quyền quản lý event & attendance không.
  * Chỉ BCN (ORG_ADMIN) hoặc HR-Event ban (banId = 'hr-event') mới có quyền.
- * ADVISOR chỉ có quyền xem (read-only).
+ * Alumni chỉ đọc; quyền quản trị yêu cầu trạng thái đang hoạt động.
  */
 export function canManageEvents(user: UserSession | null): boolean {
   if (!user) return false;
-  return user.tier === 'ORG_ADMIN' || user.banId === 'hr-event';
+  return !user.readOnly && (user.tier === 'ORG_ADMIN' || (user.tier === 'BAN_LEAD' && user.banId === 'hr-event'));
 }
 
 /**
  * Helper: Kiểm tra user có quyền admin (BCN/ADVISOR) không.
- * ADVISOR có quyền xem nhưng không được thao tác.
+ * LEAD, ADVISOR, ADMIN dùng chung quyền cấp 1.
  */
 export function isOrgAdmin(user: UserSession | null): boolean {
   if (!user) return false;
-  return user.tier === 'ORG_ADMIN';
+  return !user.readOnly && user.tier === 'ORG_ADMIN';
 }
 
 /**
@@ -70,5 +65,5 @@ export function isOrgAdmin(user: UserSession | null): boolean {
  */
 export function canManageHR(user: UserSession | null): boolean {
   if (!user) return false;
-  return user.tier === 'ORG_ADMIN';
+  return !user.readOnly && user.tier === 'ORG_ADMIN';
 }

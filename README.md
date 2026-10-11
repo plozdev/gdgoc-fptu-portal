@@ -1,20 +1,11 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# GDGoC-OS Frontend
 
-# Run and deploy your AI Studio app
+React/Vite. Xem ../README.md và ../PRODUCTION_AUDIT.md.
 
-This contains everything you need to run your app locally.
+npm ci
+npm run dev
+npm run build
 
-View your app in AI Studio: https://ai.studio/apps/7f1ab153-ef00-4364-9e90-29b296e9560f
+Build gồm TypeScript check và Vite. Phục vụ dist với SPA fallback và proxy /api tới backend; proxy trong vite.config.ts chỉ dành cho local dev.
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+.env.example chứa VITE_API_BASE_URL và VITE_RECRUITMENT_URL. Không cần Gemini API key. Không có MSW, người dùng dev hoặc dữ liệu nghiệp vụ mẫu.

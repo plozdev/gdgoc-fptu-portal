@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore, Member, MemberSocials } from '../../store/useMemberStore';
 import { tasksApi } from '../../api/tasks.api';
@@ -28,7 +29,9 @@ import {
   Check,
   Camera,
   UploadCloud,
-  Image as ImageIcon
+  Image as ImageIcon,
+  RefreshCw,
+  KeyRound
 } from 'lucide-react';
 
 const SUGGESTED_SKILLS = [
@@ -51,19 +54,19 @@ export const MyProfile: React.FC = () => {
   ) || {
     id: user?.id || 'current',
     name: user?.name || 'Thành Viên GDG',
-    studentId: user?.mssv || 'SE180000',
-    academicYear: 'K20',
-    email: user?.email || 'member@fpt.edu.vn',
-    phone: user?.phoneNumber || user?.phone || '0901234567',
+    studentId: user?.mssv || '',
+    academicYear: '',
+    email: user?.email || '',
+    phone: user?.phoneNumber || user?.phone || '',
     position: user?.tier === 'ORG_ADMIN' ? 'Ban Chủ Nhiệm' : user?.tier === 'BAN_LEAD' ? 'Trưởng Ban' : 'Thành Viên',
     tier: user?.tier || 'BAN_MEMBER',
     banId: user?.banId || null,
     banName: user?.banName || 'Ban Thành Viên',
-    gen: 'Gen 4.0',
+    gen: '',
     status: 'ACTIVE',
-    joinedDate: '15/09/2024',
-    bio: 'Thành viên nhiệt huyết của GDG on Campus FPT University HCMC! 🚀',
-    skills: ['Teamwork', 'Communication'],
+    joinedDate: '',
+    bio: '',
+    skills: [],
     socials: {} as MemberSocials,
     gemsBalance: user?.gemsBalance ?? 0
   };
@@ -92,55 +95,36 @@ export const MyProfile: React.FC = () => {
   const [userTasks, setUserTasks] = useState<any[]>([]);
   const [eventsCount, setEventsCount] = useState<number>(0);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchUserStats = async () => {
-      try {
-        const [tasksRes, eventsRes] = await Promise.allSettled([
-          tasksApi.getTasks({ limit: 100 }),
-          eventsApi.getEvents(),
-        ]);
+  const fetchUserStats = useCallback(async () => {
+    try {
+      const [tasksRes, eventsRes] = await Promise.allSettled([
+        tasksApi.getTasks({ limit: 100, assigneeId: user?.id, semesterId: 'all' }),
+        eventsApi.getMyContributionCount(),
+      ]);
 
-        if (!isMounted) return;
+      if (tasksRes.status === 'fulfilled' && tasksRes.value) {
+        const raw = tasksRes.value;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.items)
+          ? raw.items
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : [];
+        setUserTasks(list);
+      } else { setUserTasks([]); }
 
-        if (tasksRes.status === 'fulfilled' && tasksRes.value) {
-          const raw = tasksRes.value;
-          const list = Array.isArray(raw)
-            ? raw
-            : Array.isArray(raw?.items)
-            ? raw.items
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
-          if (list.length > 0) {
-            setUserTasks(list);
-          } else {
-            const saved = localStorage.getItem('gdgoc_tasks_v2');
-            setUserTasks(saved ? JSON.parse(saved) : []);
-          }
-        } else {
-          const saved = localStorage.getItem('gdgoc_tasks_v2');
-          setUserTasks(saved ? JSON.parse(saved) : []);
-        }
-
-        if (eventsRes.status === 'fulfilled' && eventsRes.value) {
-          const evList = Array.isArray(eventsRes.value)
-            ? eventsRes.value
-            : Array.isArray(eventsRes.value?.data)
-            ? eventsRes.value.data
-            : [];
-          setEventsCount(evList.length);
-        }
-      } catch (err) {
-        console.warn('[MyProfile] Failed to fetch stats:', err);
+      if (eventsRes.status === 'fulfilled' && eventsRes.value) {
+        setEventsCount(eventsRes.value.count);
       }
-    };
-
-    fetchUserStats();
-    return () => {
-      isMounted = false;
-    };
+    } catch (err) {
+      console.warn('[MyProfile] Failed to fetch stats:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUserStats();
+  }, [fetchUserStats]);
 
   useEffect(() => {
     if (currentMember) {
@@ -251,6 +235,7 @@ export const MyProfile: React.FC = () => {
       }, 4000);
     } catch (err) {
       console.error('Lỗi khi lưu profile:', err);
+      alert(err instanceof Error ? err.message : 'Không thể lưu hồ sơ');
     } finally {
       setIsSaving(false);
     }
@@ -377,6 +362,18 @@ export const MyProfile: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                fetchMembers();
+                fetchUserStats();
+              }}
+              disabled={isMembersLoading}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Đồng bộ lại thông tin hồ sơ và nhiệm vụ từ server"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isMembersLoading ? 'animate-spin text-blue-600' : ''}`} />
+              <span>Đồng bộ</span>
+            </button>
             <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Đang Hoạt Động</span>
@@ -477,11 +474,31 @@ export const MyProfile: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Security & Password Action */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Bảo Mật & Mật Khẩu
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Bạn có thể cập nhật mật khẩu đăng nhập định kỳ hoặc khi cần thiết để bảo vệ tài khoản cá nhân trong GDGoC-OS.
+            </p>
+            <Link
+              to="/app/change-password"
+              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-200 font-bold text-xs transition-all duration-200 group"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 transition-colors" />
+              <span>Đổi Mật Khẩu Tài Khoản</span>
+            </Link>
+          </div>
         </div>
 
         {/* RIGHT COLUMN: EDITABLE PERSONAL DETAILS (✏️ THÀNH VIÊN TỰ SỬA) */}
         <div className="lg:col-span-7">
-          <form onSubmit={handleSaveProfile} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+          <fieldset disabled={Boolean(user?.readOnly)}><form onSubmit={handleSaveProfile} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-indigo-600" />
@@ -715,7 +732,7 @@ export const MyProfile: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || user?.readOnly}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isSaving ? (
@@ -726,7 +743,7 @@ export const MyProfile: React.FC = () => {
                 <span>{isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi Hồ Sơ'}</span>
               </button>
             </div>
-          </form>
+          </form></fieldset>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Megaphone, X, Send, AlertTriangle, Sparkles, Layers, Shield } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore, NotificationType, NotificationPriority } from '../../store/useNotificationStore';
-import { BAN_NAMES, BanId } from '../../mocks/fixtures/users';
+import { BAN_NAMES, BanId } from '../../types/auth';
 
 interface BroadcastModalProps {
   isOpen: boolean;
@@ -15,6 +15,8 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
 
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
 
+  const [error, setError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState<NotificationType>('broadcast');
@@ -26,11 +28,14 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
 
-    addNotification({
+    if (isSending) return;
+    setIsSending(true); setError(null);
+    try {
+    await addNotification({
       title: title.trim(),
       message: message.trim(),
       type,
@@ -43,6 +48,8 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
     onClose();
     setTitle('');
     setMessage('');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Không thể lưu thông báo'); }
+    finally { setIsSending(false); }
   };
 
   return (
@@ -167,6 +174,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
           )}
         </div>
 
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
           <button
@@ -178,6 +186,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
           </button>
           <button
             type="submit"
+            disabled={isSending}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />

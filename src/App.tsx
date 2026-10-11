@@ -30,12 +30,13 @@ import { DashboardOverview } from './pages/internal/DashboardOverview';
 import { HRManagement } from './pages/internal/HRManagement';
 import { TaskBoard } from './pages/internal/TaskBoard';
 import { LandingCMS } from './pages/internal/LandingCMS';
-import { EventAttendance } from './pages/internal/EventAttendance';
+import { EventManagement } from './pages/internal/EventManagement';
 import { AssetHub } from './pages/internal/AssetHub';
 import { GemsLeaderboard } from './pages/internal/GemsLeaderboard';
 import { GenerationSettings } from './pages/internal/GenerationSettings';
 import { InventoryManagement } from './pages/internal/InventoryManagement';
 import { MyProfile } from './pages/internal/MyProfile';
+import { FirstPasswordChange } from './components/FirstPasswordChange';
 
 function LandingPage() {
   const { fetchCmsData } = useLandingContentStore();
@@ -238,7 +239,7 @@ export default function App() {
           element={
             user ? (
               <DashboardLayout>
-                <EventAttendance />
+                <EventManagement />
               </DashboardLayout>
             ) : (
               <Navigate to="/login" />
@@ -288,6 +289,16 @@ export default function App() {
               <DashboardLayout>
                 <MyProfile />
               </DashboardLayout>
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/app/change-password"
+          element={
+            user ? (
+              <FirstPasswordChange mode="standard" />
             ) : (
               <Navigate to="/login" />
             )

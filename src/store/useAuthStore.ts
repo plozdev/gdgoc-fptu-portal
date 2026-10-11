@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { UserSession, Tier, BanId, BAN_NAMES } from '../mocks/fixtures/users';
+import { UserSession, Tier, BanId, BAN_NAMES } from '../types/auth';
 import { authApi, LoginDto } from '../api';
 
 export function mapBackendUserToSession(raw: any): UserSession | null {
@@ -40,6 +40,7 @@ export function mapBackendUserToSession(raw: any): UserSession | null {
     banId,
     banName,
     ...raw,
+    readOnly: raw.readOnly === true || !['ACTIVE', 'PROBATION'].includes(currentTenure?.status),
   };
 }
 

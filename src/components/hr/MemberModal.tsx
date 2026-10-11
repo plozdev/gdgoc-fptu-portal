@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, UserCheck, Shield, Award } from 'lucide-react';
 import { Member, useMemberStore } from '../../store/useMemberStore';
-import { Tier, BanId, BAN_NAMES } from '../../mocks/fixtures/users';
+import { Tier, BanId, BAN_NAMES } from '../../types/auth';
 
 interface MemberModalProps {
   isOpen: boolean;
@@ -75,7 +75,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
 
   const resolvedGen = isCustomGen && customGen.trim() ? customGen.trim() : gen;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -111,13 +111,13 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       else finalPosition = `${selectedBanId?.toUpperCase()} Member`;
     }
 
+    try {
     if (memberToEdit) {
-      updateMember(memberToEdit.id, {
+      await updateMember(memberToEdit.id, {
         name: name.trim(),
         studentId: studentId.trim().toUpperCase(),
         academicYear: academicYear.trim(),
         email: email.trim().toLowerCase(),
-        phone: phone.trim(),
         position: finalPosition,
         tier,
         banId: selectedBanId,
@@ -126,7 +126,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
         status,
       });
     } else {
-      addMember({
+      await addMember({
         name: name.trim(),
         studentId: studentId.trim().toUpperCase(),
         academicYear: academicYear.trim(),
@@ -145,6 +145,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     }
 
     onClose();
+    } catch (err: any) { setError(err?.message || 'Không thể lưu thành viên'); }
   };
 
   return (
@@ -251,9 +252,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                 type="tel"
                 placeholder="Ví dụ: 0901234567"
                 value={phone}
+                readOnly={Boolean(memberToEdit)}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono-code text-slate-900 focus:outline-none focus:border-blue-500"
               />
+              {memberToEdit && <p className="mt-1 text-xs text-slate-500">SĐT chỉ được chủ tài khoản cập nhật trong Hồ Sơ Của Tôi.</p>}
             </div>
 
             {/* Chức danh cụ thể (Position) */}

@@ -32,7 +32,8 @@ export async function request<T = any>(
     defaultHeaders['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(url, {
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const response = await fetch(baseUrl + url, {
     ...options,
     credentials: 'include', // Bắt buộc để gửi và nhận Cookie session_token
     headers: {

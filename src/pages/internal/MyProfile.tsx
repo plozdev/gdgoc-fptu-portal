@@ -482,9 +482,6 @@ export const MyProfile: React.FC = () => {
                   Thông Tin Cá Nhân & Liên Hệ
                 </h2>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">
-                ✏️ Bạn có quyền chỉnh sửa
-              </span>
             </div>
 
             {/* 1. BIO / GIỚI THIỆU BẢN THÂN */}

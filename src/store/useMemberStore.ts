@@ -39,6 +39,7 @@ export interface Member {
   // Dữ liệu cá nhân
   bio?: string;
   avatar?: string;
+  coverUrl?: string;
   socials?: MemberSocials;
   skills?: string[];
   gemsBalance?: number;
@@ -195,6 +196,7 @@ export function mapBackendMemberToMember(raw: any): Member {
     joinedDate,
     bio: raw.bio || '',
     avatar: raw.avatarUrl || raw.avatar,
+    coverUrl: raw.coverUrl || undefined,
     socials,
     skills: raw.skills || [],
     gemsBalance: raw.gemsBalance ?? raw.user?.gemsBalance ?? 0,

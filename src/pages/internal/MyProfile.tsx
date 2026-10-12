@@ -1,42 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore, Member, MemberSocials } from '../../store/useMemberStore';
+import { membersApi } from '../../api/members.api';
 import { tasksApi } from '../../api/tasks.api';
 import { eventsApi } from '../../api/events.api';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  GraduationCap, 
-  ShieldCheck, 
-  Lock, 
-  Sparkles, 
-  Globe, 
-  Github, 
-  Linkedin, 
-  Facebook, 
-  MessageSquare, 
-  CheckCircle2, 
-  Edit3, 
-  Award, 
-  Tag, 
-  Plus, 
+import {
+  User,
+  Mail,
+  Phone,
+  GraduationCap,
+  ShieldCheck,
+  Lock,
+  Sparkles,
+  Globe,
+  Github,
+  Linkedin,
+  Facebook,
+  MessageSquare,
+  CheckCircle2,
+  Edit3,
+  Award,
+  Tag,
+  Plus,
   X,
   Calendar,
   Layers,
   Flame,
   Check,
   Camera,
-  UploadCloud,
-  Image as ImageIcon,
   RefreshCw,
   KeyRound
 } from 'lucide-react';
 
 const SUGGESTED_SKILLS = [
-  'React', 'TypeScript', 'Google Cloud', 'Python', 'PyTorch', 
-  'Figma', 'Prompt Engineering', 'Docker', 'Event Organizing', 
+  'React', 'TypeScript', 'Google Cloud', 'Python', 'PyTorch',
+  'Figma', 'Prompt Engineering', 'Docker', 'Event Organizing',
   'MC & Hosting', 'Video Production', 'Content Writing'
 ];
 
@@ -75,17 +74,16 @@ export const MyProfile: React.FC = () => {
   const [bio, setBio] = useState(currentMember.bio || '');
   const [phone, setPhone] = useState(currentMember.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(currentMember.avatar || user?.avatarUrl || '');
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [coverUrl, setCoverUrl] = useState<string>(() => {
-    const key = `gdgoc_cover_${user?.id || 'default'}`;
-    return localStorage.getItem(key) || '';
-  });
-  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverUrl, setCoverUrl] = useState(currentMember.coverUrl || '');
+  const [uploadingImage, setUploadingImage] = useState<'avatar' | 'cover' | null>(null);
+  const [imageError, setImageError] = useState('');
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const coverInput = useRef<HTMLInputElement>(null);
 
   const [facebook, setFacebook] = useState(currentMember.socials?.facebook || '');
   const [github, setGithub] = useState(currentMember.socials?.github || '');
   const [linkedin, setLinkedin] = useState(currentMember.socials?.linkedin || '');
-  
+
   const [skills, setSkills] = useState<string[]>(currentMember.skills || []);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSavedToast, setIsSavedToast] = useState(false);
@@ -131,6 +129,7 @@ export const MyProfile: React.FC = () => {
       setBio(currentMember.bio || '');
       setPhone(currentMember.phone || '');
       setAvatarUrl(currentMember.avatar || user?.avatarUrl || '');
+      setCoverUrl(currentMember.coverUrl || '');
       setFacebook(currentMember.socials?.facebook || '');
       setGithub(currentMember.socials?.github || '');
       setLinkedin(currentMember.socials?.linkedin || '');
@@ -151,30 +150,30 @@ export const MyProfile: React.FC = () => {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (kind: 'avatar' | 'cover', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setAvatarUrl(preview);
-    setAvatarFile(file);
-  };
-
-  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setCoverUrl(preview);
-    setCoverFile(file);
-    if (user?.id) {
-      localStorage.setItem(`gdgoc_cover_${user.id}`, preview);
+    e.target.value = '';
+    if (!file || user?.readOnly || uploadingImage || isSaving) return;
+    setImageError('');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setImageError('Chọn ảnh JPG, PNG hoặc WebP, tối đa 5 MB.');
+      return;
+    }
+    setUploadingImage(kind);
+    try {
+      const { url } = await membersApi.uploadProfileImage(kind, file);
+      if (kind === 'avatar') {
+        setAvatarUrl(url);
+        if (user) setUser({ ...user, avatarUrl: url });
+      } else setCoverUrl(url);
+      useMemberStore.setState(state => ({ members: state.members.map(member => member.id === user?.id
+        ? { ...member, ...(kind === 'avatar' ? { avatar: url } : { coverUrl: url }) } : member) }));
+      setIsSavedToast(true);
+      setTimeout(() => setIsSavedToast(false), 4000);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : 'Không thể tải ảnh lên.');
+    } finally {
+      setUploadingImage(null);
     }
   };
 
@@ -191,33 +190,11 @@ export const MyProfile: React.FC = () => {
     const targetUserId = currentMember.id !== 'current' ? currentMember.id : (user?.id || '');
 
     try {
-      let finalAvatar = avatarUrl.trim() || undefined;
-      if (avatarFile) {
-        try {
-          const base64Avatar = await fileToBase64(avatarFile);
-          finalAvatar = base64Avatar;
-        } catch (err) {
-          console.warn('Failed to convert avatar to base64:', err);
-        }
-      }
-
-      if (coverFile) {
-        try {
-          const base64Cover = await fileToBase64(coverFile);
-          if (user?.id) {
-            localStorage.setItem(`gdgoc_cover_${user.id}`, base64Cover);
-          }
-        } catch (err) {
-          console.warn('Failed to convert cover to base64:', err);
-        }
-      }
-
       await updateSelfProfile(targetUserId, {
         bio: bio.trim(),
         phone: phone.trim(),
         socials: socialsData,
         skills,
-        avatar: finalAvatar,
       });
 
       if (user) {
@@ -225,7 +202,6 @@ export const MyProfile: React.FC = () => {
           ...user,
           phone: phone.trim(),
           phoneNumber: phone.trim(),
-          avatarUrl: finalAvatar || user.avatarUrl,
         });
       }
 
@@ -247,7 +223,7 @@ export const MyProfile: React.FC = () => {
   // Calculate completed tasks
   const completedTasksCount = userTasks.filter((t: any) => {
     const isDone = t.status === 'DONE' || t.status === 'done';
-    const isAssigned = 
+    const isAssigned =
       t.assignees?.some((a: any) => a.userId === user?.id || a.user?.id === user?.id) ||
       t.assigneeId === user?.id ||
       t.assigneeIds?.includes(user?.id);
@@ -272,20 +248,24 @@ export const MyProfile: React.FC = () => {
         </div>
       )}
 
+      {imageError && <p role="alert" className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700">{imageError}</p>}
+      <input ref={avatarInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={Boolean(user?.readOnly) || Boolean(uploadingImage) || isSaving} onChange={e => void handleImageChange('avatar', e)} />
+      <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={Boolean(user?.readOnly) || Boolean(uploadingImage) || isSaving} onChange={e => void handleImageChange('cover', e)} />
+
       {/* Hero Header Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden relative">
         {/* Cover Gradient or Image with Google Colors Accent */}
-        <div 
+        <div
           className="h-36 sm:h-48 relative overflow-hidden bg-cover bg-center transition-all"
           style={{
-            backgroundImage: coverUrl 
-              ? `url(${coverUrl})` 
+            backgroundImage: coverUrl
+              ? `url(${coverUrl})`
               : 'linear-gradient(to right, #2563eb, #4f46e5, #9333ea)',
           }}
         >
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px]"></div>
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          
+
           <div className="absolute top-4 right-6 flex items-center gap-2">
             <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-mono-code text-xs font-bold rounded-full flex items-center gap-1.5 shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
@@ -293,27 +273,25 @@ export const MyProfile: React.FC = () => {
             </span>
           </div>
 
-          {/* Nút Upload Ảnh Bìa */}
-          <div className="absolute bottom-3 right-6">
-            <label 
-              title="Tải ảnh bìa mới từ máy tính"
-              className="cursor-pointer px-3 py-1.5 bg-black/60 hover:bg-black/80 text-white text-xs font-bold rounded-xl border border-white/30 backdrop-blur-md transition-all flex items-center gap-1.5 shadow-md hover:scale-105"
-            >
-              <Camera className="w-3.5 h-3.5 text-blue-300" />
-              <span>{coverUrl ? 'Đổi Ảnh Bìa' : 'Tải Ảnh Bìa Lên'}</span>
-              <input 
-                type="file" 
-                accept="image/*" 
-                className="hidden" 
-                onChange={handleCoverFileChange} 
-              />
-            </label>
-          </div>
+          {!user?.readOnly && <button
+            type="button"
+            aria-label="Đổi ảnh bìa"
+            title="Bấm để đổi ảnh bìa (JPG, PNG, WebP; tối đa 5 MB)"
+            disabled={Boolean(uploadingImage) || isSaving}
+            onClick={() => coverInput.current?.click()}
+            className="absolute inset-0 z-10 group cursor-pointer focus-visible:outline-4 focus-visible:outline-blue-300 disabled:cursor-wait"
+          >
+            <span className="absolute bottom-3 right-6 px-3 py-1.5 bg-black/60 text-white text-xs font-bold rounded-xl border border-white/30 flex items-center gap-1.5 opacity-80 group-hover:opacity-100">
+              <Camera className="w-3.5 h-3.5" />
+              {uploadingImage === 'cover' ? 'Đang tải ảnh...' : 'Đổi ảnh bìa'}
+            </span>
+          </button>}
+
         </div>
 
         {/* Profile Lockup Row */}
-        <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
-          <div className="flex items-end gap-4 sm:gap-6">
+        <div className="px-6 sm:px-8 pb-6 pt-0 relative z-20 pointer-events-none flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
+          <div className="flex items-end gap-4 sm:gap-6 pointer-events-auto">
             {/* Avatar with Ring & Upload Overlay */}
             <div className="relative group">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
@@ -324,20 +302,18 @@ export const MyProfile: React.FC = () => {
                 )}
               </div>
 
-              {/* Upload Avatar Overlay Button */}
-              <label 
-                title="Tải ảnh đại diện mới từ máy tính"
-                className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer backdrop-blur-[1px]"
+              {!user?.readOnly && <button
+                type="button"
+                aria-label="Đổi ảnh đại diện"
+                title="Bấm để đổi ảnh đại diện (JPG, PNG, WebP; tối đa 5 MB)"
+                disabled={Boolean(uploadingImage) || isSaving}
+                onClick={() => avatarInput.current?.click()}
+                className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
               >
-                <Camera className="w-6 h-6 mb-0.5 text-white" />
-                <span className="text-[10px] font-bold">Đổi Avt</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleAvatarFileChange} 
-                />
-              </label>
+                <Camera className="w-6 h-6 mb-0.5" />
+                <span className="text-[10px] font-bold">{uploadingImage === 'avatar' ? 'Đang tải...' : 'Đổi avatar'}</span>
+              </button>}
+
             </div>
 
             <div className="pt-2">
@@ -346,10 +322,10 @@ export const MyProfile: React.FC = () => {
                   {currentMember.name}
                 </h1>
                 <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                  isAdmin 
-                    ? 'bg-red-50 text-red-700 border-red-200' 
-                    : isLead 
-                    ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                  isAdmin
+                    ? 'bg-red-50 text-red-700 border-red-200'
+                    : isLead
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}>
                   {isAdmin ? '👑 Ban Chủ Nhiệm' : isLead ? '⚡ Trưởng Ban' : 'Thành Viên'}
@@ -361,7 +337,7 @@ export const MyProfile: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
             <button
               onClick={() => {
                 fetchMembers();
@@ -384,7 +360,7 @@ export const MyProfile: React.FC = () => {
 
       {/* Main Grid: Left Locked Info & Right Editable Info */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* LEFT COLUMN: LOCKED IDENTITY DETAILS (🔒 BẢO MẬT BỞI BCN) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
@@ -549,66 +525,6 @@ export const MyProfile: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tải Lên Ảnh Đại Diện & Ảnh Bìa */}
-              <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <UploadCloud className="w-4 h-4 text-blue-600" />
-                    <span>Tải Lên Ảnh Đại Diện & Ảnh Bìa</span>
-                  </label>
-                  <span className="text-[10px] font-mono-code text-slate-400">
-                    PNG, JPG, WEBP (Tự động nén)
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Up Avt Box */}
-                  <label className="p-3 bg-white rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500 cursor-pointer transition-all flex items-center gap-3 group shadow-xs">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <Camera className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 truncate">
-                        {avatarFile ? avatarFile.name : 'Tải Lên Ảnh Đại Diện (Avt)'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {avatarFile ? '✓ Đã chọn ảnh mới' : 'Chọn ảnh mới từ máy'}
-                      </p>
-                    </div>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleAvatarFileChange} 
-                    />
-                  </label>
-
-                  {/* Up Bìa Box */}
-                  <label className="p-3 bg-white rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-500 cursor-pointer transition-all flex items-center gap-3 group shadow-xs">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      <ImageIcon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">
-                        {coverFile ? coverFile.name : 'Tải Lên Ảnh Bìa (Cover)'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {coverFile ? '✓ Đã chọn ảnh bìa mới' : 'Chọn ảnh bìa từ máy'}
-                      </p>
-                    </div>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleCoverFileChange} 
-                    />
-                  </label>
-                </div>
-
-                <p className="text-[10px] text-slate-500 font-medium">
-                  ⚡ Ảnh đã chọn sẽ hiển thị xem trước tức thì trên hồ sơ của bạn. Tính năng đẩy file lên Cloudinary sẽ tự động kích hoạt sau khi backend hoàn tất cấu hình.
-                </p>
-              </div>
             </div>
 
             {/* 3. MẠNG XÃ HỘI & GITHUB */}
@@ -616,7 +532,7 @@ export const MyProfile: React.FC = () => {
               <label className="block text-xs font-extrabold text-slate-800">
                 Mạng Xã Hội & Hồ Sơ Lập Trình
               </label>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Facebook */}
                 <div className="relative">
@@ -732,7 +648,7 @@ export const MyProfile: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="submit"
-                disabled={isSaving || user?.readOnly}
+                disabled={isSaving || Boolean(uploadingImage) || user?.readOnly}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isSaving ? (

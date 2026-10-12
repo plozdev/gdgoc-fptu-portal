@@ -46,6 +46,11 @@ export interface UpdateProfileDto {
 }
 
 export const membersApi = {
+  uploadProfileImage: (kind: 'avatar' | 'cover', file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<{ url: string; kind: 'avatar' | 'cover' }>(`/api/members/me/images/${kind}`, form);
+  },
   getMembers: (params?: QueryMembersParams) => {
     const query = new URLSearchParams();
     if (params) {

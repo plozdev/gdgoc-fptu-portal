@@ -1,5 +1,5 @@
 import { generationApi } from '../../api/generation.api';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Sparkles, 
   Trophy, 
@@ -38,6 +38,8 @@ interface TransactionItem {
   type: string;
   reason: string;
   createdAt: string;
+  actorId?: string | null;
+  actor?: { id: string; fullName: string } | null;
 }
 
 const DEPT_FILTER_OPTIONS = [
@@ -65,16 +67,23 @@ export const GemsLeaderboard: React.FC = () => {
   const [lifetimeBalance, setLifetimeBalance] = useState<number>(user?.gemsBalance ?? 0);
   const [dataError, setDataError] = useState('');
   const [transactionTotal, setTransactionTotal] = useState(0);
+  const [transactionPage, setTransactionPage] = useState(1);
+  const requestVersion = useRef(0);
+  const transactionPages = Math.max(1, Math.ceil(transactionTotal / 15));
+  useEffect(() => { setTransactionPage(1); }, [user?.id]);
   const [isFrozen, setIsFrozen] = useState<boolean>(false);
 
   // Fetch real leaderboard and transaction history from backend
   const fetchGemsData = useCallback(async () => {
     if (!semesterId) return;
+    const version = ++requestVersion.current;
     setIsLoading(true);
+    setTransactions([]);
     setDataError('');
     try {
       const params = { limit: 100, semesterId: semesterId || undefined, ...(selectedDept !== 'all' && { departmentCode: selectedDept }) };
       const lbRes: any = await gemsApi.getLeaderboard(params);
+      if (version !== requestVersion.current) return;
 
       if (lbRes && Array.isArray(lbRes.rankings)) {
         setIsFrozen(Boolean(lbRes.isFrozen));
@@ -100,8 +109,11 @@ export const GemsLeaderboard: React.FC = () => {
 
       // Fetch personal transaction ledger
       try {
-        const txRes: any = await gemsApi.getTransactions({ limit: 15, semesterId: semesterId || undefined });
+        const txRes: any = await gemsApi.getTransactions({ page: transactionPage, limit: 15, semesterId: semesterId || undefined });
+        if (version !== requestVersion.current) return;
         if (txRes && Array.isArray(txRes.transactions)) {
+          const lastPage = Math.max(1, Math.ceil((txRes.total ?? 0) / 15));
+          if (transactionPage > lastPage) { setTransactionPage(lastPage); return; }
           setTransactions(txRes.transactions);
           setTransactionTotal(txRes.total ?? 0);
           setLifetimeBalance(txRes.lifetimeBalance ?? 0);
@@ -110,18 +122,22 @@ export const GemsLeaderboard: React.FC = () => {
           }
         }
       } catch (txErr) {
+        if (version !== requestVersion.current) return;
+        setTransactionTotal(0);
         setDataError('Không tải được số dư và lịch sử Gems. Vui lòng thử lại.');
       }
     } catch (err) {
+      if (version !== requestVersion.current) return;
       setDataError('Không tải được bảng xếp hạng. Vui lòng thử lại.');
       setLeaderboardUsers([]);
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
-  }, [selectedDept, semesterId, user?.id, user?.name]);
+  }, [selectedDept, semesterId, transactionPage, user?.id, user?.name]);
 
   useEffect(() => {
-    fetchGemsData();
+    void fetchGemsData();
+    return () => { requestVersion.current++; };
   }, [fetchGemsData]);
 
   useEffect(()=>{const refresh=()=>void fetchGemsData();window.addEventListener('gdgoc:refresh',refresh);return()=>window.removeEventListener('gdgoc:refresh',refresh);},[fetchGemsData]);
@@ -140,7 +156,7 @@ export const GemsLeaderboard: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto select-none">
-      <label className="flex gap-3 items-center text-sm">Xem kỳ<select className="border rounded-lg p-2" value={semesterId} onChange={e=>setSemesterId(e.target.value)}>{periods.map(p=><option key={p.id} value={p.id}>{p.name}{p.isClosed ? " · Đã chốt" : ""}</option>)}</select></label>
+      <label className="flex gap-3 items-center text-sm">Xem kỳ<select className="border rounded-lg p-2" value={semesterId} onChange={e=>{setTransactionPage(1);setSemesterId(e.target.value);}}>{periods.map(p=><option key={p.id} value={p.id}>{p.name}{p.isClosed ? " · Đã chốt" : ""}</option>)}</select></label>
       {dataError && <p role="alert" className="text-red-700 bg-red-50 p-3 rounded-xl">{dataError}</p>}
       <p className="text-sm text-slate-600">Điểm kỳ được tính từ giao dịch của kỳ đã chọn. Số dư tích lũy trước đây không tự tính vào kỳ này.</p>
       {/* Top Banner */}
@@ -362,7 +378,7 @@ export const GemsLeaderboard: React.FC = () => {
             <span className="text-xs text-slate-500 font-mono-code">Dữ liệu từ bảng gems_transactions</span>
           </div>
 
-          {transactions.length === 0 ? (
+          {transactions.length === 0 && !isLoading ? (
             <div className="p-12 text-center text-slate-400 space-y-2">
               <Coins className="w-8 h-8 mx-auto text-slate-300" />
               <p className="text-xs font-semibold">Chưa có giao dịch Gems nào được ghi nhận cho tài khoản của bạn.</p>
@@ -375,6 +391,7 @@ export const GemsLeaderboard: React.FC = () => {
                   <tr>
                     <th className="px-4 py-3">Loại Giao Dịch</th>
                     <th className="px-4 py-3">Lý Do / Chi Tiết</th>
+                    <th className="px-4 py-3">Người thực hiện</th>
                     <th className="px-4 py-3">Thời Gian</th>
                     <th className="px-4 py-3 text-right">Số Gems</th>
                   </tr>
@@ -404,6 +421,7 @@ export const GemsLeaderboard: React.FC = () => {
                         <td className="px-4 py-3 font-medium text-slate-900">
                           {tx.reason || 'Cộng điểm thưởng tự động'}
                         </td>
+                        <td className="px-4 py-3">{tx.actor?.fullName || (tx.type === 'MANUAL_ADJUSTMENT' ? 'Chưa ghi nhận (lịch sử cũ)' : 'Hệ thống')}</td>
                         <td className="px-4 py-3 text-slate-400 font-mono-code text-[11px]">
                           {formatDateToDDMMYYYY(tx.createdAt)}
                         </td>
@@ -419,6 +437,14 @@ export const GemsLeaderboard: React.FC = () => {
               </table>
             </div>
           )}
+          {isLoading && <p role="status" className="p-4 text-sm text-slate-500">Đang tải lịch sử Gems...</p>}
+          {transactionTotal > 0 && <nav aria-label="Phân trang lịch sử Gems" className="p-4 border-t flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span>{(transactionPage - 1) * 15 + 1}–{Math.min(transactionPage * 15, transactionTotal)} / {transactionTotal} giao dịch · Trang {transactionPage}/{transactionPages}</span>
+            <div className="flex gap-2">
+              <button type="button" disabled={isLoading || transactionPage <= 1} onClick={() => setTransactionPage(page => page - 1)} className="px-3 py-2 border rounded-lg disabled:opacity-40">Trang trước</button>
+              <button type="button" disabled={isLoading || transactionPage >= transactionPages} onClick={() => setTransactionPage(page => page + 1)} className="px-3 py-2 border rounded-lg disabled:opacity-40">Trang sau</button>
+            </div>
+          </nav>}
         </div>
       )}
     </div>

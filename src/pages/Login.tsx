@@ -29,7 +29,7 @@ export const Login: React.FC = () => {
       ) {
         setError('Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!');
       } else if (err?.statusCode === 400) {
-        setError('Email hoặc mật khẩu không đúng định dạng quy định.');
+        setError('Email/MSSV hoặc mật khẩu không đúng định dạng quy định.');
       } else if (
         err?.statusCode === 502 ||
         err?.statusCode === 503 ||
@@ -106,14 +106,17 @@ export const Login: React.FC = () => {
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Email Sinh Viên FPT (@fpt.edu.vn)
+                Email hoặc MSSV
               </label>
               <div className="relative">
                 <input
                   id="email"
-                  type="email"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   required
-                  placeholder="ví dụ: lead@fpt.edu.vn"
+                  placeholder="Email hoặc MSSV (ví dụ: SE180123)"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

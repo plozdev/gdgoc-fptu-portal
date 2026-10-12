@@ -10,8 +10,7 @@ export const eventsApi = {
   updateEvent: (id: string, dto: Partial<CreateEventDto>) => api.put('/api/events/' + id, dto),
   deleteEvent: (id: string) => api.delete('/api/events/' + id),
   getContributors: (id: string) => api.get<EventContributor[]>('/api/events/' + id + '/contributors'),
-  addContributors: (id: string, dto: { userIds: string[]; roleInEvent?: string }) => api.post<{addedCount:number; skippedCount:number}>('/api/events/' + id + '/contributors/bulk', dto),
+  addContributors: (id: string, dto: { userIds: string[]; roleInEvent?: string }) => api.post<{addedCount:number; skippedCount:number; rewardedCount:number}>('/api/events/' + id + '/contributors/bulk', dto),
   addContributor: (id: string, dto: { userId: string; roleInEvent?: string; notes?: string }) => api.post('/api/events/' + id + '/contributors', dto),
   deleteContributor: (id: string, userId: string) => api.delete('/api/events/' + id + '/contributors/' + userId),
-  settleGems: (id: string) => api.post<{ rewardedCount: number }>('/api/events/' + id + '/settle-gems'),
 };

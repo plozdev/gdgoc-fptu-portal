@@ -401,7 +401,7 @@ export const GemsLeaderboard: React.FC = () => {
                     const isPositive = tx.amount > 0;
                     const typeLabelMap: Record<string, string> = {
                       TASK_REWARD: 'Thưởng Hoàn Thành Task',
-                      EVENT_ATTENDANCE: 'Điểm Danh Sự Kiện',
+                      EVENT_CONTRIBUTION: tx.amount < 0 ? 'Thu Hồi Đóng Góp Sự Kiện' : 'Đóng Góp Sự Kiện',
                       HONOR_AWARD: 'Khen Thưởng Đóng Góp',
                       GIFT_REDEMPTION: 'Đổi Quà Tặng',
                       MANUAL_ADJUSTMENT: 'Điều Chỉnh Thủ Công',

@@ -10,9 +10,7 @@ export function mapBackendUserToSession(raw: any): UserSession | null {
   const deptCode = currentTenure?.departmentCode || currentTenure?.department?.code;
 
   let tier: Tier = 'BAN_MEMBER';
-  if (role === 'ADVISOR') {
-    tier = 'ADVISOR';
-  } else if (role === 'LEAD') {
+  if (['LEAD', 'ADVISOR', 'ADMIN'].includes(role)) {
     tier = 'ORG_ADMIN';
   } else if (role === 'DEPARTMENT_LEAD') {
     tier = 'BAN_LEAD';
@@ -33,13 +31,13 @@ export function mapBackendUserToSession(raw: any): UserSession | null {
   const banName = currentTenure?.departmentName || (banId ? BAN_NAMES[banId] : undefined);
 
   return {
+    ...raw,
     id: raw.id,
     email: raw.email,
     name: raw.fullName || raw.name || raw.email,
     tier,
     banId,
     banName,
-    ...raw,
     readOnly: raw.readOnly === true || !['ACTIVE', 'PROBATION'].includes(currentTenure?.status),
   };
 }

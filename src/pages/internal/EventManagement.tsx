@@ -416,7 +416,7 @@ export const EventManagement: React.FC = () => {
                   <div className="flex items-center gap-2 pt-1">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-800 text-xs font-bold shadow-2xs">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>{event.contributionGems || 20} Gems/người</span>
+                      <span>{event.contributionGems ?? 20} Gems/người</span>
                     </div>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold">
                       <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -449,10 +449,11 @@ export const EventManagement: React.FC = () => {
                     )}
                   </div>
 
-                  {manager && !event.semester?.isClosed && (
+                  {manager && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => {
+                          if (event.semester?.isClosed) return;
                           setEditId(event.id);
                           setForm({
                             title: event.title,
@@ -467,6 +468,7 @@ export const EventManagement: React.FC = () => {
                           });
                         }}
                         className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
+                        disabled={busy || event.semester?.isClosed}
                         title="Sửa sự kiện"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -474,11 +476,11 @@ export const EventManagement: React.FC = () => {
                       <button
                         disabled={busy}
                         onClick={() => {
-                          if (window.confirm(`Xác nhận xóa sự kiện "${event.title}"?`))
+                          if (window.confirm(`Xóa sự kiện "${event.title}"?\n\nGems đã cộng từ sự kiện này cho ${event.rewardedCount || 0} người sẽ bị thu hồi. Task và tài nguyên liên quan được giữ lại, bỏ liên kết event. ${event.semester?.isClosed ? "Sự kiện thuộc kỳ đã chốt: điểm của kỳ đó cũng sẽ cập nhật. " : ""}Thao tác này không thể hoàn tác.`))
                             void run(() => eventsApi.deleteEvent(event.id));
                         }}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                        title="Xóa sự kiện"
+                        title="Xóa sự kiện và thu hồi Gems liên quan"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -519,17 +521,11 @@ export const EventManagement: React.FC = () => {
               </button>
             </div>
 
+            {error && <p role="alert" className="text-sm text-red-700 bg-red-50 p-3 rounded-xl">{error}</p>}
             {manager && !selected.semester?.isClosed && (
-              <form className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3" onSubmit={e => {
-                e.preventDefault();
-                void run(async () => {
-                  const result = await eventsApi.addContributors(selected.id, { userIds: selectedMemberIds, roleInEvent: role });
-                  setSelectedMemberIds([]);
-                  setAddedMessage('Đã thêm ' + result.addedCount + ' thành viên' + (result.skippedCount ? '; ' + result.skippedCount + ' người đã có trong danh sách.' : '.'));
-                });
-              }}>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                 <p className="flex gap-2 items-center text-sm font-bold"><UserPlus className="w-4 h-4" />Chọn người đã tham gia đóng góp</p>
-                <p className="text-xs text-slate-500">Chọn nhiều người rồi lưu một lần. Gems được BCN duyệt riêng sau khi xác nhận đóng góp.</p>
+                <p className="text-xs text-slate-500">Tick thành viên để ghi nhận và cộng Gems ngay. Bỏ thành viên sẽ thu hồi Gems đã nhận từ sự kiện này.</p>
                 <div className="grid sm:grid-cols-2 gap-2">
                   <input aria-label="Tìm thành viên" placeholder="Tìm tên hoặc MSSV…" className="border rounded-xl p-2 text-sm" value={memberSearch} onChange={e=>setMemberSearch(e.target.value)} />
                   <select aria-label="Lọc ban" className="border rounded-xl p-2 text-sm" value={memberBan} onChange={e=>setMemberBan(e.target.value)}>
@@ -538,12 +534,21 @@ export const EventManagement: React.FC = () => {
                   </select>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <button type="button" disabled={busy || !visibleMembers.length} className="text-blue-600 font-bold" onClick={()=>setSelectedMemberIds(ids=>[...new Set([...ids,...visibleMembers.map(m=>m.id)])])}>Chọn tất cả kết quả ({visibleMembers.length})</button>
-                  <button type="button" disabled={busy} onClick={()=>setSelectedMemberIds([])}>Bỏ chọn ({selectedMemberIds.length})</button>
+                  <button type="button" disabled={busy || !visibleMembers.length} className="text-blue-600 font-bold" onClick={() => void run(async () => {
+                    const ids = visibleMembers.map(member => member.id);
+                    setSelectedMemberIds(ids);
+                    try { const result = await eventsApi.addContributors(selected.id, { userIds: ids, roleInEvent: role }); setAddedMessage('Đã ghi nhận và cộng Gems cho ' + result.rewardedCount + ' người.'); }
+                    finally { setSelectedMemberIds([]); }
+                  })}>Chọn tất cả và cộng Gems ({visibleMembers.length})</button>
+                  <span>{busy ? 'Đang lưu và cập nhật Gems…' : 'Tự động lưu'}</span>
                 </div>
                 <div className="max-h-52 overflow-y-auto bg-white border rounded-xl divide-y">
                   {visibleMembers.map(m=><label key={m.id} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-blue-50">
-                    <input type="checkbox" disabled={busy} checked={selectedMemberIds.includes(m.id)} onChange={e=>setSelectedMemberIds(ids=>e.target.checked?[...ids,m.id]:ids.filter(id=>id!==m.id))} />
+                    <input type="checkbox" disabled={busy} checked={selectedMemberIds.includes(m.id)} onChange={e => { if (!e.target.checked) return; void run(async () => {
+                      setSelectedMemberIds([m.id]);
+                      try { const result = await eventsApi.addContributors(selected.id, { userIds: [m.id], roleInEvent: role }); setAddedMessage(result.rewardedCount ? 'Đã ghi nhận và cộng Gems cho ' + m.name + '.' : m.name + ' đã được ghi nhận trước đó.'); }
+                      finally { setSelectedMemberIds([]); }
+                    }); }} />
                     <span className="text-sm"><strong>{m.name}</strong><span className="block text-xs text-slate-500">{m.studentId} · {m.banName || 'Chưa phân ban'}</span></span>
                   </label>)}
                   {!visibleMembers.length && <p className="p-4 text-sm text-slate-500">Không có thành viên phù hợp chưa được thêm.</p>}
@@ -551,9 +556,9 @@ export const EventManagement: React.FC = () => {
                 <input className="w-full border rounded-xl p-2 text-sm" placeholder="Vai trò chung (không bắt buộc): Media, Logistics…" value={role} onChange={e=>setRole(e.target.value)} maxLength={200} />
                 <div className="flex justify-between items-center gap-3">
                   <span role="status" className="text-xs text-emerald-700">{addedMessage}</span>
-                  <button disabled={busy || !selectedMemberIds.length} className="bg-blue-600 text-white rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-50">{busy ? 'Đang lưu…' : 'Thêm ' + selectedMemberIds.length + ' người'}</button>
+
                 </div>
-              </form>
+              </div>
             )}
 
             {/* Contributors List */}
@@ -594,6 +599,10 @@ export const EventManagement: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {manager && !selected.semester?.isClosed && <input type="checkbox" aria-label={'Ghi nhận đóng góp của ' + c.user.fullName} checked={c.isGemsGranted} disabled={busy} onChange={e => {
+                          if (e.target.checked) void run(() => eventsApi.addContributors(selected.id, { userIds: [c.userId] }));
+                          else if (window.confirm('Bỏ ' + c.user.fullName + ' khỏi sự kiện và thu hồi Gems đã nhận?')) void run(() => eventsApi.deleteContributor(selected.id, c.userId));
+                        }} />}
                         {c.isGemsGranted ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -602,16 +611,16 @@ export const EventManagement: React.FC = () => {
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                             <Clock className="w-3 h-3 text-amber-600" />
-                            <span>Chờ duyệt</span>
+                            <span>Chưa nhận Gems (dữ liệu cũ)</span>
                           </span>
                         )}
 
-                        {manager && !selected.semester?.isClosed && !c.isGemsGranted && (
+                        {manager && !selected.semester?.isClosed && (
                           <button
                             disabled={busy}
                             className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             onClick={() =>
-                              void run(() => eventsApi.deleteContributor(selected.id, c.userId))
+                              window.confirm('Bỏ ' + c.user.fullName + ' khỏi sự kiện? Gems đã nhận từ sự kiện này sẽ bị thu hồi.') && void run(() => eventsApi.deleteContributor(selected.id, c.userId))
                             }
                             title="Bỏ gán thành viên"
                           >
@@ -625,30 +634,6 @@ export const EventManagement: React.FC = () => {
               </div>
             </div>
 
-            {/* Settle Gems Button for ORG_ADMIN */}
-            {!user?.readOnly && user?.tier === "ORG_ADMIN" && !selected.semester?.isClosed && (
-              <div className="pt-2">
-                <button
-                  disabled={busy || !contributors.some((c) => !c.isGemsGranted)}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  onClick={() => {
-                    const pendingCount = contributors.filter((c) => !c.isGemsGranted).length;
-                    if (
-                      window.confirm(
-                        `Xác nhận duyệt cộng ${selected.contributionGems} Gems cho ${pendingCount} thành viên trong BTC chưa nhận thưởng?`
-                      )
-                    ) {
-                      void run(() => eventsApi.settleGems(selected.id));
-                    }
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 text-yellow-200" />
-                  <span>
-                    Duyệt & Cộng Cố Định {selected.contributionGems} Gems Cho Các Thành Viên Chờ Duyệt
-                  </span>
-                </button>
-              </div>
-            )}
           </section>
         </div>
       )}

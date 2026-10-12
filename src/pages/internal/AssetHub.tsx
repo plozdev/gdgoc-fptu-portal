@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useGenerationStore } from '../../store/useGenerationStore';
+import { BAN_NAMES, BanId } from '../../types/auth';
 import { 
   Folder, 
   ExternalLink, 
@@ -37,6 +37,7 @@ interface DriveAsset {
   department?: { id: string; name: string; code: string };
   tenure?: { id: string; name: string; genLabel: string };
   createdAt?: string;
+  uploadedById?: string;
 }
 
 const CATEGORIES = [
@@ -69,7 +70,12 @@ function safeDriveUrl(value: string): string | undefined {
 
 export const AssetHub: React.FC = () => {
   const { user } = useAuthStore();
-  const { currentGen } = useGenerationStore();
+  const requestVersion = useRef(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const scopeKey = [user?.id, user?.tier, user?.banId, user?.readOnly].join(':');
+  const [loadedScope, setLoadedScope] = useState('');
+  const departmentCodes: Record<BanId, string> = { ai: 'TECH_AI', cloud: 'TECH_CLOUD', web: 'TECH_WEB', research: 'RESEARCH', media: 'MEDIA', 'hr-event': 'HR_EVENT' };
+  const isLevelOne = !user?.readOnly && (user?.tier === 'ORG_ADMIN' || user?.tier === 'ADVISOR');
 
   const [assets, setAssets] = useState<DriveAsset[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -87,13 +93,17 @@ export const AssetHub: React.FC = () => {
     category: 'BRAND_KIT',
     accessLevel: 'INTERNAL_MEMBER',
     driveUrl: '',
-    departmentId: '',
+    departmentCode: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canManage = !user?.readOnly && (user?.tier === 'ORG_ADMIN' || user?.tier === 'BAN_LEAD');
+  const canManage = isLevelOne || (!user?.readOnly && user?.tier === 'BAN_LEAD');
+  const canManageAsset = (asset: DriveAsset) => isLevelOne || (canManage && asset.uploadedById === user?.id && asset.department?.code === (user?.banId ? departmentCodes[user.banId] : '') && asset.accessLevel !== 'EXECUTIVE_ONLY');
+  const displayedAssets = loadedScope === scopeKey ? assets : [];
 
   const loadAssets = useCallback(async () => {
+    const version = ++requestVersion.current;
+    setAssets([]);
     setIsLoading(true);
     setError(null);
     try {
@@ -104,18 +114,22 @@ export const AssetHub: React.FC = () => {
         ...(selectedCategory !== 'ALL' ? { category: selectedCategory } : {}),
       });
       const response = await api.get<{ items: DriveAsset[]; totalPages: number }>('/api/assets?' + query.toString());
+      if (version !== requestVersion.current) return;
+      setLoadedScope(scopeKey);
       setAssets(response?.items || []);
       setTotalPages(response?.totalPages || 1);
     } catch (err: any) {
+      if (version !== requestVersion.current) return;
       setAssets([]);
       setError(err?.message || 'Không thể tải danh sách tài nguyên');
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
-  }, [page, search, selectedCategory]);
+  }, [page, search, selectedCategory, scopeKey]);
 
   useEffect(() => {
     void loadAssets();
+    return () => { requestVersion.current++; };
   }, [loadAssets]);
 
   const handleCreateAsset = async (e: React.FormEvent) => {
@@ -125,22 +139,26 @@ export const AssetHub: React.FC = () => {
     setIsSubmitting(true);
     try {
       const match = newAsset.driveUrl.match(/[-\w]{20,}/);
-      const driveFileId = match ? match[0] : 'drive-file-' + Date.now();
+      if (!safeDriveUrl(newAsset.driveUrl) || !match) throw new Error('Vui lòng nhập link file hoặc thư mục Google Drive hợp lệ.');
+      const driveFileId = match[0];
 
-      await api.post('/api/assets', {
+      const payload = {
         ...newAsset,
         driveFileId,
-        departmentId: newAsset.departmentId || undefined,
-      });
+        departmentCode: newAsset.departmentCode || undefined,
+      };
+      if (editingId) await api.patch(`/api/assets/${editingId}`, payload);
+      else await api.post('/api/assets', payload);
 
       setIsModalOpen(false);
+      setEditingId(null);
       setNewAsset({
         name: '',
         description: '',
         category: 'BRAND_KIT',
         accessLevel: 'INTERNAL_MEMBER',
         driveUrl: '',
-        departmentId: '',
+        departmentCode: '',
       });
       await loadAssets();
     } catch (err: any) {
@@ -187,13 +205,13 @@ export const AssetHub: React.FC = () => {
             </span>
             <span className="text-xs text-slate-300">•</span>
             <span className="text-xs text-slate-500 font-medium">
-              Đồng bộ tài liệu & Phân quyền bảo mật 4 cấp độ
+              Danh sách liên kết Drive • Phân quyền hiển thị trong hệ thống
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
             <span>Kho Tài Nguyên Số CLB</span>
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono-code">
-              {assets.length} tài nguyên
+              {displayedAssets.length} tài nguyên
             </span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -225,7 +243,11 @@ export const AssetHub: React.FC = () => {
 
           {canManage && (
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setEditingId(null);
+                setNewAsset({ name: '', description: '', category: 'BRAND_KIT', accessLevel: 'INTERNAL_MEMBER', driveUrl: '', departmentCode: user?.banId ? departmentCodes[user.banId] : '' });
+                setIsModalOpen(true);
+              }}
               className="px-4 py-2 bg-[#4285F4] hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -234,6 +256,8 @@ export const AssetHub: React.FC = () => {
           )}
         </div>
       </div>
+
+      <p className="text-xs text-slate-500 px-2">Ban trên thẻ là ban sở hữu. “Toàn CLB” cho phép mọi tài khoản nội bộ xem, kể cả Alumni. Quyền mở file thực tế do Google Drive kiểm soát; hệ thống chưa tự đồng bộ quyền chia sẻ Drive.</p>
 
       {/* Search & Category Filter Bar */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
@@ -292,7 +316,7 @@ export const AssetHub: React.FC = () => {
           <RotateCcw className="w-8 h-8 mx-auto text-blue-500 animate-spin" />
           <p className="text-xs font-semibold text-slate-500">Đang đồng bộ tài nguyên từ hệ thống...</p>
         </div>
-      ) : assets.length === 0 ? (
+      ) : displayedAssets.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-200/80 p-16 text-center text-slate-400 space-y-3">
           <Folder className="w-12 h-12 mx-auto text-slate-300 opacity-60" />
           <h3 className="text-sm font-extrabold text-slate-700">Chưa có tài nguyên phù hợp</h3>
@@ -302,7 +326,7 @@ export const AssetHub: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {assets.map((asset) => {
+          {displayedAssets.map((asset) => {
             const url = safeDriveUrl(asset.driveUrl);
             const accessInfo = ACCESS_LEVEL_MAP[asset.accessLevel] || {
               label: asset.accessLevel,
@@ -370,7 +394,14 @@ export const AssetHub: React.FC = () => {
                     <span className="text-xs text-red-500 font-medium">Link Drive chưa hợp lệ</span>
                   )}
 
-                  {canManage && (
+                  {canManageAsset(asset) && (
+                    <button type="button" className="p-1.5 text-blue-600 text-xs" onClick={() => {
+                      setEditingId(asset.id);
+                      setNewAsset({ name: asset.name, description: asset.description || '', category: asset.category, accessLevel: asset.accessLevel, driveUrl: asset.driveUrl, departmentCode: asset.department?.code || '' });
+                      setIsModalOpen(true);
+                    }}>Sửa quyền</button>
+                  )}
+                  {canManageAsset(asset) && (
                     <button
                       onClick={() => handleDeleteAsset(asset.id, asset.name)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -386,6 +417,12 @@ export const AssetHub: React.FC = () => {
         </div>
       )}
 
+      {totalPages > 1 && !error && <div className="flex justify-center items-center gap-3 text-sm">
+        <button disabled={page <= 1 || isLoading} onClick={() => setPage(page - 1)}>Trang trước</button>
+        <span>{page} / {totalPages}</span>
+        <button disabled={page >= totalPages || isLoading} onClick={() => setPage(page + 1)}>Trang sau</button>
+      </div>}
+
       {/* MODAL: Đăng ký tài nguyên Google Drive mới */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
@@ -396,7 +433,7 @@ export const AssetHub: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                 <HardDrive className="w-5 h-5 text-blue-600" />
-                <span>Đăng Ký Tài Nguyên Drive Mới</span>
+                <span>{editingId ? 'Chỉnh Sửa Tài Nguyên & Quyền' : 'Đăng Ký Tài Nguyên Drive Mới'}</span>
               </h2>
               <button
                 type="button"
@@ -457,12 +494,21 @@ export const AssetHub: React.FC = () => {
                   >
                     <option value="INTERNAL_MEMBER">Toàn CLB (Thành viên đã login)</option>
                     <option value="DEPARTMENT_ONLY">Nội Bộ Ban (Theo ban phụ trách)</option>
-                    <option value="EXECUTIVE_ONLY">Ban Chủ Nhiệm (Chỉ Lead/BCN)</option>
-                    <option value="PUBLIC">Công Khai (Landing Page)</option>
+                    {isLevelOne && <option value="EXECUTIVE_ONLY">Ban Chủ Nhiệm (LEAD / ADVISOR / ADMIN)</option>}
+                    <option value="PUBLIC">Công Khai (Mức quyền trong hệ thống)</option>
                   </select>
                 </div>
               </div>
 
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Ban sở hữu {newAsset.accessLevel === 'DEPARTMENT_ONLY' ? '*' : ''}</label>
+                <select required={newAsset.accessLevel === 'DEPARTMENT_ONLY' || !isLevelOne} disabled={!isLevelOne} value={newAsset.departmentCode} onChange={e => setNewAsset({ ...newAsset, departmentCode: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <option value="">Không gắn ban</option>
+                  {Object.entries(BAN_NAMES).map(([id, name]) => <option key={id} value={departmentCodes[id as BanId]}>{name}</option>)}
+                  {isLevelOne && <option value="EXECUTIVE">Ban Chủ Nhiệm</option>}
+                </select>
+              </div>
+              <p className="text-xs text-amber-700">Sau khi đổi quyền ở đây, cần kiểm tra và chỉnh Share trên Google Drive tương ứng. Hệ thống chưa tự thay đổi quyền Drive.</p>
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Mô Tả Chi Tiết Tài Nguyên</label>
                 <textarea
@@ -488,7 +534,7 @@ export const AssetHub: React.FC = () => {
                 disabled={isSubmitting}
                 className="px-5 py-2 bg-[#4285F4] hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                {isSubmitting ? 'Đang Lưu...' : 'Đăng Ký Tài Nguyên'}
+                {isSubmitting ? 'Đang Lưu...' : editingId ? 'Lưu Thay Đổi' : 'Đăng Ký Tài Nguyên'}
               </button>
             </div>
           </form>

@@ -18,7 +18,6 @@ export interface MemberSocials {
   facebook?: string;
   github?: string;
   linkedin?: string;
-  discord?: string;
 }
 
 export interface Member {
@@ -177,7 +176,6 @@ export function mapBackendMemberToMember(raw: any): Member {
     facebook: raw.facebookUrl || '',
     github: raw.githubUrl || '',
     linkedin: raw.linkedinUrl || '',
-    discord: raw.discordUsername || '',
   };
 
   return {
@@ -198,7 +196,9 @@ export function mapBackendMemberToMember(raw: any): Member {
     avatar: raw.avatarUrl || raw.avatar,
     coverUrl: raw.coverUrl || undefined,
     socials,
-    skills: raw.skills || [],
+    skills: (raw.skills || []).filter(
+      (s: string) => !/^GEN/i.test(s.trim()) && !/^K\d+$/i.test(s.trim())
+    ),
     gemsBalance: raw.gemsBalance ?? raw.user?.gemsBalance ?? 0,
   };
 }
@@ -314,16 +314,19 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   updateSelfProfile: async (id, profile) => {
+    const cleanSkills = profile.skills
+      ? profile.skills.filter((s: string) => !/^GEN/i.test(s.trim()) && !/^K\d+$/i.test(s.trim()))
+      : undefined;
+
     try {
       await membersApi.updateProfile(id, {
         bio: profile.bio,
-        phoneNumber: profile.phone,
-        skills: profile.skills,
-        facebookUrl: profile.socials?.facebook,
-        githubUrl: profile.socials?.github,
-        linkedinUrl: profile.socials?.linkedin,
-        discordUsername: profile.socials?.discord,
-        avatarUrl: profile.avatar,
+        phoneNumber: profile.phone !== undefined ? (profile.phone.trim() ? profile.phone.trim() : null) : undefined,
+        skills: cleanSkills,
+        facebookUrl: profile.socials?.facebook !== undefined ? (profile.socials.facebook.trim() ? profile.socials.facebook.trim() : null) : undefined,
+        githubUrl: profile.socials?.github !== undefined ? (profile.socials.github.trim() ? profile.socials.github.trim() : null) : undefined,
+        linkedinUrl: profile.socials?.linkedin !== undefined ? (profile.socials.linkedin.trim() ? profile.socials.linkedin.trim() : null) : undefined,
+        avatarUrl: profile.avatar !== undefined ? (profile.avatar.trim() ? profile.avatar.trim() : null) : undefined,
       });
     } catch (error) {
       throw error;
@@ -335,9 +338,9 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         return {
           ...m,
           ...(profile.bio !== undefined && { bio: profile.bio }),
-          ...(profile.phone !== undefined && { phone: profile.phone }),
+          ...(profile.phone !== undefined && { phone: profile.phone.trim() }),
           ...(profile.socials !== undefined && { socials: { ...m.socials, ...profile.socials } }),
-          ...(profile.skills !== undefined && { skills: profile.skills }),
+          ...(profile.skills !== undefined && { skills: cleanSkills || [] }),
           ...(profile.avatar !== undefined && { avatar: profile.avatar }),
         };
       });

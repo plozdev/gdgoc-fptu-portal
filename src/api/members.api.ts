@@ -36,13 +36,12 @@ export interface UpdateMemberDto {
 
 export interface UpdateProfileDto {
   bio?: string;
-  phoneNumber?: string;
-  avatarUrl?: string;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
   skills?: string[];
-  githubUrl?: string;
-  linkedinUrl?: string;
-  facebookUrl?: string;
-  discordUsername?: string;
+  githubUrl?: string | null;
+  linkedinUrl?: string | null;
+  facebookUrl?: string | null;
 }
 
 export const membersApi = {

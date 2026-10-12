@@ -70,9 +70,29 @@ export const MyProfile: React.FC = () => {
     gemsBalance: user?.gemsBalance ?? 0
   };
 
+  // Helper functions for validation & data cleaning
+  const cleanSkills = (list: string[] = []) =>
+    list.filter((s) => !/^GEN/i.test(s.trim()) && !/^K\d+$/i.test(s.trim()));
+
+  const isValidVietnamesePhone = (p: string) => {
+    const cleaned = p.replace(/[\s.-]/g, '');
+    return /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(cleaned);
+  };
+
+  const isValidUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   // Editable Form State
   const [bio, setBio] = useState(currentMember.bio || '');
-  const [phone, setPhone] = useState(currentMember.phone || '');
+  const [phone, setPhone] = useState(currentMember.phone === 'Chưa cập nhật' ? '' : (currentMember.phone || ''));
+  const [phoneError, setPhoneError] = useState('');
+  const [formError, setFormError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(currentMember.avatar || user?.avatarUrl || '');
   const [coverUrl, setCoverUrl] = useState(currentMember.coverUrl || '');
   const [uploadingImage, setUploadingImage] = useState<'avatar' | 'cover' | null>(null);
@@ -84,7 +104,7 @@ export const MyProfile: React.FC = () => {
   const [github, setGithub] = useState(currentMember.socials?.github || '');
   const [linkedin, setLinkedin] = useState(currentMember.socials?.linkedin || '');
 
-  const [skills, setSkills] = useState<string[]>(currentMember.skills || []);
+  const [skills, setSkills] = useState<string[]>(cleanSkills(currentMember.skills));
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSavedToast, setIsSavedToast] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -127,19 +147,25 @@ export const MyProfile: React.FC = () => {
   useEffect(() => {
     if (currentMember) {
       setBio(currentMember.bio || '');
-      setPhone(currentMember.phone || '');
+      const rawPhone = currentMember.phone === 'Chưa cập nhật' ? '' : (currentMember.phone || '');
+      setPhone(rawPhone);
       setAvatarUrl(currentMember.avatar || user?.avatarUrl || '');
       setCoverUrl(currentMember.coverUrl || '');
       setFacebook(currentMember.socials?.facebook || '');
       setGithub(currentMember.socials?.github || '');
       setLinkedin(currentMember.socials?.linkedin || '');
-      setSkills(currentMember.skills || []);
+      setSkills(cleanSkills(currentMember.skills));
     }
   }, [currentMember.id, members.length]);
 
   const handleAddSkill = (skillToAdd: string) => {
     const trimmed = skillToAdd.trim();
     if (!trimmed) return;
+    if (/^GEN/i.test(trimmed) || /^K\d+$/i.test(trimmed)) {
+      alert('Khóa sinh viên (K) và Thế hệ (Gen) đã được hệ thống quản lý riêng ở phần Thông Tin Định Danh, không cần thêm vào kỹ năng.');
+      setNewSkillInput('');
+      return;
+    }
     if (!skills.includes(trimmed)) {
       setSkills([...skills, trimmed]);
     }
@@ -179,12 +205,40 @@ export const MyProfile: React.FC = () => {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPhoneError('');
+    setFormError('');
+
+    const phoneTrimmed = phone.trim().replace(/[\s.-]/g, '');
+    if (phoneTrimmed && !isValidVietnamesePhone(phoneTrimmed)) {
+      setPhoneError('Số điện thoại không hợp lệ (cần đúng 10 số di động Việt Nam, ví dụ: 0901234567 hoặc +84901234567)');
+      return;
+    }
+
+    const fbTrimmed = facebook.trim();
+    const ghTrimmed = github.trim();
+    const liTrimmed = linkedin.trim();
+
+    if (fbTrimmed && !isValidUrl(fbTrimmed)) {
+      setFormError('Link Facebook không hợp lệ (cần bắt đầu bằng http:// hoặc https://)');
+      return;
+    }
+
+    if (ghTrimmed && !isValidUrl(ghTrimmed)) {
+      setFormError('Link GitHub không hợp lệ (cần bắt đầu bằng http:// hoặc https://)');
+      return;
+    }
+
+    if (liTrimmed && !isValidUrl(liTrimmed)) {
+      setFormError('Link LinkedIn không hợp lệ (cần bắt đầu bằng http:// hoặc https://)');
+      return;
+    }
+
     setIsSaving(true);
 
     const socialsData: MemberSocials = {
-      facebook: facebook.trim(),
-      github: github.trim(),
-      linkedin: linkedin.trim()
+      facebook: fbTrimmed,
+      github: ghTrimmed,
+      linkedin: liTrimmed
     };
 
     const targetUserId = currentMember.id !== 'current' ? currentMember.id : (user?.id || '');
@@ -192,16 +246,16 @@ export const MyProfile: React.FC = () => {
     try {
       await updateSelfProfile(targetUserId, {
         bio: bio.trim(),
-        phone: phone.trim(),
+        phone: phoneTrimmed,
         socials: socialsData,
-        skills,
+        skills: cleanSkills(skills),
       });
 
       if (user) {
         setUser({
           ...user,
-          phone: phone.trim(),
-          phoneNumber: phone.trim(),
+          phone: phoneTrimmed,
+          phoneNumber: phoneTrimmed,
         });
       }
 
@@ -211,7 +265,7 @@ export const MyProfile: React.FC = () => {
       }, 4000);
     } catch (err) {
       console.error('Lỗi khi lưu profile:', err);
-      alert(err instanceof Error ? err.message : 'Không thể lưu hồ sơ');
+      setFormError(err instanceof Error ? err.message : 'Không thể lưu hồ sơ');
     } finally {
       setIsSaving(false);
     }
@@ -484,6 +538,14 @@ export const MyProfile: React.FC = () => {
               </div>
             </div>
 
+            {/* Form Error Banner */}
+            {formError && (
+              <div role="alert" className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 flex items-center gap-2">
+                <span className="font-bold shrink-0">⚠️</span>
+                <span>{formError}</span>
+              </div>
+            )}
+
             {/* 1. BIO / GIỚI THIỆU BẢN THÂN */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -514,21 +576,38 @@ export const MyProfile: React.FC = () => {
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="tel"
-                    placeholder="Ví dụ: 0901234567"
+                    placeholder="Ví dụ: 0901234567 (có thể để trống)"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all"
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      if (phoneError) setPhoneError('');
+                      if (formError) setFormError('');
+                    }}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border ${
+                      phoneError ? 'border-red-400 focus:border-red-500 bg-red-50/30' : 'border-slate-200 focus:border-blue-500'
+                    } rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all`}
                   />
                 </div>
+                {phoneError ? (
+                  <p className="text-[11px] text-red-600 font-medium">
+                    ⚠️ {phoneError}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-400">
+                    Định dạng: 10 chữ số di động Việt Nam (đầu số 03, 05, 07, 08, 09 hoặc +84). Có thể để trống nếu chưa muốn chia sẻ.
+                  </p>
+                )}
               </div>
-
             </div>
 
             {/* 3. MẠNG XÃ HỘI & GITHUB */}
             <div className="space-y-3 pt-2">
-              <label className="block text-xs font-extrabold text-slate-800">
-                Mạng Xã Hội & Hồ Sơ Lập Trình
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-extrabold text-slate-800">
+                  Mạng Xã Hội & Hồ Sơ Lập Trình
+                </label>
+                <span className="text-[11px] text-slate-400 font-medium">(Tất cả đường dẫn đều tùy chọn, có thể để trống)</span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Facebook */}
@@ -536,9 +615,12 @@ export const MyProfile: React.FC = () => {
                   <Facebook className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="Link Facebook profile"
+                    placeholder="https://facebook.com/..."
                     value={facebook}
-                    onChange={(e) => setFacebook(e.target.value)}
+                    onChange={(e) => {
+                      setFacebook(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -548,9 +630,12 @@ export const MyProfile: React.FC = () => {
                   <Github className="w-4 h-4 text-slate-800 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="Link GitHub profile"
+                    placeholder="https://github.com/..."
                     value={github}
-                    onChange={(e) => setGithub(e.target.value)}
+                    onChange={(e) => {
+                      setGithub(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -560,9 +645,12 @@ export const MyProfile: React.FC = () => {
                   <Linkedin className="w-4 h-4 text-sky-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="Link LinkedIn profile"
+                    placeholder="https://linkedin.com/in/..."
                     value={linkedin}
-                    onChange={(e) => setLinkedin(e.target.value)}
+                    onChange={(e) => {
+                      setLinkedin(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>

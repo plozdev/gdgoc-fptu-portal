@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
-import { useLandingContentStore } from '../../store/useLandingContentStore';
 import { tasksApi } from '../../api/tasks.api';
 import { eventsApi } from '../../api/events.api';
 import { 
@@ -10,21 +9,16 @@ import {
   CheckSquare, 
   Calendar, 
   Award, 
-  Sparkles, 
-  ArrowRight, 
-  FolderGit2 
 } from 'lucide-react';
 import { BanId } from '../../types/auth';
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuthStore();
   const { members, fetchMembers } = useMemberStore();
-  const { events: fallbackEvents } = useLandingContentStore();
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
 
   const [tasks, setTasks] = useState<any[]>([]);
   const [backendEvents, setBackendEvents] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
 
   // Fetch actual data from backend
   useEffect(() => {
@@ -63,8 +57,6 @@ export const DashboardOverview: React.FC = () => {
         }
       } catch (err) {
         console.warn('[DashboardOverview] Error loading data:', err);
-      } finally {
-        if (isMounted) setIsLoadingData(false);
       }
     };
 

@@ -1,12 +1,8 @@
 import React from 'react';
 import { Users2, BookOpenCheck, TrendingUp, Sparkles, Target } from 'lucide-react';
-import { VALUES_PILLARS, CHAPTER_INFO } from '../data/gdgData';
+import { VALUES_PILLARS } from '../data/gdgData';
 
-interface AboutProps {
-  onOpenJoinModal: () => void;
-}
-
-export const About: React.FC<AboutProps> = ({ onOpenJoinModal }) => {
+export const About: React.FC = () => {
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Users2':

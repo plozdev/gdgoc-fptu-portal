@@ -9,7 +9,6 @@ import { useNotificationStore } from "../store/useNotificationStore";
  */
 export const LiveUpdates: React.FC = () => {
   useEffect(() => {
-    let active = true;
     const refresh = () => {
       void useGenerationStore.getState().fetchGenerationConfig();
       window.dispatchEvent(new Event("gdgoc:refresh"));
@@ -28,10 +27,7 @@ export const LiveUpdates: React.FC = () => {
     stream.addEventListener("refresh", refresh);
     refresh();
 
-    return () => {
-      active = false;
-      stream.close();
-    };
+    return () => stream.close();
   }, []);
 
   return null;

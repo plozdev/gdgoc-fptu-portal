@@ -17,7 +17,6 @@ import {
 import type { Department, EventItem, StatMilestone, OrganizerMember } from '../types';
 import { cmsApi } from '../api/cms.api';
 import { eventsApi } from '../api/events.api';
-import { membersApi } from '../api/members.api';
 
 // ==========================================
 // STATE INTERFACE
@@ -153,7 +152,7 @@ export const useLandingContentStore = create<LandingContentState>((set, get) => 
               date: e.startTime ? e.startTime.slice(0, 10) : new Date().toISOString().slice(0, 10),
               time: startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
               location: e.location || 'FPT University HCMC',
-              status: e.status || (isPast ? 'Completed' : 'Registration Open'),
+              status: e.status || (isPast ? 'Completed' : e.registrationUrl ? 'Registration Open' : 'Upcoming'),
               summary: e.description || '',
               highlights: [],
               accentColor: colors.accentColor,

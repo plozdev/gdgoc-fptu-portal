@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, Sparkles, ExternalLink, ArrowRight, Ticket, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { useLandingContentStore } from '../store/useLandingContentStore';
-import { EventItem } from '../types';
 import { formatDateToDDMMYYYY } from '../utils/dateUtils';
 
-interface EventsProps {
-  onSelectEvent: (event: EventItem) => void;
-}
-
-export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
+export const Events: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
   const events = useLandingContentStore((s) => s.events);
 
@@ -127,15 +122,12 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
 
                   {/* Event Title */}
                   <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E1E1E] tracking-tight leading-snug">
-                    <a
-                      href={event.registrationUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-[#4285F4] transition-colors inline-flex items-center gap-2 group/title"
-                    >
-                      <span>{event.title}</span>
-                      <ExternalLink className="w-4 h-4 opacity-0 group-hover/title:opacity-100 transition-opacity text-[#4285F4] shrink-0" />
-                    </a>
+                    {event.registrationUrl ? (
+                      <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#4285F4] transition-colors inline-flex items-center gap-2 group/title">
+                        <span>{event.title}</span>
+                        <ExternalLink className="w-4 h-4 opacity-0 group-hover/title:opacity-100 transition-opacity text-[#4285F4] shrink-0" />
+                      </a>
+                    ) : event.title}
                   </h3>
 
                   {/* Summary / Description */}
@@ -163,14 +155,9 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                 </div>
 
                 {/* Bottom Action Bar */}
-                <div className="pt-6 mt-4 border-t border-[#1E1E1E]/15 flex items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-1.5 font-mono-code text-xs font-bold text-[#34A853]">
-                    <Ticket className="w-4 h-4 text-[#34A853]" />
-                    <span>Free Student Pass</span>
-                  </div>
-
+                {event.registrationUrl && <div className="pt-6 mt-4 border-t border-[#1E1E1E]/15 flex justify-end">
                   <a
-                    href={event.registrationUrl || 'https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/'}
+                    href={event.registrationUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-5 py-2.5 bg-[#1E1E1E] hover:bg-[#4285F4] text-[#FFFFFF] font-bold text-xs sm:text-sm font-mono-code rounded-full border-2 border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover transition-all flex items-center gap-1.5 cursor-pointer"
@@ -178,7 +165,7 @@ export const Events: React.FC<EventsProps> = ({ onSelectEvent }) => {
                     <span>Xem Chi Tiết & Đăng Ký (Bevy)</span>
                     <ExternalLink className="w-4 h-4" />
                   </a>
-                </div>
+                </div>}
 
               </div>
             ))}

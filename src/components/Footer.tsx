@@ -1,15 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { GdgLogo } from './GdgLogo';
-import { Github, Linkedin, Facebook, ArrowUp, MapPin, Mail, Globe, BookOpen, ArrowRight, Trophy } from 'lucide-react';
+import { Github, Linkedin, Facebook, ArrowUp, MapPin, Mail } from 'lucide-react';
 import { CHAPTER_INFO } from '../data/gdgData';
 
-interface FooterProps {
-  onOpenJoinModal?: () => void;
-  onOpenJdHandbook?: () => void;
-}
-
-export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandbook }) => {
+export const Footer: React.FC = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

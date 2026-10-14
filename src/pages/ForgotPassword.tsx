@@ -98,7 +98,7 @@ export const ForgotPassword: React.FC = () => {
           <span>Quay lại Đăng nhập</span>
         </Link>
         <span className="text-xs font-mono-code font-semibold text-slate-500 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-xs">
-          GDGoC-OS • Security Portal
+          GDGoC FPTU OS • Security Portal
         </span>
       </div>
 

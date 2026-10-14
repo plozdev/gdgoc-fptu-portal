@@ -149,7 +149,7 @@ export const FirstPasswordChange: React.FC<FirstPasswordChangeProps> = ({
                 </div>
                 <div>
                   <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 block font-mono-code">
-                    GDGoC-OS • Security Portal
+                    GDGoC FPTU OS • Security Portal
                   </span>
                   <span className="text-xs font-bold text-slate-800">
                     FPT University HCMC

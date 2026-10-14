@@ -76,7 +76,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-white text-base tracking-tight">GDGoC-OS</span>
+              <span className="font-extrabold text-white text-base tracking-tight">GDGoC FPTU OS</span>
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono-code">
                 v2.0
               </span>

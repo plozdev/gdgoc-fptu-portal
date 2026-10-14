@@ -514,7 +514,7 @@ export const MyProfile: React.FC = () => {
               </h3>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Bạn có thể cập nhật mật khẩu đăng nhập định kỳ hoặc khi cần thiết để bảo vệ tài khoản cá nhân trong GDGoC-OS.
+              Bạn có thể cập nhật mật khẩu đăng nhập định kỳ hoặc khi cần thiết để bảo vệ tài khoản cá nhân trong GDGoC FPTU OS.
             </p>
             <Link
               to="/app/change-password"

@@ -211,7 +211,7 @@ export const NotificationCenter: React.FC = () => {
 
           {/* Footer */}
           <div className="p-2 border-t border-slate-100 bg-slate-50/50 text-center text-[10px] text-slate-400">
-            Hệ thống thông báo thời gian thực GDGoC-OS
+            Hệ thống thông báo thời gian thực GDGoC FPTU OS
           </div>
         </div>
       )}

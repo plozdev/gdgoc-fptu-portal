@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
     { name: 'Các Ban Chuyên Môn', href: '#departments' },
     { name: 'Số Liệu Summer 2026', href: '#impact' },
     { name: 'Sự Kiện Fall 2026', href: '#events' },
-    { name: 'Cổng Thành Viên (GDGoC-OS)', href: '/login' },
+    { name: 'Cổng Thành Viên (GDGoC FPTU OS)', href: '/login' },
   ];
 
   const resources = [

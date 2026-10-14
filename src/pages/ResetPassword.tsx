@@ -96,7 +96,7 @@ export const ResetPassword: React.FC = () => {
           <span>Trang Đăng Nhập</span>
         </Link>
         <span className="text-xs font-mono-code font-semibold text-slate-500 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-xs">
-          GDGoC-OS • Account Recovery
+          GDGoC FPTU OS • Account Recovery
         </span>
       </div>
 
@@ -119,7 +119,7 @@ export const ResetPassword: React.FC = () => {
               Tạo Mật Khẩu Mới
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Nhập mật khẩu mới an toàn cho tài khoản GDGoC-OS của bạn.
+              Nhập mật khẩu mới an toàn cho tài khoản GDGoC FPTU OS của bạn.
             </p>
           </div>
 

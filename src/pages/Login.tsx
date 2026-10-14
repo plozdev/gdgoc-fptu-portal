@@ -109,7 +109,7 @@ export const Login: React.FC = () => {
               <GdgLogo size="md" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1E1E1E] tracking-tight">
-              Cổng Thành Viên <span className="text-[#4285F4]">GDGoC-OS</span>
+              Cổng Thành Viên <span className="text-[#4285F4]">GDGoC FPTU OS</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
               Đăng nhập tài khoản nội bộ GDG on Campus Đại học FPT TP.HCM

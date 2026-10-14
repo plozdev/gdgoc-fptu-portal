@@ -29,7 +29,7 @@ export const Header: React.FC = () => {
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-xs select-none shrink-0">
       {/* Breadcrumb & Title */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-slate-400 font-mono-code">GDGoC-OS</span>
+        <span className="text-xs font-bold text-slate-400 font-mono-code">GDGoC FPTU OS</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
         <h1 className="text-sm font-extrabold text-slate-800 tracking-tight">
           {getPageTitle(location.pathname)}

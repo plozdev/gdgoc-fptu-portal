@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
             >
               <span className="w-2 h-2 rounded-full bg-[#34A853] animate-pulse"></span>
               <LayoutDashboard className="w-4 h-4 text-[#4285F4]" />
-              <span>Vào GDGoC-OS</span>
+              <span>Vào GDGoC FPTU OS</span>
             </Link>
           )}
 
@@ -178,7 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
               >
                 <span className="w-2 h-2 rounded-full bg-[#34A853]"></span>
                 <LayoutDashboard className="w-4 h-4 text-[#4285F4]" />
-                <span>Vào Cổng Nội Bộ GDGoC-OS</span>
+                <span>Vào Cổng Nội Bộ GDGoC FPTU OS</span>
               </Link>
             )}
 

@@ -100,7 +100,7 @@ export const DashboardOverview: React.FC = () => {
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-              GDGoC-OS • Gen 4.0
+              GDGoC FPTU OS • Gen 4.0
             </span>
             <span className="text-xs text-slate-400">|</span>
             <span className="text-xs text-slate-300 font-mono-code">Kỳ Fall 2026</span>

@@ -130,7 +130,7 @@ export default function App() {
     return (
       <div className="flex h-screen items-center justify-center text-blue-600 font-bold text-sm bg-slate-50 gap-2">
         <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-        <span>Đang khởi tạo hệ thống GDGoC-OS...</span>
+        <span>Đang khởi tạo hệ thống GDGoC FPTU OS...</span>
       </div>
     );
   }

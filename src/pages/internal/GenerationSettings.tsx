@@ -171,7 +171,7 @@ export const GenerationSettings: React.FC = () => {
                   Trạng Thái Kỳ Đang Hoạt Động
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Thời điểm vận hành hiện tại của toàn bộ hệ thống GDGoC-OS
+                  Thời điểm vận hành hiện tại của toàn bộ hệ thống GDGoC FPTU OS
                 </p>
               </div>
             </div>

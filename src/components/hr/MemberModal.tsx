@@ -149,8 +149,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-backdrop">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-modal-pop">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">

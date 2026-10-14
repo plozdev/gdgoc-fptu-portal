@@ -115,8 +115,8 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
       {choices.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
     </select>
   </div>;
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6" onClick={() => { if (!busy) onClose(); }}>
-    <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="recruitment-title" onClick={event => event.stopPropagation()} className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border-[2.5px] border-slate-900 bg-white text-slate-900 shadow-[6px_6px_0_#1e293b] outline-none">
+  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6 animate-backdrop" onClick={() => { if (!busy) onClose(); }}>
+    <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="recruitment-title" onClick={event => event.stopPropagation()} className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border-[2.5px] border-slate-900 bg-white text-slate-900 shadow-[6px_6px_0_#1e293b] outline-none animate-modal-pop">
       <header className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-slate-900 bg-[#E8F0FE] px-5 py-4 sm:px-7">
         <div><p className="mb-1 text-xs font-bold uppercase tracking-wider text-blue-700">GDGoC FPTU HCMC · {status?.cycleLabel || 'Tuyển thành viên'}</p><h2 id="recruitment-title" className="text-xl font-extrabold sm:text-2xl">{receipt ? 'Đã nhận hồ sơ của bạn!' : 'Ứng tuyển thành viên · Vòng 1'}</h2></div>
         <button type="button" aria-label="Đóng form ứng tuyển" disabled={busy} onClick={onClose} className="rounded-lg p-1 focus-visible:outline-2 disabled:opacity-40"><X /></button>

@@ -18,6 +18,7 @@ import { JoinModal } from './components/JoinModal';
 import { TrackDetailModal } from './components/TrackDetailModal';
 import { Department } from './types';
 import { DEPARTMENTS_DATA } from './data/gdgData';
+import { GdgBracketsGlyph } from './components/GdgLogo';
 
 import { useAuthStore } from './store/useAuthStore';
 import { useLandingContentStore } from './store/useLandingContentStore';
@@ -128,9 +129,40 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center text-blue-600 font-bold text-sm bg-slate-50 gap-2">
-        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-        <span>Đang khởi tạo hệ thống GDGoC FPTU OS...</span>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FFFFFF] bg-dot-pattern">
+        {/* Glow ambient background circles */}
+        <div className="absolute w-80 h-80 bg-[#C3ECF6] rounded-full blur-3xl opacity-40 -z-10 animate-pulse pointer-events-none" />
+        <div className="absolute w-60 h-60 bg-[#FFE7A5] rounded-full blur-3xl opacity-30 -z-10 pointer-events-none -translate-x-20 translate-y-16" />
+
+        <div className="flex flex-col items-center max-w-sm px-6 text-center animate-fadeIn">
+          {/* Logo with gentle floating animation */}
+          <div className="relative mb-5 p-4 rounded-2xl bg-white border-2 border-[#1E1E1E] brutal-shadow animate-float">
+            <GdgBracketsGlyph size={48} />
+          </div>
+
+          {/* Title and version badge */}
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-xl font-extrabold text-[#1E1E1E] tracking-tight">
+              GDGoC FPTU OS
+            </h1>
+            <span className="px-2 py-0.5 text-[10px] font-mono-code font-bold bg-[#FFE7A5] text-[#1E1E1E] border border-[#1E1E1E] rounded-md">
+              v2.4
+            </span>
+          </div>
+
+          <p className="text-xs text-[#1E1E1E]/70 font-mono-code mb-5">
+            Google Developer Groups on Campus • FPT University HCMC
+          </p>
+
+          {/* Google 4-Color Animated Progress Track */}
+          <div className="w-56 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 mb-3 relative">
+            <div className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-[#4285F4] via-[#EA4335] via-[#FBBC04] to-[#34A853] rounded-full animate-shimmer" />
+          </div>
+
+          <span className="text-[11px] font-mono-code text-slate-500 font-medium">
+            Đang khởi tạo hệ sinh thái GDGoC...
+          </span>
+        </div>
       </div>
     );
   }

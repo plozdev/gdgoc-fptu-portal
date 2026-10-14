@@ -26,7 +26,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
 
           {/* Left Column: Typography & CTAs */}
-          <div className="lg:col-span-7 flex flex-col items-start space-y-6 text-left">
+          <div className="lg:col-span-7 flex flex-col items-start space-y-6 text-left animate-fade-in-up">
 
             {/* Unified Sleek Status Pill */}
             <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-full brutal-shadow-sm text-xs font-mono-code">
@@ -88,7 +88,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
           </div>
 
           {/* Right Column: Digital Admission Pass & Chapter Recognition */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-5 space-y-4 animate-fade-in-up delay-100">
 
             {/* Card 1: Official Gen 4.0 Digital Admission Pass */}
             <div className="relative bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow overflow-hidden p-6">

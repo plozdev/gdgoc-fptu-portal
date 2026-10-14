@@ -18,11 +18,11 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E1E1E]/60 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E1E1E]/60 backdrop-blur-sm animate-backdrop"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[90vh] flex flex-col overflow-hidden"
+        className="relative w-full max-w-2xl bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[28px] brutal-shadow-lg max-h-[90vh] flex flex-col overflow-hidden animate-modal-pop"
       >
 
         {/* Modal Top Bar (Non-scrolling fixed header) */}

@@ -23,11 +23,134 @@
   --color-black02: #1E1E1E;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: #FFFFFF;
   color: #1E1E1E;
   overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =============================================================================
+   KEYFRAME ANIMATIONS (Startup, Modals & Micro-interactions)
+   ============================================================================= */
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pageRevealUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes googleBarShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Modal and Overlay Animations */
+.animate-backdrop {
+  animation: backdropFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-pop {
+  animation: modalPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Automatically apply smooth spring pop-in to dialog cards inside fixed overlays */
+.fixed.inset-0 > div[class*="rounded-"],
+.fixed.inset-0 > form[class*="rounded-"] {
+  animation: modalPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: pageRevealUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float {
+  animation: floatGentle 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: googleBarShimmer 1.6s ease-in-out infinite;
+}
+
+/* Stagger Animation Delays */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Smooth transition utility */
+.transition-smooth {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .font-mono-code {
@@ -64,7 +187,8 @@ body {
 }
 
 .brutal-shadow-hover {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
 }
 
 .brutal-shadow-hover:hover {

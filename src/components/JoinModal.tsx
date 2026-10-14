@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, Globe, Loader2, Mail, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
-import { RECRUITMENT_CONFIG } from '../data/gdgData';
+import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
 
 interface JoinModalProps { isOpen: boolean; onClose: () => void; defaultDepartment?: string; }
 type Fields = Record<'fullName' | 'email' | 'phone' | 'studentId' | 'major' | 'semester' | 'facebookUrl' | 'nv1' | 'nv2' | 'portfolioUrl' | 'techStack' | 'nonTechSkills' | 'projectHighlight' | 'goals' | 'commitment' | 'message' | 'website', string>;
@@ -43,6 +43,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
   close.current = onClose;
   busyRef.current = busy;
   const isTech = ['AI', 'Cloud', 'Web Development', 'Research'].includes(fields.nv1);
+  const isClosed = !RECRUITMENT_CONFIG.isOpen || (status !== null && !status.enabled);
   const change = (key: keyof Fields, value: string) => {
     setFields(previous => ({ ...previous, [key]: value, ...(key === 'nv1' && value === previous.nv2 ? { nv2: '' } : {}) }));
     requestId.current = '';
@@ -83,6 +84,10 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
   const advance = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busyRef.current || !form.current?.reportValidity()) return;
+    if (isClosed) {
+      setError('Cổng đăng ký tuyển thành viên hiện đang tạm đóng.');
+      return;
+    }
     if (step < 3) { setStep(step + 1); setError(''); scrollArea.current?.scrollTo({ top: 0 }); return; }
     if (!consent || !status?.enabled) return;
     busyRef.current = true;
@@ -118,64 +123,172 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
   return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6 animate-backdrop" onClick={() => { if (!busy) onClose(); }}>
     <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="recruitment-title" onClick={event => event.stopPropagation()} className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border-[2.5px] border-slate-900 bg-white text-slate-900 shadow-[6px_6px_0_#1e293b] outline-none animate-modal-pop">
       <header className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-slate-900 bg-[#E8F0FE] px-5 py-4 sm:px-7">
-        <div><p className="mb-1 text-xs font-bold uppercase tracking-wider text-blue-700">GDGoC FPTU HCMC · {status?.cycleLabel || 'Tuyển thành viên'}</p><h2 id="recruitment-title" className="text-xl font-extrabold sm:text-2xl">{receipt ? 'Đã nhận hồ sơ của bạn!' : 'Ứng tuyển thành viên · Vòng 1'}</h2></div>
+        <div>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wider text-blue-700">
+            GDGoC FPTU HCMC · {isClosed ? 'Thông Báo Tuyển Sinh' : (status?.cycleLabel || 'Tuyển thành viên')}
+          </p>
+          <h2 id="recruitment-title" className="text-xl font-extrabold sm:text-2xl">
+            {receipt
+              ? 'Đã nhận hồ sơ của bạn!'
+              : isClosed
+              ? 'Cổng Tuyển Thành Viên · Tạm Đóng'
+              : 'Ứng tuyển thành viên · Vòng 1'}
+          </h2>
+        </div>
         <button type="button" aria-label="Đóng form ứng tuyển" disabled={busy} onClick={onClose} className="rounded-lg p-1 focus-visible:outline-2 disabled:opacity-40"><X /></button>
       </header>
       <div ref={scrollArea} className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
-        {receipt ? <div className="space-y-5 py-6 text-center" role="status">
-          <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" /><p>Hồ sơ đã được ghi nhận cho đợt <strong>{receipt.cycleLabel}</strong>.</p>
-          <div className="inline-block rounded-2xl border-2 border-slate-900 bg-[#FFE7A5] px-10 py-5"><p className="text-xs font-bold uppercase">Mã ứng viên</p><p className="mt-2 font-mono text-4xl font-black">{receipt.candidateId}</p></div>
-          <p className="text-sm text-slate-600">Lưu mã này để tra cứu với CLB. BCN sẽ xem hồ sơ và liên hệ qua email hoặc số điện thoại bạn cung cấp.</p>
-          <button type="button" onClick={() => { setReceipt(null); onClose(); }} className="rounded-xl border-2 border-slate-900 px-6 py-3 font-bold">Hoàn tất</button>
-        </div> : <>
-          <ol aria-label="Tiến độ ứng tuyển" className="mb-6 grid grid-cols-4 gap-2">{steps.map((label, index) => <li key={label} aria-current={index === step ? 'step' : undefined} className={`rounded-xl border-2 p-2 text-center text-xs font-bold ${index === step ? 'border-slate-900 bg-[#FFE7A5]' : 'border-slate-200 bg-slate-50 text-slate-500'}`}><span className="block text-base">{index + 1}</span><span className="hidden sm:block">{label}</span></li>)}</ol>
-          {statusError ? <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">Chưa kết nối được cổng tuyển. <button type="button" onClick={() => setStatusRetry(value => value + 1)} className="font-bold underline">Thử lại</button></div> : !status ? <p className="mb-4 text-sm text-slate-500">Đang kiểm tra đợt tuyển...</p> : (!RECRUITMENT_CONFIG.isOpen || !status.enabled) && (
-            <div role="status" className="mb-5 rounded-2xl border-2 border-slate-900 bg-[#FFE7A5] p-4 text-xs sm:text-sm font-medium">
-              <div className="flex items-center gap-2 font-extrabold text-slate-900 mb-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-                <span className="uppercase tracking-wide">Cổng Tuyển Thành Viên Đang Cập Nhật</span>
+        {receipt ? (
+          <div className="space-y-5 py-6 text-center" role="status">
+            <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" />
+            <p>Hồ sơ đã được ghi nhận cho đợt <strong>{receipt.cycleLabel}</strong>.</p>
+            <div className="inline-block rounded-2xl border-2 border-slate-900 bg-[#FFE7A5] px-10 py-5">
+              <p className="text-xs font-bold uppercase">Mã ứng viên</p>
+              <p className="mt-2 font-mono text-4xl font-black">{receipt.candidateId}</p>
+            </div>
+            <p className="text-sm text-slate-600">Lưu mã này để tra cứu với CLB. BCN sẽ xem hồ sơ và liên hệ qua email hoặc số điện thoại bạn cung cấp.</p>
+            <button type="button" onClick={() => { setReceipt(null); onClose(); }} className="rounded-xl border-2 border-slate-900 px-6 py-3 font-bold">Hoàn tất</button>
+          </div>
+        ) : isClosed ? (
+          <div className="space-y-6 py-2 animate-fadeIn" role="status">
+            {/* Banner Thông Báo */}
+            <div className="rounded-2xl border-[2.5px] border-slate-900 bg-[#FFF8E1] p-5 sm:p-6 shadow-[4px_4px_0_#1e293b]">
+              <div className="flex items-center gap-2.5 font-mono-code font-bold text-xs uppercase tracking-wider text-amber-800 mb-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                <span>Trạng thái: Tạm Đóng / Đang Cập Nhật</span>
               </div>
-              <p className="text-slate-800 leading-relaxed">
-                {RECRUITMENT_CONFIG.noticeText} Bạn vẫn có thể xem trước các bước câu hỏi bên dưới để chuẩn bị hồ sơ tốt nhất!
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">
+                Cổng Tuyển Thành Viên Hiện Chưa Mở Đăng Ký
+              </h3>
+              <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
+                {RECRUITMENT_CONFIG.noticeText}
               </p>
             </div>
-          )}
-          <form ref={form} onSubmit={event => void advance(event)}>
-            <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
-              <legend className="mb-4 text-lg font-extrabold">Bước {step + 1}: {steps[step]}</legend>
-              {step === 0 && <>
-                {textField('fullName', 'Họ và tên', { placeholder: 'Nguyễn Văn A', minLength: 2, maxLength: 120, autoComplete: 'name' })}
-                {textField('email', 'Email FPT / Cá nhân', { type: 'email', placeholder: 'Email bạn thường kiểm tra', maxLength: 254, autoComplete: 'email' })}
-                {textField('phone', 'Số điện thoại (Zalo)', { type: 'tel', pattern: '(0|\\+84)[0-9]{9,10}', placeholder: '0901234567', maxLength: 13, autoComplete: 'tel' })}
-                {textField('studentId', 'Mã số sinh viên (MSSV)', { pattern: '[A-Za-z]{2,4}[0-9]{6,8}', placeholder: 'SE190000', maxLength: 12 })}
-                {selectField('major', 'Chuyên ngành học', majors)}{selectField('semester', 'Kỳ học hiện tại', semesters)}
-                {textField('facebookUrl', 'Link Facebook cá nhân', { type: 'url', pattern: 'https://.*', placeholder: 'https://facebook.com/username' })}
-              </>}
-              {step === 1 && <>
-                {selectField('nv1', 'Ban nguyện vọng 1 (NV1)', departments.map(value => [value, value]))}
-                {selectField('nv2', 'Ban nguyện vọng 2 (NV2)', departments.filter(value => value !== fields.nv1).map(value => [value, value]), true)}
-                <p className="text-sm text-slate-500 sm:col-span-2">NV1 quyết định câu hỏi chuyên môn tiếp theo. NV2 không bắt buộc và phải khác NV1.</p>
-              </>}
-              {step === 2 && <>
-                {textField('portfolioUrl', 'Link Portfolio / CV / Github / Sản phẩm', { type: 'url', pattern: 'https://.*', placeholder: 'https://github.com/username', hint: 'Dán link Github, Behance, Canva hoặc Google Drive và mở quyền xem. Nếu mới bắt đầu, có thể chia sẻ trang cá nhân hoặc bài tập.' })}
-                {isTech ? textField('techStack', 'Công nghệ & công cụ bạn từng tiếp xúc hoặc muốn học sâu?', { area: true, placeholder: 'Python, React, Docker, Gemini API... Tân sinh viên mới tìm hiểu cũng đừng ngại chia sẻ.' }) : textField('nonTechSkills', 'Kỹ năng hoặc công cụ bạn tự tin nhất?', { area: true, placeholder: 'Figma, Photoshop, CapCut, viết content, lập kế hoạch sự kiện, giao tiếp...' })}
-                {textField('projectHighlight', 'Dự án, hoạt động hoặc thành tích bạn tâm đắc nhất', { area: true, minLength: 10, maxLength: 5000, hint: 'Có thể là bài tập môn học, dự án cá nhân hoặc hoạt động bạn từng phụ trách.' })}
-              </>}
-              {step === 3 && <>
-                {textField('goals', 'Mục tiêu lớn nhất khi gia nhập GDGoC FPTU?', { area: true, minLength: 10, maxLength: 5000, placeholder: 'Bạn muốn học gì, phát triển ra sao và cùng đồng đội làm điều gì?' })}
-                <div className="sm:col-span-2"><p id="commitment-label" className="mb-2 text-sm font-bold">Mức độ cam kết thời gian <span className="text-red-600">*</span></p><div role="radiogroup" aria-labelledby="commitment-label" className="space-y-2">{commitments.map(([value, label]) => <label key={value} className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 p-3 text-sm"><input type="radio" name="commitment" required value={value} checked={fields.commitment === value} onChange={() => change('commitment', value)} className="mt-0.5" /><span>{label}</span></label>)}</div></div>
-                {textField('message', 'Câu hỏi hoặc lời nhắn dành cho CLB', { area: true, optional: true })}
-                <label className="flex items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" required checked={consent} onChange={event => { setConsent(event.target.checked); requestId.current = ''; }} className="mt-1" /><span>Tôi xác nhận thông tin đúng và đồng ý để CLB lưu hồ sơ, liên hệ phục vụ tuyển thành viên.</span></label>
-              </>}
-              <div hidden aria-hidden="true"><label>Website<input tabIndex={-1} autoComplete="off" value={fields.website} onChange={event => change('website', event.target.value)} /></label></div>
-            </fieldset>
-            {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-            <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <button type="button" disabled={busy || step === 0} onClick={() => { setStep(step - 1); setError(''); scrollArea.current?.scrollTo({ top: 0 }); }} className="flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-bold disabled:opacity-30"><ArrowLeft size={16} />Quay lại</button>
-              <button type="submit" disabled={busy || (step === 3 && !status?.enabled)} className="flex items-center gap-2 rounded-xl border-2 border-slate-900 bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[3px_3px_0_#1e293b] disabled:cursor-not-allowed disabled:opacity-50">{busy ? <><Loader2 size={16} className="animate-spin" />Đang gửi...</> : <>{step === 3 ? 'Nộp hồ sơ' : 'Tiếp tục'}<ArrowRight size={16} /></>}</button>
+
+            {/* Thông tin kết nối & theo dõi */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <a
+                href={CHAPTER_INFO.communityUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex flex-col justify-between p-4 rounded-2xl border-2 border-slate-900 bg-white hover:bg-[#E8F0FE] transition-all brutal-shadow-sm brutal-shadow-hover"
+              >
+                <div>
+                  <div className="flex items-center justify-between text-blue-600 mb-2">
+                    <Globe className="w-5 h-5" />
+                    <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900">GDG Community Dev</h4>
+                  <p className="text-xs text-slate-600 mt-1">Trang cộng đồng chính thức tại Google Developers để đăng ký thành viên và nhận thông báo sự kiện.</p>
+                </div>
+                <span className="mt-3 inline-block font-mono-code text-[11px] font-bold text-blue-600 underline">Ghé thăm trang web →</span>
+              </a>
+
+              <div className="flex flex-col justify-between p-4 rounded-2xl border-2 border-slate-900 bg-white brutal-shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-600 mb-2">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900">Email Ban Chủ Nhiệm</h4>
+                  <p className="text-xs text-slate-600 mt-1">Liên hệ trực tiếp với BCN CLB nếu bạn cần thêm thông tin về các hoạt động hoặc hợp tác.</p>
+                </div>
+                <a href={`mailto:${CHAPTER_INFO.email}`} className="mt-3 font-mono-code text-xs font-bold text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-2.5 py-1 rounded-lg break-all">
+                  {CHAPTER_INFO.email}
+                </a>
+              </div>
             </div>
-          </form>
-        </>}
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-3 border-t border-slate-200">
+              <a
+                href={CHAPTER_INFO.communityUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#4285F4] hover:bg-[#3367D6] text-white font-bold text-sm rounded-xl border-2 border-slate-900 shadow-[3px_3px_0_#1e293b] cursor-pointer"
+              >
+                <span>Tham gia GDG Community</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl border-2 border-slate-900 bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm shadow-[2px_2px_0_#1e293b]"
+              >
+                Đã hiểu, đóng lại
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <ol aria-label="Tiến độ ứng tuyển" className="mb-6 grid grid-cols-4 gap-2">
+              {steps.map((label, index) => (
+                <li
+                  key={label}
+                  aria-current={index === step ? 'step' : undefined}
+                  className={`rounded-xl border-2 p-2 text-center text-xs font-bold ${
+                    index === step
+                      ? 'border-slate-900 bg-[#FFE7A5]'
+                      : 'border-slate-200 bg-slate-50 text-slate-500'
+                  }`}
+                >
+                  <span className="block text-base">{index + 1}</span>
+                  <span className="hidden sm:block">{label}</span>
+                </li>
+              ))}
+            </ol>
+            {statusError ? (
+              <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">
+                Chưa kết nối được cổng tuyển. <button type="button" onClick={() => setStatusRetry(value => value + 1)} className="font-bold underline">Thử lại</button>
+              </div>
+            ) : !status ? (
+              <p className="mb-4 text-sm text-slate-500">Đang kiểm tra đợt tuyển...</p>
+            ) : null}
+            <form ref={form} onSubmit={event => void advance(event)}>
+              <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
+                <legend className="mb-4 text-lg font-extrabold">Bước {step + 1}: {steps[step]}</legend>
+                {step === 0 && (
+                  <>
+                    {textField('fullName', 'Họ và tên', { placeholder: 'Nguyễn Văn A', minLength: 2, maxLength: 120, autoComplete: 'name' })}
+                    {textField('email', 'Email FPT / Cá nhân', { type: 'email', placeholder: 'Email bạn thường kiểm tra', maxLength: 254, autoComplete: 'email' })}
+                    {textField('phone', 'Số điện thoại (Zalo)', { type: 'tel', pattern: '(0|\\+84)[0-9]{9,10}', placeholder: '0901234567', maxLength: 13, autoComplete: 'tel' })}
+                    {textField('studentId', 'Mã số sinh viên (MSSV)', { pattern: '[A-Za-z]{2,4}[0-9]{6,8}', placeholder: 'SE190000', maxLength: 12 })}
+                    {selectField('major', 'Chuyên ngành học', majors)}
+                    {selectField('semester', 'Kỳ học hiện tại', semesters)}
+                    {textField('facebookUrl', 'Link Facebook cá nhân', { type: 'url', pattern: 'https://.*', placeholder: 'https://facebook.com/username' })}
+                  </>
+                )}
+                {step === 1 && (
+                  <>
+                    {selectField('nv1', 'Ban nguyện vọng 1 (NV1)', departments.map(value => [value, value]))}
+                    {selectField('nv2', 'Ban nguyện vọng 2 (NV2)', departments.filter(value => value !== fields.nv1).map(value => [value, value]), true)}
+                    <p className="text-sm text-slate-500 sm:col-span-2">NV1 quyết định câu hỏi chuyên môn tiếp theo. NV2 không bắt buộc và phải khác NV1.</p>
+                  </>
+                )}
+                {step === 2 && (
+                  <>
+                    {textField('portfolioUrl', 'Link Portfolio / CV / Github / Sản phẩm', { type: 'url', pattern: 'https://.*', placeholder: 'https://github.com/username', hint: 'Dán link Github, Behance, Canva hoặc Google Drive và mở quyền xem. Nếu mới bắt đầu, có thể chia sẻ trang cá nhân hoặc bài tập.' })}
+                    {isTech ? textField('techStack', 'Công nghệ & công cụ bạn từng tiếp xúc hoặc muốn học sâu?', { area: true, placeholder: 'Python, React, Docker, Gemini API... Tân sinh viên mới tìm hiểu cũng đừng ngại chia sẻ.' }) : textField('nonTechSkills', 'Kỹ năng hoặc công cụ bạn tự tin nhất?', { area: true, placeholder: 'Figma, Photoshop, CapCut, viết content, lập kế hoạch sự kiện, giao tiếp...' })}
+                    {textField('projectHighlight', 'Dự án, hoạt động hoặc thành tích bạn tâm đắc nhất', { area: true, minLength: 10, maxLength: 5000, hint: 'Có thể là bài tập môn học, dự án cá nhân hoặc hoạt động bạn từng phụ trách.' })}
+                  </>
+                )}
+                {step === 3 && (
+                  <>
+                    {textField('goals', 'Mục tiêu lớn nhất khi gia nhập GDGoC FPTU?', { area: true, minLength: 10, maxLength: 5000, placeholder: 'Bạn muốn học gì, phát triển ra sao và cùng đồng đội làm điều gì?' })}
+                    <div className="sm:col-span-2"><p id="commitment-label" className="mb-2 text-sm font-bold">Mức độ cam kết thời gian <span className="text-red-600">*</span></p><div role="radiogroup" aria-labelledby="commitment-label" className="space-y-2">{commitments.map(([value, label]) => <label key={value} className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 p-3 text-sm"><input type="radio" name="commitment" required value={value} checked={fields.commitment === value} onChange={() => change('commitment', value)} className="mt-0.5" /><span>{label}</span></label>)}</div></div>
+                    {textField('message', 'Câu hỏi hoặc lời nhắn dành cho CLB', { area: true, optional: true })}
+                    <label className="flex items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" required checked={consent} onChange={event => { setConsent(event.target.checked); requestId.current = ''; }} className="mt-1" /><span>Tôi xác nhận thông tin đúng và đồng ý để CLB lưu hồ sơ, liên hệ phục vụ tuyển thành viên.</span></label>
+                  </>
+                )}
+                <div hidden aria-hidden="true"><label>Website<input tabIndex={-1} autoComplete="off" value={fields.website} onChange={event => change('website', event.target.value)} /></label></div>
+              </fieldset>
+              {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                <button type="button" disabled={busy || step === 0} onClick={() => { setStep(step - 1); setError(''); scrollArea.current?.scrollTo({ top: 0 }); }} className="flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-bold disabled:opacity-30"><ArrowLeft size={16} />Quay lại</button>
+                <button type="submit" disabled={busy || (step === 3 && !status?.enabled)} className="flex items-center gap-2 rounded-xl border-2 border-slate-900 bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[3px_3px_0_#1e293b] disabled:cursor-not-allowed disabled:opacity-50">{busy ? <><Loader2 size={16} className="animate-spin" />Đang gửi...</> : <>{step === 3 ? 'Nộp hồ sơ' : 'Tiếp tục'}<ArrowRight size={16} /></>}</button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   </div>;

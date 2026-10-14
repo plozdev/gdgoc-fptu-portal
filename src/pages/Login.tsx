@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../api/client';
 import { useAuthStore } from '../store/useAuthStore';
 import { GdgLogo } from '../components/GdgLogo';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
+
+const getDynamicAcademicYear = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const startYear = now.getMonth() >= 8 ? year : year - 1;
+  return `${startYear} - ${startYear + 1}`;
+};
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,8 +18,22 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [academicYear, setAcademicYear] = useState<string>(getDynamicAcademicYear);
   const { login } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    api
+      .get<{ academicYear?: string }>('/api/cms/current-tenure')
+      .then((res) => {
+        if (res?.academicYear) {
+          setAcademicYear(res.academicYear);
+        }
+      })
+      .catch(() => {
+        // Fallback to dynamic calculation
+      });
+  }, []);
 
   const performLogin = async (targetEmail: string, targetPass: string) => {
     setIsSubmitting(true);
@@ -67,7 +89,7 @@ export const Login: React.FC = () => {
           <span>Quay lại Trang Chủ</span>
         </Link>
         <span className="text-xs font-mono-code font-semibold text-slate-500 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-xs">
-          Niên khóa 2025 - 2026 • Gen 4.0
+          Niên khóa {academicYear}
         </span>
       </div>
 
@@ -132,6 +154,12 @@ export const Login: React.FC = () => {
                 <label htmlFor="password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Mật Khẩu
                 </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-bold text-[#4285F4] hover:text-[#3367D6] hover:underline transition-colors"
+                >
+                  Quên mật khẩu?
+                </Link>
               </div>
               <div className="relative">
                 <input

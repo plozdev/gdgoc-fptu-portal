@@ -22,6 +22,8 @@ import { DEPARTMENTS_DATA } from './data/gdgData';
 import { useAuthStore } from './store/useAuthStore';
 import { useLandingContentStore } from './store/useLandingContentStore';
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 
 // Internal Member Portal Pages
@@ -141,6 +143,10 @@ export default function App() {
 
         {/* Member Login Page */}
         <Route path="/login" element={user ? <Navigate to="/app" /> : <Login />} />
+
+        {/* Member Password Recovery Routes */}
+        <Route path="/forgot-password" element={user ? <Navigate to="/app" /> : <ForgotPassword />} />
+        <Route path="/reset-password" element={user ? <Navigate to="/app" /> : <ResetPassword />} />
 
         {/* Internal Member Portal Routes (/app/*) */}
         <Route

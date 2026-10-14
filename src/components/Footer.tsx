@@ -10,9 +10,40 @@ export const Footer: React.FC = () => {
   };
 
   const socialLinks = [
-    { name: 'Facebook', href: 'https://www.facebook.com/gdg.fptu.hcmc', icon: Facebook, color: '#4285F4' },
-    { name: 'LinkedIn', href: 'https://www.linkedin.com/company/gdg-fptu-hcmc/home/', icon: Linkedin, color: '#57CAFF' },
-    { name: 'GitHub', href: 'https://github.com/gdgc-fptu-hcmc', icon: Github, color: '#1E1E1E' },
+    {
+      name: 'Community',
+      title: 'Google Developer Groups Community FPT University HCMC',
+      href: CHAPTER_INFO.communityUrl,
+      icon: () => (
+        <img
+          src="/google_developers_logomark.png"
+          alt="GDG Community"
+          className="w-5 h-auto object-contain shrink-0"
+        />
+      ),
+      color: '#4285F4',
+    },
+    {
+      name: 'Facebook',
+      title: 'Facebook Fanpage GDG on Campus FPTU HCMC',
+      href: 'https://www.facebook.com/gdg.fptu.hcmc',
+      icon: Facebook,
+      color: '#4285F4',
+    },
+    {
+      name: 'LinkedIn',
+      title: 'LinkedIn GDG on Campus FPTU HCMC',
+      href: 'https://www.linkedin.com/company/gdg-fptu-hcmc/home/',
+      icon: Linkedin,
+      color: '#57CAFF',
+    },
+    {
+      name: 'GitHub',
+      title: 'GitHub GDG on Campus FPTU HCMC',
+      href: 'https://github.com/gdgc-fptu-hcmc',
+      icon: Github,
+      color: '#1E1E1E',
+    },
   ];
 
   const quickLinks = [
@@ -24,6 +55,7 @@ export const Footer: React.FC = () => {
   ];
 
   const resources = [
+    { name: 'GDG on Campus FPTU (Community.dev)', href: CHAPTER_INFO.communityUrl },
     { name: 'Google Cloud Skills Boost', href: 'https://www.cloudskillsboost.google/' },
     { name: 'Gemini for Developers & AI Studio', href: 'https://ai.google.dev/' },
     { name: 'Google Developer Groups Community', href: 'https://developers.google.com/community/gdg' },
@@ -55,7 +87,8 @@ export const Footer: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-11 h-11 rounded-xl bg-[#FFFFFF] hover:bg-[#F0F0F0] border-[2.5px] border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover flex items-center justify-center text-[#1E1E1E] transition-all"
-                    aria-label={`GDGoC FPTU on ${social.name}`}
+                    aria-label={social.title}
+                    title={social.title}
                   >
                     <IconComponent className="w-4 h-4" />
                   </a>

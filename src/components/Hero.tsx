@@ -136,13 +136,13 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                 </div>
 
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-[#1E1E1E]/60 uppercase">ĐẶC QUYỀN:</span>
-                  <span className="font-bold text-[#4285F4]">Google Cloud Boost & Codelab</span>
+                  <span className="text-[#1E1E1E]/60 uppercase">QUYỀN LỢI:</span>
+                  <span className="font-bold text-[#4285F4]">Mentorship & Dự án thực tế</span>
                 </div>
 
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-[#1E1E1E]/60 uppercase">TIẾP NHẬN:</span>
-                  <span className="font-bold text-[#34A853]">Phỏng vấn cuốn chiếu</span>
+                  <span className="font-bold text-[#34A853]">Online Form & Phỏng vấn</span>
                 </div>
               </div>
 

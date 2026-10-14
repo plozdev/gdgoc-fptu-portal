@@ -96,7 +96,7 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
                     Kỳ Tuyển Fall 2026
                   </h4>
                   <p className="text-xs text-[#1E1E1E]/80 font-mono-code font-medium">
-                    Phỏng vấn cuốn chiếu trực tiếp tại campus FPTU HCMC
+                    Online form & phỏng vấn trực tiếp tại campus FPTU HCMC
                   </p>
                 </div>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight, BookOpen, Sparkles, Trophy, CheckCircle2, ShieldCheck, Flame } from 'lucide-react';
-import { CHAPTER_INFO } from '../data/gdgData';
+import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
 
 interface JoinCTAProps {
   onOpenJoinModal: () => void;
@@ -29,7 +29,7 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
             <div className="lg:col-span-8 space-y-4">
               <div className="space-y-2">
                 <span className="font-mono-code text-xs font-bold text-[#1E1E1E]/80 uppercase tracking-wider block">
-                  CỔNG TUYỂN SINH Gen 4.0 • KỲ FALL 2026
+                  {RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openHeaderTag : RECRUITMENT_CONFIG.headerTag}
                 </span>
                 <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight leading-tight">
                   Trở Thành Một Phần Của <br />
@@ -53,7 +53,7 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
                 </div>
                 <div className="flex items-center gap-2 bg-[#FFFFFF]/90 p-2.5 rounded-xl border-[1.5px] border-[#1E1E1E]">
                   <CheckCircle2 className="w-4 h-4 text-[#34A853] shrink-0" />
-                  <span>Miễn phí tài khoản Google Cloud Boost</span>
+                  <span>Dự án thực tế & chia sẻ từ chuyên gia</span>
                 </div>
                 <div className="flex items-center gap-2 bg-[#FFFFFF]/90 p-2.5 rounded-xl border-[1.5px] border-[#1E1E1E]">
                   <CheckCircle2 className="w-4 h-4 text-[#34A853] shrink-0" />
@@ -68,7 +68,7 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
                   id="cta-join-now-btn"
                   className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow brutal-shadow-hover transition-all cursor-pointer"
                 >
-                  <span>Gia Nhập Gen 4.0 Ngay</span>
+                  <span>{RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openButtonText : 'Ứng Tuyển (Đang Cập Nhật)'}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
 
@@ -90,13 +90,15 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
 
                 <div className="space-y-1">
                   <div className="font-mono-code text-xs font-bold text-[#EA4335] uppercase">
-                    Hạn Chót Đăng Ký Đợt 1
+                    {RECRUITMENT_CONFIG.isOpen ? 'Hạn Chót Đăng Ký Đợt 1' : 'TRẠNG THÁI: ĐANG CẬP NHẬT'}
                   </div>
                   <h4 className="font-extrabold text-xl text-[#1E1E1E]">
-                    Kỳ Tuyển Fall 2026
+                    {RECRUITMENT_CONFIG.isOpen ? 'Kỳ Tuyển Fall 2026' : 'Chuẩn Bị Mở Đơn Tuyển'}
                   </h4>
                   <p className="text-xs text-[#1E1E1E]/80 font-mono-code font-medium">
-                    Online form & phỏng vấn trực tiếp tại campus FPTU HCMC
+                    {RECRUITMENT_CONFIG.isOpen
+                      ? 'Online form & phỏng vấn trực tiếp tại campus FPTU HCMC'
+                      : 'Cổng đăng ký sẽ sớm mở, theo dõi Fanpage để cập nhật'}
                   </p>
                 </div>
 

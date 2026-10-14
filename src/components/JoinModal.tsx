@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
+import { RECRUITMENT_CONFIG } from '../data/gdgData';
 
 interface JoinModalProps { isOpen: boolean; onClose: () => void; defaultDepartment?: string; }
 type Fields = Record<'fullName' | 'email' | 'phone' | 'studentId' | 'major' | 'semester' | 'facebookUrl' | 'nv1' | 'nv2' | 'portfolioUrl' | 'techStack' | 'nonTechSkills' | 'projectHighlight' | 'goals' | 'commitment' | 'message' | 'website', string>;
@@ -128,7 +129,17 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
           <button type="button" onClick={() => { setReceipt(null); onClose(); }} className="rounded-xl border-2 border-slate-900 px-6 py-3 font-bold">Hoàn tất</button>
         </div> : <>
           <ol aria-label="Tiến độ ứng tuyển" className="mb-6 grid grid-cols-4 gap-2">{steps.map((label, index) => <li key={label} aria-current={index === step ? 'step' : undefined} className={`rounded-xl border-2 p-2 text-center text-xs font-bold ${index === step ? 'border-slate-900 bg-[#FFE7A5]' : 'border-slate-200 bg-slate-50 text-slate-500'}`}><span className="block text-base">{index + 1}</span><span className="hidden sm:block">{label}</span></li>)}</ol>
-          {statusError ? <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">Chưa kết nối được cổng tuyển. <button type="button" onClick={() => setStatusRetry(value => value + 1)} className="font-bold underline">Thử lại</button></div> : !status ? <p className="mb-4 text-sm text-slate-500">Đang kiểm tra đợt tuyển...</p> : !status.enabled && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">Đợt tuyển hiện chưa mở nhận hồ sơ. Bạn có thể xem các câu hỏi trước.</p>}
+          {statusError ? <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm">Chưa kết nối được cổng tuyển. <button type="button" onClick={() => setStatusRetry(value => value + 1)} className="font-bold underline">Thử lại</button></div> : !status ? <p className="mb-4 text-sm text-slate-500">Đang kiểm tra đợt tuyển...</p> : (!RECRUITMENT_CONFIG.isOpen || !status.enabled) && (
+            <div role="status" className="mb-5 rounded-2xl border-2 border-slate-900 bg-[#FFE7A5] p-4 text-xs sm:text-sm font-medium">
+              <div className="flex items-center gap-2 font-extrabold text-slate-900 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="uppercase tracking-wide">Cổng Tuyển Thành Viên Đang Cập Nhật</span>
+              </div>
+              <p className="text-slate-800 leading-relaxed">
+                {RECRUITMENT_CONFIG.noticeText} Bạn vẫn có thể xem trước các bước câu hỏi bên dưới để chuẩn bị hồ sơ tốt nhất!
+              </p>
+            </div>
+          )}
           <form ref={form} onSubmit={event => void advance(event)}>
             <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
               <legend className="mb-4 text-lg font-extrabold">Bước {step + 1}: {steps[step]}</legend>

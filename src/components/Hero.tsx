@@ -4,7 +4,7 @@ import {
   BookOpen,
   Award
 } from 'lucide-react';
-import { CHAPTER_INFO } from '../data/gdgData';
+import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
 import { GdgBracketsGlyph } from './GdgLogo';
 
 interface HeroProps {
@@ -68,7 +68,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                 id="hero-join-community-btn"
                 className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow brutal-shadow-hover cursor-pointer whitespace-nowrap"
               >
-                <span>Gia Nhập Gen 4.0 Ngay</span>
+                <span>{RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openButtonText : RECRUITMENT_CONFIG.buttonText}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
 
@@ -115,10 +115,17 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                   </div>
                 </div>
 
-                <span className="px-2.5 py-1 bg-[#CCF6C5] border-2 border-[#1E1E1E] rounded-full text-[10px] font-mono-code font-extrabold text-[#1E1E1E] flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#34A853] animate-ping" />
-                  ONLINE
-                </span>
+                {RECRUITMENT_CONFIG.isOpen ? (
+                  <span className="px-2.5 py-1 bg-[#CCF6C5] border-2 border-[#1E1E1E] rounded-full text-[10px] font-mono-code font-extrabold text-[#1E1E1E] flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#34A853] animate-ping" />
+                    ONLINE
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 bg-[#FFE7A5] border-2 border-[#1E1E1E] rounded-full text-[10px] font-mono-code font-extrabold text-[#1E1E1E] flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#FBBC04] animate-pulse" />
+                    ĐANG CẬP NHẬT
+                  </span>
+                )}
               </div>
 
               {/* Pass Ticket Body */}
@@ -126,7 +133,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenJoinModal, onOpenJdHandbook })
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-[#1E1E1E]/60 uppercase">ĐỐI TƯỢNG:</span>
                   <span className="font-extrabold text-[#1E1E1E] bg-[#FFE7A5] px-2 py-0.5 rounded border border-[#1E1E1E]">
-                    Tân Sinh Viên Gen 4.0
+                    {RECRUITMENT_CONFIG.isOpen ? 'Tân Sinh Viên Gen 4.0' : 'Gen 4.0 • Sắp Mở'}
                   </span>
                 </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GdgLogo } from './GdgLogo';
 import { Menu, X, ArrowRight, Sparkles, Check, Copy, LogIn, LayoutDashboard } from 'lucide-react';
-import { CHAPTER_INFO } from '../data/gdgData';
+import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
 import { useAuthStore } from '../store/useAuthStore';
 
 interface NavbarProps {
@@ -113,7 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
             id="navbar-join-button"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-xs lg:text-sm rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow-hover brutal-shadow-sm cursor-pointer whitespace-nowrap"
           >
-            <span>Ứng Tuyển Gen 4.0</span>
+            <span>{RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openButtonText : RECRUITMENT_CONFIG.buttonText}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -189,7 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
               }}
               className="w-full flex items-center justify-center gap-2 py-3 bg-[#4285F4] text-[#FFFFFF] font-bold text-sm rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow-sm"
             >
-              <span>Ứng Tuyển Gen 4.0</span>
+              <span>{RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openButtonText : RECRUITMENT_CONFIG.buttonText}</span>
             </button>
 
             {onOpenJdHandbook && (

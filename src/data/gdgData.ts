@@ -17,6 +17,27 @@ export const CHAPTER_INFO = {
   summerAward: '"The GDGoC Impact Maker" trong AI Riser Vietnam 2026',
 };
 
+// =============================================================================
+// CẤU HÌNH TRẠNG THÁI TUYỂN QUÂN (RECRUITMENT CONFIGURATION)
+// =============================================================================
+// 👉 DÀNH CHO BAN CHỦ NHIỆM (BCN) KHI MỞ / ĐÓNG ĐỢT TUYỂN SINH:
+// - Khi ĐANG CẬP NHẬT / TẠM ĐÓNG: Giữ `isOpen: false`
+//   -> Toàn bộ nút CTA, thẻ vé và thông báo trên Landing Page tự động chuyển sang "Đang cập nhật".
+// - Khi CHÍNH THỨC MỞ ĐƠN: Đổi `isOpen: true`
+//   -> Các nút sẽ đổi thành "Gia Nhập Gen 4.0 Ngay", form tuyển quân sẽ mở nhận hồ sơ.
+// =============================================================================
+export const RECRUITMENT_CONFIG = {
+  isOpen: false, // 👈 [BẬT / TẮT ĐỢT TUYỂN TẠI ĐÂY] true: Mở nhận đơn | false: Đang cập nhật
+  batch: "Gen 4.0",
+  term: "Kỳ Fall 2026",
+  statusBadge: "ĐANG CẬP NHẬT",
+  buttonText: "Ứng Tuyển (Đang Cập Nhật)",
+  openButtonText: "Gia Nhập Gen 4.0 Ngay",
+  headerTag: "CỔNG TUYỂN SINH • ĐANG CẬP NHẬT",
+  openHeaderTag: "CỔNG TUYỂN SINH Gen 4.0 • KỲ FALL 2026",
+  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 hiện đang được cập nhật và chuẩn bị mở trong thời gian tới. Các bạn sinh viên hãy theo dõi Fanpage CLB để nhận thông báo sớm nhất!",
+};
+
 export const DEPARTMENTS_DATA: Department[] = [
   // --- KHỐI TECH ---
   {

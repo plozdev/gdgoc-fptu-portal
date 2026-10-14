@@ -1,23 +1,49 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { GdgLogo } from './GdgLogo';
-import { Github, Linkedin, Facebook, MessageSquare, ArrowUp, MapPin, Mail, Globe, BookOpen, ArrowRight, Trophy } from 'lucide-react';
+import { Github, Linkedin, Facebook, ArrowUp, MapPin, Mail } from 'lucide-react';
 import { CHAPTER_INFO } from '../data/gdgData';
 
-interface FooterProps {
-  onOpenJoinModal?: () => void;
-  onOpenJdHandbook?: () => void;
-}
-
-export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandbook }) => {
+export const Footer: React.FC = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const socialLinks = [
-    { name: 'Facebook', href: 'https://facebook.com', icon: Facebook, color: '#4285F4' },
-    { name: 'LinkedIn', href: 'https://linkedin.com', icon: Linkedin, color: '#57CAFF' },
-    { name: 'GitHub', href: 'https://github.com', icon: Github, color: '#1E1E1E' },
-    { name: 'Discord', href: 'https://discord.com', icon: MessageSquare, color: '#34A853' },
+    {
+      name: 'Community',
+      title: 'Google Developer Groups Community FPT University HCMC',
+      href: CHAPTER_INFO.communityUrl,
+      icon: () => (
+        <img
+          src="/google_developers_logomark.png"
+          alt="GDG Community"
+          className="w-5 h-auto object-contain shrink-0"
+        />
+      ),
+      color: '#4285F4',
+    },
+    {
+      name: 'Facebook',
+      title: 'Facebook Fanpage GDG on Campus FPTU HCMC',
+      href: 'https://www.facebook.com/gdg.fptu.hcmc',
+      icon: Facebook,
+      color: '#4285F4',
+    },
+    {
+      name: 'LinkedIn',
+      title: 'LinkedIn GDG on Campus FPTU HCMC',
+      href: 'https://www.linkedin.com/company/gdg-fptu-hcmc/home/',
+      icon: Linkedin,
+      color: '#57CAFF',
+    },
+    {
+      name: 'GitHub',
+      title: 'GitHub GDG on Campus FPTU HCMC',
+      href: 'https://github.com/gdgc-fptu-hcmc',
+      icon: Github,
+      color: '#1E1E1E',
+    },
   ];
 
   const quickLinks = [
@@ -25,10 +51,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandboo
     { name: 'Các Ban Chuyên Môn', href: '#departments' },
     { name: 'Số Liệu Summer 2026', href: '#impact' },
     { name: 'Sự Kiện Fall 2026', href: '#events' },
-    { name: 'Cổng Thành Viên (GDGoC-OS)', href: '/login' },
+    { name: 'Cổng Thành Viên (GDGoC FPTU OS)', href: '/login' },
   ];
 
   const resources = [
+    { name: 'GDG on Campus FPTU (Community.dev)', href: CHAPTER_INFO.communityUrl },
     { name: 'Google Cloud Skills Boost', href: 'https://www.cloudskillsboost.google/' },
     { name: 'Gemini for Developers & AI Studio', href: 'https://ai.google.dev/' },
     { name: 'Google Developer Groups Community', href: 'https://developers.google.com/community/gdg' },
@@ -60,7 +87,8 @@ export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandboo
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-11 h-11 rounded-xl bg-[#FFFFFF] hover:bg-[#F0F0F0] border-[2.5px] border-[#1E1E1E] brutal-shadow-sm brutal-shadow-hover flex items-center justify-center text-[#1E1E1E] transition-all"
-                    aria-label={`GDGoC FPTU on ${social.name}`}
+                    aria-label={social.title}
+                    title={social.title}
                   >
                     <IconComponent className="w-4 h-4" />
                   </a>
@@ -77,12 +105,22 @@ export const Footer: React.FC<FooterProps> = ({ onOpenJoinModal, onOpenJdHandboo
             <ul className="space-y-2">
               {quickLinks.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-xs sm:text-sm text-[#1E1E1E]/85 hover:text-[#4285F4] hover:underline transition-colors font-medium"
-                  >
-                    {link.name}
-                  </a>
+                  {link.href.startsWith('/') ? (
+                    <Link
+                      to={link.href}
+                      className="text-xs sm:text-sm text-[#1E1E1E]/85 hover:text-[#4285F4] hover:underline transition-colors font-medium inline-flex items-center gap-1.5"
+                    >
+                      <span>{link.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-mono-code border border-blue-200">OS</span>
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      className="text-xs sm:text-sm text-[#1E1E1E]/85 hover:text-[#4285F4] hover:underline transition-colors font-medium"
+                    >
+                      {link.name}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

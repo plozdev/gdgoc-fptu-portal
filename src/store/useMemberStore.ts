@@ -2,13 +2,13 @@
  * @file useMemberStore.ts
  * @description Zustand store quản lý danh sách thành viên CLB.
  * 
- * ⚠️  MOCK DATA ĐÃ BỊ XÓA — Store bắt đầu với danh sách rỗng.
- * Khi backend được tích hợp, data sẽ được fetch từ GET /api/members.
- * localStorage chỉ dùng để cache local, không phải nguồn dữ liệu chính.
+ * Dữ liệu được fetch trực tiếp từ API backend (GET /api/members).
+ * Chỉ cập nhật trạng thái sau khi backend lưu thành công.
  */
 
 import { create } from 'zustand';
-import { Tier, BanId, BAN_NAMES } from '../mocks/fixtures/users';
+import { Tier, BanId, BAN_NAMES } from '../types/auth';
+import { membersApi, QueryMembersParams } from '../api/members.api';
 
 // ==========================================
 // TYPES
@@ -18,7 +18,6 @@ export interface MemberSocials {
   facebook?: string;
   github?: string;
   linkedin?: string;
-  discord?: string;
 }
 
 export interface Member {
@@ -32,15 +31,17 @@ export interface Member {
   tier: Tier;                // Cấp bậc: ADVISOR | ORG_ADMIN | BAN_LEAD | BAN_MEMBER
   banId: BanId | null;       // Ban trực thuộc
   banName: string;           // Tên ban đầy đủ
-  gen: string;               // Kỳ hoạt động: 'Gen 4.0', 'Gen 3.5', v.v.
-  status: 'ACTIVE' | 'ALUMNI' | 'ON_LEAVE';
+  gen: string;               // Kỳ hoạt động: 'GEN 2.0', 'GEN 2.1', 'GEN 3.0', 'Gen 4.0'
+  status: 'ACTIVE' | 'PROBATION' | 'ALUMNI' | 'ON_LEAVE';
   joinedDate: string;        // dd/MM/yyyy
 
-  // Dữ liệu cá nhân (thành viên tự cập nhật)
+  // Dữ liệu cá nhân
   bio?: string;
   avatar?: string;
+  coverUrl?: string;
   socials?: MemberSocials;
   skills?: string[];
+  gemsBalance?: number;
 }
 
 export interface ExcelImportRow {
@@ -58,17 +59,19 @@ export interface ExcelImportRow {
 
 interface MemberState {
   members: Member[];
-  addMember: (member: Omit<Member, 'id'>) => void;
-  updateMember: (id: string, updates: Partial<Member>) => void;
-  deleteMember: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  fetchMembers: (params?: QueryMembersParams) => Promise<void>;
+  addMember: (member: Omit<Member, 'id'>) => Promise<void>;
+  updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
   updateSelfProfile: (id: string, profile: {
     bio?: string;
     phone?: string;
     socials?: MemberSocials;
     skills?: string[];
     avatar?: string;
-  }) => void;
-  importFromExcel: (rows: ExcelImportRow[], defaultGen: string) => { added: number; errors: string[] };
+  }) => Promise<void>;
   getMemberById: (id: string) => Member | undefined;
   getMemberByEmail: (email: string) => Member | undefined;
   getAvailableGens: () => string[];
@@ -78,37 +81,14 @@ interface MemberState {
 // STORAGE
 // ==========================================
 
-const STORAGE_KEY = 'gdgoc_members_directory_v1';
 
-const loadMembersFromStorage = (): Member[] => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      const parsed: unknown = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as Member[];
-      }
-    }
-  } catch (error) {
-    console.error('[MemberStore] Failed to load members from localStorage:', error);
-  }
-  return [];
-};
-
-const saveToStorage = (members: Member[]): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(members));
-  } catch (error) {
-    console.error('[MemberStore] Failed to save members to localStorage:', error);
-  }
-};
 
 // ==========================================
 // HELPERS — Derive tier/ban from position string
 // ==========================================
 
-function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; banName: string } {
-  const posLower = position.toLowerCase();
+export function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; banName: string } {
+  const posLower = (position || '').toLowerCase();
 
   if (posLower.includes('advisor') || posLower.includes('cố vấn')) {
     return { tier: 'ADVISOR', banId: null, banName: 'Cố Vấn CLB' };
@@ -136,7 +116,91 @@ function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; 
   }
 
   // Default fallback
-  return { tier: 'BAN_MEMBER', banId: null, banName: 'Ban Thành Viên' };
+  return { tier: 'BAN_MEMBER', banId: null, banName: 'Ban Chủ Nhiệm / Thành Viên' };
+}
+
+export function mapBackendMemberToMember(raw: any): Member {
+  const role = raw.tenure?.role;
+  let tier: Tier = 'BAN_MEMBER';
+  if (role === 'ADVISOR') {
+    tier = 'ADVISOR';
+  } else if (role === 'LEAD' || role === 'ADMIN') {
+    tier = 'ORG_ADMIN';
+  } else if (role === 'DEPARTMENT_LEAD') {
+    tier = 'BAN_LEAD';
+  }
+
+  const deptCode = raw.tenure?.departmentCode;
+  const deptMap: Record<string, { banId: BanId | null; banName: string }> = {
+    TECH_AI: { banId: 'ai', banName: BAN_NAMES['ai'] },
+    TECH_CLOUD: { banId: 'cloud', banName: BAN_NAMES['cloud'] },
+    TECH_WEB: { banId: 'web', banName: BAN_NAMES['web'] },
+    TECH_RESEARCH: { banId: 'research', banName: BAN_NAMES['research'] },
+    MEDIA: { banId: 'media', banName: BAN_NAMES['media'] },
+    HR_EVENT: { banId: 'hr-event', banName: BAN_NAMES['hr-event'] },
+    EXECUTIVE: { banId: null, banName: 'Ban Chủ Nhiệm' },
+  };
+
+  const derived = deriveTierAndBan(raw.tenure?.position || raw.position || '');
+  const banInfo = deptCode && deptMap[deptCode] ? deptMap[deptCode] : derived;
+
+  // Extract academicYear: e.g. K21
+  let academicYear = raw.academicYear;
+  if (!academicYear) {
+    const kSkill = raw.skills?.find((s: string) => /^K\d+$/i.test(s));
+    if (kSkill) {
+      academicYear = kSkill;
+    } else {
+      const match = (raw.mssv || '').match(/^[A-Za-z]+(\d{2})/);
+      academicYear = match ? `K${match[1]}` : ''; 
+    }
+  }
+
+  // Extract gen: e.g. GEN 2.1
+  let gen = raw.gen;
+  if (!gen) {
+    const genSkill = raw.skills?.find((s: string) => /^GEN/i.test(s));
+    gen = genSkill || raw.tenure?.genLabel || '';
+  }
+
+  // Joined date: dd/MM/yyyy
+  let joinedDate = 'Chưa cập nhật';
+  if (raw.tenure?.joinedAt) {
+    const d = new Date(raw.tenure.joinedAt);
+    if (!isNaN(d.getTime())) {
+      joinedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    }
+  }
+
+  const socials: MemberSocials = raw.socials || {
+    facebook: raw.facebookUrl || '',
+    github: raw.githubUrl || '',
+    linkedin: raw.linkedinUrl || '',
+  };
+
+  return {
+    id: raw.id,
+    name: raw.fullName || raw.name,
+    studentId: raw.mssv || raw.studentId,
+    academicYear,
+    email: raw.email,
+    phone: raw.phoneNumber || raw.phone || 'Chưa cập nhật',
+    position: raw.tenure?.position || raw.position || 'Thành Viên',
+    tier: raw.tier || tier,
+    banId: banInfo.banId,
+    banName: banInfo.banName,
+    gen,
+    status: raw.tenure?.status || raw.status || 'ACTIVE',
+    joinedDate,
+    bio: raw.bio || '',
+    avatar: raw.avatarUrl || raw.avatar,
+    coverUrl: raw.coverUrl || undefined,
+    socials,
+    skills: (raw.skills || []).filter(
+      (s: string) => !/^GEN/i.test(s.trim()) && !/^K\d+$/i.test(s.trim())
+    ),
+    gemsBalance: raw.gemsBalance ?? raw.user?.gemsBalance ?? 0,
+  };
 }
 
 // ==========================================
@@ -144,122 +208,144 @@ function deriveTierAndBan(position: string): { tier: Tier; banId: BanId | null; 
 // ==========================================
 
 export const useMemberStore = create<MemberState>((set, get) => ({
-  members: loadMembersFromStorage(),
+  members: [],
+  isLoading: false,
+  error: null,
 
-  addMember: (memberData) => {
-    const newMember: Member = {
-      ...memberData,
-      id: `mem-${Date.now()}`,
-    };
-    set((state) => {
-      const updated = [newMember, ...state.members];
-      saveToStorage(updated);
-      return { members: updated };
-    });
+  fetchMembers: async (params?: QueryMembersParams) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res: any = await membersApi.getMembers({ limit: 100, ...params });
+      const rawList = res.items || res.data?.items || (Array.isArray(res) ? res : Array.isArray(res.data) ? res.data : []);
+      const mapped = rawList.map(mapBackendMemberToMember);
+      set({ members: mapped, isLoading: false });
+    } catch (err: any) {
+      console.error('[MemberStore] Failed to fetch members from API:', err);
+      set({ error: err.message || 'Lỗi tải danh sách thành viên', isLoading: false });
+    }
   },
 
-  updateMember: (id, updates) => {
-    set((state) => {
-      const updated = state.members.map((m) =>
-        m.id === id ? { ...m, ...updates } : m
-      );
-      saveToStorage(updated);
-      return { members: updated };
-    });
+  addMember: async (memberData) => {
+    try {
+      const deptCodeMap: Record<string, string> = {
+        ai: 'TECH_AI',
+        cloud: 'TECH_CLOUD',
+        web: 'TECH_WEB',
+        research: 'TECH_RESEARCH',
+        media: 'MEDIA',
+        'hr-event': 'HR_EVENT',
+      };
+      const deptCode = memberData.banId ? deptCodeMap[memberData.banId] || 'EXECUTIVE' : 'EXECUTIVE';
+
+      const roleMap: Record<Tier, string> = {
+        ORG_ADMIN: 'LEAD',
+        ADVISOR: 'ADVISOR',
+        BAN_LEAD: 'DEPARTMENT_LEAD',
+        BAN_MEMBER: 'MEMBER',
+      };
+
+      const res: any = await membersApi.createMember({
+        mssv: memberData.studentId,
+        fullName: memberData.name,
+        email: memberData.email,
+        phoneNumber: memberData.phone,
+        departmentCode: deptCode,
+        role: roleMap[memberData.tier] || 'MEMBER',
+        position: memberData.position,
+        academicYear: memberData.academicYear,
+        gen: memberData.gen,
+        status: memberData.status,
+      });
+
+      if (!res?.id) throw new Error('Backend không trả về ID thành viên.');
+      const newMember = mapBackendMemberToMember(res);
+
+      set((state) => {
+        const updated = [newMember, ...state.members.filter((m) => m.id !== newMember.id)];
+          return { members: updated };
+      });
+    } catch (error) {
+      console.error('[MemberStore] Failed to create member on backend:', error);
+      throw error;
+    }
   },
 
-  deleteMember: (id) => {
+  updateMember: async (id, updates) => {
+    try {
+      const deptCodeMap: Record<string, string> = {
+        ai: 'TECH_AI',
+        cloud: 'TECH_CLOUD',
+        web: 'TECH_WEB',
+        research: 'TECH_RESEARCH',
+        media: 'MEDIA',
+        'hr-event': 'HR_EVENT',
+      };
+      const roleMap: Record<Tier, string> = {
+        ORG_ADMIN: 'LEAD',
+        ADVISOR: 'ADVISOR',
+        BAN_LEAD: 'DEPARTMENT_LEAD',
+        BAN_MEMBER: 'MEMBER',
+      };
+
+      const saved: any = await membersApi.updateMember(id, {
+        academicYear: updates.academicYear,
+        gen: updates.gen,
+        fullName: updates.name, mssv: updates.studentId, email: updates.email,
+        position: updates.position,
+        status: updates.status,
+        departmentCode: updates.banId === null ? 'EXECUTIVE' : updates.banId ? deptCodeMap[updates.banId] : undefined,
+        role: updates.tier ? roleMap[updates.tier] : undefined,
+      });
+      set((state) => ({ members: state.members.map((member) => member.id === id ? mapBackendMemberToMember(saved) : member) }));
+    } catch (error) { throw error; }
+  },
+
+  deleteMember: async (id) => {
+    try {
+      await membersApi.deleteMember(id);
+    } catch (error) {
+      throw error;
+    }
+
     set((state) => {
       const updated = state.members.filter((m) => m.id !== id);
-      saveToStorage(updated);
       return { members: updated };
     });
   },
 
-  updateSelfProfile: (id, profile) => {
+  updateSelfProfile: async (id, profile) => {
+    const cleanSkills = profile.skills
+      ? profile.skills.filter((s: string) => !/^GEN/i.test(s.trim()) && !/^K\d+$/i.test(s.trim()))
+      : undefined;
+
+    try {
+      await membersApi.updateProfile(id, {
+        bio: profile.bio,
+        phoneNumber: profile.phone !== undefined ? (profile.phone.trim() ? profile.phone.trim() : null) : undefined,
+        skills: cleanSkills,
+        facebookUrl: profile.socials?.facebook !== undefined ? (profile.socials.facebook.trim() ? profile.socials.facebook.trim() : null) : undefined,
+        githubUrl: profile.socials?.github !== undefined ? (profile.socials.github.trim() ? profile.socials.github.trim() : null) : undefined,
+        linkedinUrl: profile.socials?.linkedin !== undefined ? (profile.socials.linkedin.trim() ? profile.socials.linkedin.trim() : null) : undefined,
+        avatarUrl: profile.avatar !== undefined ? (profile.avatar.trim() ? profile.avatar.trim() : null) : undefined,
+      });
+    } catch (error) {
+      throw error;
+    }
+
     set((state) => {
       const updated = state.members.map((m) => {
         if (m.id !== id) return m;
         return {
           ...m,
           ...(profile.bio !== undefined && { bio: profile.bio }),
-          ...(profile.phone !== undefined && { phone: profile.phone }),
+          ...(profile.phone !== undefined && { phone: profile.phone.trim() }),
           ...(profile.socials !== undefined && { socials: { ...m.socials, ...profile.socials } }),
-          ...(profile.skills !== undefined && { skills: profile.skills }),
+          ...(profile.skills !== undefined && { skills: cleanSkills || [] }),
           ...(profile.avatar !== undefined && { avatar: profile.avatar }),
         };
       });
-      saveToStorage(updated);
       return { members: updated };
     });
-  },
-
-  importFromExcel: (rows, defaultGen) => {
-    const errors: string[] = [];
-    const newMembers: Member[] = [];
-    const currentMembers = get().members;
-
-    rows.forEach((row, index) => {
-      const rowNum = index + 2; // 1-indexed, row 1 = header
-      const name = (row['Họ và tên'] ?? '').trim();
-      const studentId = (row['MSSV'] ?? '').trim().toUpperCase();
-      const email = (row['Email'] ?? '').trim().toLowerCase();
-      const academicYear = (row['Khóa'] ?? 'K20').trim().toUpperCase();
-      const phone = (row['Số điện thoại'] ?? '').trim();
-      const position = (row['Position'] ?? 'Thành Viên').trim();
-
-      if (!name) {
-        errors.push(`Dòng ${rowNum}: Thiếu Họ và tên`);
-        return;
-      }
-      if (!studentId) {
-        errors.push(`Dòng ${rowNum} (${name}): Thiếu MSSV`);
-        return;
-      }
-      if (!email) {
-        errors.push(`Dòng ${rowNum} (${name}): Thiếu Email FPT`);
-        return;
-      }
-
-      const emailExists =
-        currentMembers.some((m) => m.email.toLowerCase() === email) ||
-        newMembers.some((m) => m.email.toLowerCase() === email);
-
-      if (emailExists) {
-        errors.push(`Dòng ${rowNum}: Email ${email} đã tồn tại trong hệ thống`);
-        return;
-      }
-
-      const { tier, banId, banName } = deriveTierAndBan(position);
-
-      newMembers.push({
-        id: `mem-import-${Date.now()}-${index}`,
-        name,
-        studentId,
-        academicYear,
-        email,
-        phone: phone || 'Chưa cập nhật',
-        position,
-        tier,
-        banId,
-        banName,
-        gen: defaultGen || 'Gen 4.0',
-        status: 'ACTIVE',
-        joinedDate: new Date().toLocaleDateString('vi-VN'),
-        bio: `${position} tại GDG on Campus FPT University HCMC.`,
-        skills: [],
-      });
-    });
-
-    if (newMembers.length > 0) {
-      set((state) => {
-        const updated = [...newMembers, ...state.members];
-        saveToStorage(updated);
-        return { members: updated };
-      });
-    }
-
-    return { added: newMembers.length, errors };
   },
 
   getMemberById: (id) => get().members.find((m) => m.id === id),
@@ -270,9 +356,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   },
 
   getAvailableGens: () => {
-    const genSet = new Set(get().members.map((m) => m.gen));
-    const standardGens = ['Gen 4.0', 'Gen 3.5', 'Gen 3.0', 'Gen 2.5', 'Gen 2.0', 'Gen 1.0'];
-    standardGens.forEach((g) => genSet.add(g));
+    const genSet = new Set(get().members.map((m) => m.gen).filter(Boolean));
 
     return Array.from(genSet).sort((a, b) => {
       const numA = parseFloat(a.replace(/[^\d.]/g, '')) || 0;

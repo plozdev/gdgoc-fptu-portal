@@ -5,7 +5,7 @@ export interface CreateInventoryItemDto {
   category: string;
   quantity: number;
   holderName: string;
-  holderUserId?: string;
+  holderUserId?: string | null;
   notes?: string;
 }
 

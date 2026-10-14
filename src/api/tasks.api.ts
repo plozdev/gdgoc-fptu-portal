@@ -1,6 +1,8 @@
 import { api } from './client';
 
 export interface QueryTasksParams {
+  semesterId?: string;
+  doneDays?: number;
   tenureId?: string;
   departmentCode?: string;
   departmentId?: string;
@@ -20,7 +22,7 @@ export interface CreateTaskDto {
   gemsReward?: number;
   departmentCode?: string;
   departmentId?: string;
-  tenureId: string;
+  tenureId?: string;
   assigneeIds?: string[];
   eventId?: string;
 }

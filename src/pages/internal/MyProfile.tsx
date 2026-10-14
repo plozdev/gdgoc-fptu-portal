@@ -1,87 +1,171 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useMemberStore, MemberSocials } from '../../store/useMemberStore';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  GraduationCap, 
-  ShieldCheck, 
-  Lock, 
-  Sparkles, 
-  Globe, 
-  Github, 
-  Linkedin, 
-  Facebook, 
-  MessageSquare, 
-  CheckCircle2, 
-  Edit3, 
-  Award, 
-  Tag, 
-  Plus, 
+import { useMemberStore, Member, MemberSocials } from '../../store/useMemberStore';
+import { membersApi } from '../../api/members.api';
+import { tasksApi } from '../../api/tasks.api';
+import { eventsApi } from '../../api/events.api';
+import {
+  User,
+  Mail,
+  Phone,
+  GraduationCap,
+  ShieldCheck,
+  Lock,
+  Sparkles,
+  Globe,
+  Github,
+  Linkedin,
+  Facebook,
+  MessageSquare,
+  CheckCircle2,
+  Edit3,
+  Award,
+  Tag,
+  Plus,
   X,
   Calendar,
   Layers,
   Flame,
-  Check
+  Check,
+  Camera,
+  RefreshCw,
+  KeyRound
 } from 'lucide-react';
 
 const SUGGESTED_SKILLS = [
-  'React', 'TypeScript', 'Google Cloud', 'Python', 'PyTorch', 
-  'Figma', 'Prompt Engineering', 'Docker', 'Event Organizing', 
+  'React', 'TypeScript', 'Google Cloud', 'Python', 'PyTorch',
+  'Figma', 'Prompt Engineering', 'Docker', 'Event Organizing',
   'MC & Hosting', 'Video Production', 'Content Writing'
 ];
 
 export const MyProfile: React.FC = () => {
   const { user, setUser } = useAuthStore();
-  const { members, updateSelfProfile } = useMemberStore();
+  const { members, fetchMembers, updateSelfProfile, isLoading: isMembersLoading } = useMemberStore();
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   // Find member matching current user session
-  const currentMember = members.find(m => m.email.toLowerCase() === user?.email.toLowerCase()) || {
+  const currentMember: Member = members.find(
+    m => (user?.id && m.id === user.id) || (user?.email && m.email.toLowerCase() === user.email.toLowerCase())
+  ) || {
     id: user?.id || 'current',
     name: user?.name || 'Thành Viên GDG',
-    studentId: 'SE180000',
-    academicYear: 'K20',
-    email: user?.email || 'member@fpt.edu.vn',
-    phone: '0901234567',
+    studentId: user?.mssv || '',
+    academicYear: '',
+    email: user?.email || '',
+    phone: user?.phoneNumber || user?.phone || '',
     position: user?.tier === 'ORG_ADMIN' ? 'Ban Chủ Nhiệm' : user?.tier === 'BAN_LEAD' ? 'Trưởng Ban' : 'Thành Viên',
     tier: user?.tier || 'BAN_MEMBER',
     banId: user?.banId || null,
     banName: user?.banName || 'Ban Thành Viên',
-    gen: 'Gen 4.0',
+    gen: '',
     status: 'ACTIVE',
-    joinedDate: '15/09/2024',
-    bio: 'Thành viên nhiệt huyết của GDG on Campus FPT University HCMC! 🚀',
-    skills: ['Teamwork', 'Communication']
+    joinedDate: '',
+    bio: '',
+    skills: [],
+    socials: {} as MemberSocials,
+    gemsBalance: user?.gemsBalance ?? 0
+  };
+
+  // Helper functions for validation & data cleaning
+  const cleanSkills = (list: string[] = []) =>
+    list.filter((s) => !/^GEN/i.test(s.trim()) && !/^K\d+$/i.test(s.trim()));
+
+  const isValidVietnamesePhone = (p: string) => {
+    const cleaned = p.replace(/[\s.-]/g, '');
+    return /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(cleaned);
+  };
+
+  const isValidUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
   };
 
   // Editable Form State
   const [bio, setBio] = useState(currentMember.bio || '');
-  const [phone, setPhone] = useState(currentMember.phone || '');
+  const [phone, setPhone] = useState(currentMember.phone === 'Chưa cập nhật' ? '' : (currentMember.phone || ''));
+  const [phoneError, setPhoneError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(currentMember.avatar || user?.avatarUrl || '');
+  const [coverUrl, setCoverUrl] = useState(currentMember.coverUrl || '');
+  const [uploadingImage, setUploadingImage] = useState<'avatar' | 'cover' | null>(null);
+  const [imageError, setImageError] = useState('');
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const coverInput = useRef<HTMLInputElement>(null);
+
   const [facebook, setFacebook] = useState(currentMember.socials?.facebook || '');
   const [github, setGithub] = useState(currentMember.socials?.github || '');
   const [linkedin, setLinkedin] = useState(currentMember.socials?.linkedin || '');
-  const [discord, setDiscord] = useState(currentMember.socials?.discord || '');
-  
-  const [skills, setSkills] = useState<string[]>(currentMember.skills || []);
+
+  const [skills, setSkills] = useState<string[]>(cleanSkills(currentMember.skills));
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSavedToast, setIsSavedToast] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Stats from backend
+  const [userTasks, setUserTasks] = useState<any[]>([]);
+  const [eventsCount, setEventsCount] = useState<number>(0);
+
+  const fetchUserStats = useCallback(async () => {
+    try {
+      const [tasksRes, eventsRes] = await Promise.allSettled([
+        tasksApi.getTasks({ limit: 100, assigneeId: user?.id, semesterId: 'all' }),
+        eventsApi.getMyContributionCount(),
+      ]);
+
+      if (tasksRes.status === 'fulfilled' && tasksRes.value) {
+        const raw = tasksRes.value;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.items)
+          ? raw.items
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : [];
+        setUserTasks(list);
+      } else { setUserTasks([]); }
+
+      if (eventsRes.status === 'fulfilled' && eventsRes.value) {
+        setEventsCount(eventsRes.value.count);
+      }
+    } catch (err) {
+      console.warn('[MyProfile] Failed to fetch stats:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserStats();
+  }, [fetchUserStats]);
 
   useEffect(() => {
     if (currentMember) {
       setBio(currentMember.bio || '');
-      setPhone(currentMember.phone || '');
+      const rawPhone = currentMember.phone === 'Chưa cập nhật' ? '' : (currentMember.phone || '');
+      setPhone(rawPhone);
+      setAvatarUrl(currentMember.avatar || user?.avatarUrl || '');
+      setCoverUrl(currentMember.coverUrl || '');
       setFacebook(currentMember.socials?.facebook || '');
       setGithub(currentMember.socials?.github || '');
       setLinkedin(currentMember.socials?.linkedin || '');
-      setDiscord(currentMember.socials?.discord || '');
-      setSkills(currentMember.skills || []);
+      setSkills(cleanSkills(currentMember.skills));
     }
-  }, [currentMember.id]);
+  }, [currentMember.id, members.length]);
 
   const handleAddSkill = (skillToAdd: string) => {
     const trimmed = skillToAdd.trim();
     if (!trimmed) return;
+    if (/^GEN/i.test(trimmed) || /^K\d+$/i.test(trimmed)) {
+      alert('Khóa sinh viên (K) và Thế hệ (Gen) đã được hệ thống quản lý riêng ở phần Thông Tin Định Danh, không cần thêm vào kỹ năng.');
+      setNewSkillInput('');
+      return;
+    }
     if (!skills.includes(trimmed)) {
       setSkills([...skills, trimmed]);
     }
@@ -92,31 +176,116 @@ export const MyProfile: React.FC = () => {
     setSkills(skills.filter(s => s !== skillToRemove));
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleImageChange = async (kind: 'avatar' | 'cover', e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || user?.readOnly || uploadingImage || isSaving) return;
+    setImageError('');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setImageError('Chọn ảnh JPG, PNG hoặc WebP, tối đa 5 MB.');
+      return;
+    }
+    setUploadingImage(kind);
+    try {
+      const { url } = await membersApi.uploadProfileImage(kind, file);
+      if (kind === 'avatar') {
+        setAvatarUrl(url);
+        if (user) setUser({ ...user, avatarUrl: url });
+      } else setCoverUrl(url);
+      useMemberStore.setState(state => ({ members: state.members.map(member => member.id === user?.id
+        ? { ...member, ...(kind === 'avatar' ? { avatar: url } : { coverUrl: url }) } : member) }));
+      setIsSavedToast(true);
+      setTimeout(() => setIsSavedToast(false), 4000);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : 'Không thể tải ảnh lên.');
+    } finally {
+      setUploadingImage(null);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPhoneError('');
+    setFormError('');
+
+    const phoneTrimmed = phone.trim().replace(/[\s.-]/g, '');
+    if (phoneTrimmed && !isValidVietnamesePhone(phoneTrimmed)) {
+      setPhoneError('Số điện thoại không hợp lệ (cần đúng 10 số di động Việt Nam, ví dụ: 0901234567 hoặc +84901234567)');
+      return;
+    }
+
+    const fbTrimmed = facebook.trim();
+    const ghTrimmed = github.trim();
+    const liTrimmed = linkedin.trim();
+
+    if (fbTrimmed && !isValidUrl(fbTrimmed)) {
+      setFormError('Link Facebook không hợp lệ (cần bắt đầu bằng http:// hoặc https://)');
+      return;
+    }
+
+    if (ghTrimmed && !isValidUrl(ghTrimmed)) {
+      setFormError('Link GitHub không hợp lệ (cần bắt đầu bằng http:// hoặc https://)');
+      return;
+    }
+
+    if (liTrimmed && !isValidUrl(liTrimmed)) {
+      setFormError('Link LinkedIn không hợp lệ (cần bắt đầu bằng http:// hoặc https://)');
+      return;
+    }
+
+    setIsSaving(true);
 
     const socialsData: MemberSocials = {
-      facebook: facebook.trim(),
-      github: github.trim(),
-      linkedin: linkedin.trim(),
-      discord: discord.trim()
+      facebook: fbTrimmed,
+      github: ghTrimmed,
+      linkedin: liTrimmed
     };
 
-    updateSelfProfile(currentMember.id, {
-      bio: bio.trim(),
-      phone: phone.trim(),
-      socials: socialsData,
-      skills
-    });
+    const targetUserId = currentMember.id !== 'current' ? currentMember.id : (user?.id || '');
 
-    setIsSavedToast(true);
-    setTimeout(() => {
-      setIsSavedToast(false);
-    }, 4000);
+    try {
+      await updateSelfProfile(targetUserId, {
+        bio: bio.trim(),
+        phone: phoneTrimmed,
+        socials: socialsData,
+        skills: cleanSkills(skills),
+      });
+
+      if (user) {
+        setUser({
+          ...user,
+          phone: phoneTrimmed,
+          phoneNumber: phoneTrimmed,
+        });
+      }
+
+      setIsSavedToast(true);
+      setTimeout(() => {
+        setIsSavedToast(false);
+      }, 4000);
+    } catch (err) {
+      console.error('Lỗi khi lưu profile:', err);
+      setFormError(err instanceof Error ? err.message : 'Không thể lưu hồ sơ');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isLead = currentMember.tier === 'BAN_LEAD';
   const isAdmin = currentMember.tier === 'ORG_ADMIN';
+
+  // Calculate completed tasks
+  const completedTasksCount = userTasks.filter((t: any) => {
+    const isDone = t.status === 'DONE' || t.status === 'done';
+    const isAssigned =
+      t.assignees?.some((a: any) => a.userId === user?.id || a.user?.id === user?.id) ||
+      t.assigneeId === user?.id ||
+      t.assigneeIds?.includes(user?.id);
+    return isDone && (isAssigned || isAdmin);
+  }).length;
+
+  const currentGems = currentMember.gemsBalance ?? user?.gemsBalance ?? 0;
+  const currentAvatar = avatarUrl || currentMember.avatar || user?.avatarUrl;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto select-none pb-12">
@@ -128,31 +297,77 @@ export const MyProfile: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-bold">Lưu Thành Công!</p>
-            <p className="text-[11px] text-slate-300">Thông tin cá nhân và Bio của bạn đã được cập nhật.</p>
+            <p className="text-[11px] text-slate-300">Thông tin cá nhân và Bio của bạn đã được cập nhật trực tiếp vào hệ thống.</p>
           </div>
         </div>
       )}
 
+      {imageError && <p role="alert" className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700">{imageError}</p>}
+      <input ref={avatarInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={Boolean(user?.readOnly) || Boolean(uploadingImage) || isSaving} onChange={e => void handleImageChange('avatar', e)} />
+      <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={Boolean(user?.readOnly) || Boolean(uploadingImage) || isSaving} onChange={e => void handleImageChange('cover', e)} />
+
       {/* Hero Header Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden relative">
-        {/* Cover Gradient with Google Colors Accent */}
-        <div className="h-36 sm:h-44 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+        {/* Cover Gradient or Image with Google Colors Accent */}
+        <div
+          className="h-36 sm:h-48 relative overflow-hidden bg-cover bg-center transition-all"
+          style={{
+            backgroundImage: coverUrl
+              ? `url(${coverUrl})`
+              : 'linear-gradient(to right, #2563eb, #4f46e5, #9333ea)',
+          }}
+        >
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px]"></div>
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          
+
           <div className="absolute top-4 right-6 flex items-center gap-2">
             <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-mono-code text-xs font-bold rounded-full flex items-center gap-1.5 shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
               <span>{currentMember.gen}</span>
             </span>
           </div>
+
+          {!user?.readOnly && <button
+            type="button"
+            aria-label="Đổi ảnh bìa"
+            title="Bấm để đổi ảnh bìa (JPG, PNG, WebP; tối đa 5 MB)"
+            disabled={Boolean(uploadingImage) || isSaving}
+            onClick={() => coverInput.current?.click()}
+            className="absolute inset-0 z-10 group cursor-pointer focus-visible:outline-4 focus-visible:outline-blue-300 disabled:cursor-wait"
+          >
+            <span className="absolute bottom-3 right-6 px-3 py-1.5 bg-black/60 text-white text-xs font-bold rounded-xl border border-white/30 flex items-center gap-1.5 opacity-80 group-hover:opacity-100">
+              <Camera className="w-3.5 h-3.5" />
+              {uploadingImage === 'cover' ? 'Đang tải ảnh...' : 'Đổi ảnh bìa'}
+            </span>
+          </button>}
+
         </div>
 
         {/* Profile Lockup Row */}
-        <div className="px-6 sm:px-8 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
-          <div className="flex items-end gap-4 sm:gap-6">
-            {/* Avatar with Ring */}
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none">
-              {currentMember.name.charAt(0)}
+        <div className="px-6 sm:px-8 pb-6 pt-0 relative z-20 pointer-events-none flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
+          <div className="flex items-end gap-4 sm:gap-6 pointer-events-auto">
+            {/* Avatar with Ring & Upload Overlay */}
+            <div className="relative group">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
+                {currentAvatar ? (
+                  <img src={currentAvatar} alt={currentMember.name} className="w-full h-full object-cover" />
+                ) : (
+                  currentMember.name.charAt(0)
+                )}
+              </div>
+
+              {!user?.readOnly && <button
+                type="button"
+                aria-label="Đổi ảnh đại diện"
+                title="Bấm để đổi ảnh đại diện (JPG, PNG, WebP; tối đa 5 MB)"
+                disabled={Boolean(uploadingImage) || isSaving}
+                onClick={() => avatarInput.current?.click()}
+                className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
+              >
+                <Camera className="w-6 h-6 mb-0.5" />
+                <span className="text-[10px] font-bold">{uploadingImage === 'avatar' ? 'Đang tải...' : 'Đổi avatar'}</span>
+              </button>}
+
             </div>
 
             <div className="pt-2">
@@ -161,10 +376,10 @@ export const MyProfile: React.FC = () => {
                   {currentMember.name}
                 </h1>
                 <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                  isAdmin 
-                    ? 'bg-red-50 text-red-700 border-red-200' 
-                    : isLead 
-                    ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                  isAdmin
+                    ? 'bg-red-50 text-red-700 border-red-200'
+                    : isLead
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}>
                   {isAdmin ? '👑 Ban Chủ Nhiệm' : isLead ? '⚡ Trưởng Ban' : 'Thành Viên'}
@@ -176,7 +391,19 @@ export const MyProfile: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
+            <button
+              onClick={() => {
+                fetchMembers();
+                fetchUserStats();
+              }}
+              disabled={isMembersLoading}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Đồng bộ lại thông tin hồ sơ và nhiệm vụ từ server"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isMembersLoading ? 'animate-spin text-blue-600' : ''}`} />
+              <span>Đồng bộ</span>
+            </button>
             <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Đang Hoạt Động</span>
@@ -187,7 +414,7 @@ export const MyProfile: React.FC = () => {
 
       {/* Main Grid: Left Locked Info & Right Editable Info */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* LEFT COLUMN: LOCKED IDENTITY DETAILS (🔒 BẢO MẬT BỞI BCN) */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
@@ -264,24 +491,44 @@ export const MyProfile: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-xs">
-                <p className="text-lg font-extrabold text-yellow-400">450</p>
+                <p className="text-lg font-extrabold text-yellow-400">{currentGems}</p>
                 <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Gems 💎</p>
               </div>
               <div className="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-xs">
-                <p className="text-lg font-extrabold text-emerald-400">12</p>
+                <p className="text-lg font-extrabold text-emerald-400">{completedTasksCount}</p>
                 <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Tasks Xong</p>
               </div>
               <div className="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-xs">
-                <p className="text-lg font-extrabold text-blue-400">6</p>
-                <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Events Điểm Danh</p>
+                <p className="text-lg font-extrabold text-blue-400">{eventsCount}</p>
+                <p className="text-[10px] text-slate-300 uppercase font-mono-code mt-0.5">Events CLB</p>
               </div>
             </div>
+          </div>
+
+          {/* Security & Password Action */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Bảo Mật & Mật Khẩu
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Bạn có thể cập nhật mật khẩu đăng nhập định kỳ hoặc khi cần thiết để bảo vệ tài khoản cá nhân trong GDGoC FPTU OS.
+            </p>
+            <Link
+              to="/app/change-password"
+              className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-200 font-bold text-xs transition-all duration-200 group"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 transition-colors" />
+              <span>Đổi Mật Khẩu Tài Khoản</span>
+            </Link>
           </div>
         </div>
 
         {/* RIGHT COLUMN: EDITABLE PERSONAL DETAILS (✏️ THÀNH VIÊN TỰ SỬA) */}
         <div className="lg:col-span-7">
-          <form onSubmit={handleSaveProfile} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+          <fieldset disabled={Boolean(user?.readOnly)}><form onSubmit={handleSaveProfile} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-indigo-600" />
@@ -289,10 +536,15 @@ export const MyProfile: React.FC = () => {
                   Thông Tin Cá Nhân & Liên Hệ
                 </h2>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">
-                ✏️ Bạn có quyền chỉnh sửa
-              </span>
             </div>
+
+            {/* Form Error Banner */}
+            {formError && (
+              <div role="alert" className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 flex items-center gap-2">
+                <span className="font-bold shrink-0">⚠️</span>
+                <span>{formError}</span>
+              </div>
+            )}
 
             {/* 1. BIO / GIỚI THIỆU BẢN THÂN */}
             <div className="space-y-2">
@@ -314,38 +566,61 @@ export const MyProfile: React.FC = () => {
               />
             </div>
 
-            {/* 2. SỐ ĐIỆN THOẠI */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold text-slate-800">
-                Số Điện Thoại Liên Hệ (Zalo / Call)
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="tel"
-                  placeholder="Ví dụ: 0901234567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all"
-                />
+            {/* 2. SỐ ĐIỆN THOẠI & UPLOAD AVATAR / ẢNH BÌA */}
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-800">
+                  Số Điện Thoại Liên Hệ (Zalo / Call)
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    placeholder="Ví dụ: 0901234567 (có thể để trống)"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      if (phoneError) setPhoneError('');
+                      if (formError) setFormError('');
+                    }}
+                    className={`w-full pl-10 pr-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border ${
+                      phoneError ? 'border-red-400 focus:border-red-500 bg-red-50/30' : 'border-slate-200 focus:border-blue-500'
+                    } rounded-xl text-xs sm:text-sm font-mono-code text-slate-900 focus:outline-none transition-all`}
+                  />
+                </div>
+                {phoneError ? (
+                  <p className="text-[11px] text-red-600 font-medium">
+                    ⚠️ {phoneError}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-400">
+                    Định dạng: 10 chữ số di động Việt Nam (đầu số 03, 05, 07, 08, 09 hoặc +84). Có thể để trống nếu chưa muốn chia sẻ.
+                  </p>
+                )}
               </div>
             </div>
 
             {/* 3. MẠNG XÃ HỘI & GITHUB */}
             <div className="space-y-3 pt-2">
-              <label className="block text-xs font-extrabold text-slate-800">
-                Mạng Xã Hội & Hồ Sơ Lập Trình
-              </label>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-extrabold text-slate-800">
+                  Mạng Xã Hội & Hồ Sơ Lập Trình
+                </label>
+                <span className="text-[11px] text-slate-400 font-medium">(Tất cả đường dẫn đều tùy chọn, có thể để trống)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Facebook */}
                 <div className="relative">
                   <Facebook className="w-4 h-4 text-blue-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="Link Facebook profile"
+                    placeholder="https://facebook.com/..."
                     value={facebook}
-                    onChange={(e) => setFacebook(e.target.value)}
+                    onChange={(e) => {
+                      setFacebook(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -355,9 +630,12 @@ export const MyProfile: React.FC = () => {
                   <Github className="w-4 h-4 text-slate-800 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="Link GitHub profile"
+                    placeholder="https://github.com/..."
                     value={github}
-                    onChange={(e) => setGithub(e.target.value)}
+                    onChange={(e) => {
+                      setGithub(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -367,21 +645,12 @@ export const MyProfile: React.FC = () => {
                   <Linkedin className="w-4 h-4 text-sky-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="url"
-                    placeholder="Link LinkedIn profile"
+                    placeholder="https://linkedin.com/in/..."
                     value={linkedin}
-                    onChange={(e) => setLinkedin(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
-                  />
-                </div>
-
-                {/* Discord */}
-                <div className="relative">
-                  <MessageSquare className="w-4 h-4 text-indigo-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Discord username / tag"
-                    value={discord}
-                    onChange={(e) => setDiscord(e.target.value)}
+                    onChange={(e) => {
+                      setLinkedin(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full pl-10 pr-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -464,13 +733,18 @@ export const MyProfile: React.FC = () => {
             <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer"
+                disabled={isSaving || Boolean(uploadingImage) || user?.readOnly}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <Check className="w-4 h-4" />
-                <span>Lưu Thay Đổi Hồ Sơ</span>
+                {isSaving ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>{isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi Hồ Sơ'}</span>
               </button>
             </div>
-          </form>
+          </form></fieldset>
         </div>
       </div>
     </div>

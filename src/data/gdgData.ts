@@ -1,4 +1,4 @@
-import { Department, LeadRole, EventItem, StatMilestone, OrganizerMember } from '../types';
+import { Department, LeadRole } from '../types';
 
 export const CHAPTER_INFO = {
   name: "Google Developer Groups on Campus FPT University HCMC",
@@ -10,7 +10,8 @@ export const CHAPTER_INFO = {
   hashtag: "#GDGOnCampus",
   university: "FPT University HCMC",
   campusLocation: "Đường D9, Khu Công Nghệ Cao, P. Long Thạnh Mỹ, TP. Thủ Đức, TP. Hồ Chí Minh",
-  email: "gdgoc.fptuhcmc@gmail.com",
+  email: "gdsc.fpt.hcm23@gmail.com",
+  communityUrl: "https://gdg.community.dev/gdg-on-campus-fpt-university-ho-chi-minh-city-vietnam/",
   establishedYear: 2021,
   disclaimer: "Google Developer Groups on Campus is an independent group; our activities and the opinions expressed here should in no way be linked to Google, the corporation.",
   summerAward: '"The GDGoC Impact Maker" trong AI Riser Vietnam 2026',
@@ -344,49 +345,6 @@ export const LEAD_ROLES_DATA: LeadRole[] = [
   }
 ];
 
-// Số liệu tổng kết thực tế của kỳ Summer 2026
-export const STATS_DATA: StatMilestone[] = [
-  {
-    value: "10",
-    number: 10,
-    suffix: "",
-    label: "Hoạt Động & Sự Kiện",
-    description: "Đã tổ chức thành công trong kỳ Summer 2026, tạo sân chơi công nghệ sôi động cho sinh viên.",
-    accentColor: "#4285F4",
-    pastelColor: "#C3ECF6"
-  },
-  {
-    value: "100+",
-    number: 100,
-    suffix: "+",
-    label: "Lượt Sinh Viên Tham Gia",
-    description: "Sinh viên tham dự trực tiếp và tích cực tại các buổi codelab, workshop và tech talk trên campus.",
-    accentColor: "#34A853",
-    pastelColor: "#CCF6C5"
-  },
-  {
-    value: "30+",
-    number: 30,
-    suffix: "+",
-    label: "Thành Viên Cốt Cán",
-    description: "Đội ngũ Core Members năng nổ, nhiệt huyết cống hiến hết mình trong mọi công tác vận hành.",
-    accentColor: "#FBBC04",
-    pastelColor: "#FFE7A5"
-  },
-  {
-    value: "Impact Maker",
-    number: 1,
-    suffix: "",
-    label: "AI Riser Vietnam 2026",
-    description: "Vinh dự đạt danh hiệu 'The GDGoC Impact Maker' do Google Developer Ecosystem trao tặng.",
-    accentColor: "#EA4335",
-    pastelColor: "#F8D8D8"
-  }
-];
-
-// Pipeline sự kiện trọng điểm kỳ Fall 2026 (Mock data đã xóa theo yêu cầu - nạp qua API hoặc CMS nội bộ)
-export const EVENTS_DATA: EventItem[] = [];
-
 export const VALUES_PILLARS = [
   {
     title: "Connect",
@@ -418,13 +376,3 @@ export const VALUES_PILLARS = [
   }
 ];
 
-/**
- * CORE_ORGANIZERS_DATA — Dữ liệu ban tổ chức (Organizers section trên landing page)
- *
- * ⚠️  Mock data đã bị xóa vì thông tin thành viên thuộc dữ liệu nội bộ CLB.
- * Khi backend được tích hợp, dữ liệu này sẽ được fetch từ:
- *   GET /api/members/organizers?featured=true
- *
- * Landing page sẽ hiển thị empty state hoặc ẩn section khi array rỗng.
- */
-export const CORE_ORGANIZERS_DATA: OrganizerMember[] = [];

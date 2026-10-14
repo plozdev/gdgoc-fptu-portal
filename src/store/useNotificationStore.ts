@@ -1,17 +1,6 @@
-/**
- * @file useNotificationStore.ts
- * @description Zustand store quản lý thông báo nội bộ CLB.
- *
- * ⚠️  MOCK DATA ĐÃ BỊ XÓA — Store bắt đầu với danh sách rỗng.
- * Khi backend được tích hợp, notifications sẽ được fetch từ GET /api/notifications.
- */
-
 import { create } from 'zustand';
-import type { BanId } from '../mocks/fixtures/users';
-
-// ==========================================
-// TYPES
-// ==========================================
+import type { BanId } from '../types/auth';
+import { notificationsApi } from '../api/notifications.api';
 
 export type NotificationType = 'task' | 'event' | 'gems' | 'broadcast' | 'system';
 export type NotificationPriority = 'normal' | 'important' | 'urgent';
@@ -30,68 +19,48 @@ export interface AppNotification {
   link?: string;
 }
 
-// ==========================================
-// STATE INTERFACE
-// ==========================================
 
 interface NotificationState {
   notifications: AppNotification[];
-  addNotification: (notif: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  deleteNotification: (id: string) => void;
+  error: string | null;
+  fetchNotifications: () => Promise<void>;
+  addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
 }
-
-// ==========================================
-// HELPERS
-// ==========================================
-
-function formatDateTimeVN(): string {
-  const now = new Date();
-  const d = String(now.getDate()).padStart(2, '0');
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const y = now.getFullYear();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  return `${d}/${m}/${y} ${hh}:${mm}`;
-}
-
-// ==========================================
-// STORE
-// ==========================================
-
-export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: [], // Empty — data comes from backend
-
-  addNotification: (notif) => {
-    const newNotif: AppNotification = {
-      ...notif,
-      id: `notif-${Date.now()}`,
-      createdAt: formatDateTimeVN(),
-      isRead: false,
-    };
-    set((state) => ({
-      notifications: [newNotif, ...state.notifications],
-    }));
+const departmentCodes: Record<BanId, string> = { ai: 'TECH_AI', cloud: 'TECH_CLOUD', web: 'TECH_WEB', research: 'TECH_RESEARCH', media: 'MEDIA', 'hr-event': 'HR_EVENT' };
+const departmentIds = Object.fromEntries(Object.entries(departmentCodes).map(([id, code]) => [code, id]));
+export const useNotificationStore = create<NotificationState>((set, get) => ({
+  notifications: [], error: null,
+  fetchNotifications: async () => {
+    try {
+      const response: any = await notificationsApi.getNotifications({ limit: 100 });
+      set({ notifications: response.items.map((notification: any) => ({
+        id: notification.id, title: notification.title, message: notification.message,
+        type: notification.type.toLowerCase(), priority: notification.priority.toLowerCase(),
+        targetScope: notification.targetDepartment ? departmentIds[notification.targetDepartment.code] : 'all',
+        senderName: notification.sender?.fullName || '', senderRole: '',
+        createdAt: new Date(notification.createdAt).toLocaleString('vi-VN'), isRead: notification.isRead, link: notification.link,
+      })), error: null });
+    } catch (err) { set({ error: err instanceof Error ? err.message : 'Không thể tải thông báo' }); }
   },
-
-  markAsRead: (id) => {
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n
-      ),
-    }));
+  addNotification: async (notification) => {
+    await notificationsApi.createNotification({ title: notification.title, message: notification.message,
+      type: notification.type.toUpperCase(), priority: notification.priority.toUpperCase(),
+      targetDepartmentCode: notification.targetScope === 'all' ? 'all' : departmentCodes[notification.targetScope], link: notification.link });
+    await get().fetchNotifications();
   },
-
-  markAllAsRead: () => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
-    }));
+  markAsRead: async (id) => {
+    try { await notificationsApi.markAsRead(id); set(state => ({ notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true } : n), error: null })); }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'Không thể đánh dấu đã đọc' }); }
   },
-
-  deleteNotification: (id) => {
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-    }));
+  markAllAsRead: async () => {
+    try { await notificationsApi.markAllAsRead(); set(state => ({ notifications: state.notifications.map(n => ({ ...n, isRead: true })), error: null })); }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'Không thể đánh dấu đã đọc' }); }
+  },
+  deleteNotification: async (id) => {
+    try { await notificationsApi.deleteNotification(id); set(state => ({ notifications: state.notifications.filter(n => n.id !== id), error: null })); }
+    catch (err) { set({ error: err instanceof Error ? err.message : 'Không thể xóa thông báo' }); }
   },
 }));

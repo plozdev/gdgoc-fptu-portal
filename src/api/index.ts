@@ -4,7 +4,6 @@ export * from './members.api';
 export * from './events.api';
 export * from './tasks.api';
 export * from './gems.api';
-export * from './gifts.api';
 export * from './inventory.api';
 export * from './notifications.api';
 export * from './generation.api';

@@ -1,12 +1,8 @@
 import React from 'react';
 import { Users2, BookOpenCheck, TrendingUp, Sparkles, Target } from 'lucide-react';
-import { VALUES_PILLARS, CHAPTER_INFO } from '../data/gdgData';
+import { VALUES_PILLARS } from '../data/gdgData';
 
-interface AboutProps {
-  onOpenJoinModal: () => void;
-}
-
-export const About: React.FC<AboutProps> = ({ onOpenJoinModal }) => {
+export const About: React.FC = () => {
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Users2':
@@ -38,16 +34,6 @@ export const About: React.FC<AboutProps> = ({ onOpenJoinModal }) => {
             <p className="text-base sm:text-lg text-[#1E1E1E]/85 max-w-2xl">
               Cộng đồng học thuật chính thức tại <strong>Đại học FPT TP.HCM</strong>, cầu nối giúp sinh viên tiếp cận hệ sinh thái công nghệ Google và cùng nhau kiến tạo các giải pháp có sức ảnh hưởng.
             </p>
-          </div>
-
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <span className="font-mono-code text-xs font-semibold text-[#1E1E1E]/80">
-              Học kỳ: {CHAPTER_INFO.term}
-            </span>
-            <div className="h-4 w-px bg-[#1E1E1E]/20" />
-            <span className="font-mono-code text-xs font-bold text-[#4285F4]">
-              {CHAPTER_INFO.hashtag}
-            </span>
           </div>
         </div>
 

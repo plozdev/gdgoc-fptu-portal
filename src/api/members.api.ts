@@ -10,6 +10,9 @@ export interface QueryMembersParams {
 }
 
 export interface CreateMemberDto {
+  status?: string;
+  academicYear?: string;
+  gen?: string;
   mssv: string;
   fullName: string;
   email: string;
@@ -22,6 +25,9 @@ export interface CreateMemberDto {
 }
 
 export interface UpdateMemberDto {
+  academicYear?: string;
+  gen?: string;
+  fullName?: string; mssv?: string; email?: string;
   role?: string;
   status?: string;
   position?: string;
@@ -30,16 +36,20 @@ export interface UpdateMemberDto {
 
 export interface UpdateProfileDto {
   bio?: string;
-  phoneNumber?: string;
-  avatarUrl?: string;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
   skills?: string[];
-  githubUrl?: string;
-  linkedinUrl?: string;
-  facebookUrl?: string;
-  discordUsername?: string;
+  githubUrl?: string | null;
+  linkedinUrl?: string | null;
+  facebookUrl?: string | null;
 }
 
 export const membersApi = {
+  uploadProfileImage: (kind: 'avatar' | 'cover', file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<{ url: string; kind: 'avatar' | 'cover' }>(`/api/members/me/images/${kind}`, form);
+  },
   getMembers: (params?: QueryMembersParams) => {
     const query = new URLSearchParams();
     if (params) {

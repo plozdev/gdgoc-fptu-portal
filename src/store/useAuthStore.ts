@@ -1,6 +1,46 @@
 import { create } from 'zustand';
-import { UserSession } from '../mocks/fixtures/users';
+import { UserSession, Tier, BanId, BAN_NAMES } from '../types/auth';
 import { authApi, LoginDto } from '../api';
+
+export function mapBackendUserToSession(raw: any): UserSession | null {
+  if (!raw) return null;
+
+  const currentTenure = raw.currentTenure || raw.tenures?.[0];
+  const role = currentTenure?.role;
+  const deptCode = currentTenure?.departmentCode || currentTenure?.department?.code;
+
+  let tier: Tier = 'BAN_MEMBER';
+  if (['LEAD', 'ADVISOR', 'ADMIN'].includes(role)) {
+    tier = 'ORG_ADMIN';
+  } else if (role === 'DEPARTMENT_LEAD') {
+    tier = 'BAN_LEAD';
+  } else {
+    tier = 'BAN_MEMBER';
+  }
+
+  const deptMap: Record<string, BanId> = {
+    TECH_AI: 'ai',
+    TECH_CLOUD: 'cloud',
+    TECH_WEB: 'web',
+    TECH_RESEARCH: 'research',
+    MEDIA: 'media',
+    HR_EVENT: 'hr-event',
+  };
+
+  const banId: BanId | null = (deptCode && deptMap[deptCode]) ? deptMap[deptCode] : null;
+  const banName = currentTenure?.departmentName || (banId ? BAN_NAMES[banId] : undefined);
+
+  return {
+    ...raw,
+    id: raw.id,
+    email: raw.email,
+    name: raw.fullName || raw.name || raw.email,
+    tier,
+    banId,
+    banName,
+    readOnly: raw.readOnly === true || !['ACTIVE', 'PROBATION'].includes(currentTenure?.status),
+  };
+}
 
 interface AuthState {
   user: UserSession | null;
@@ -21,9 +61,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   fetchSession: async () => {
     set({ isLoading: true });
     try {
-      const user = await authApi.getMe();
-      set({ user: user as any, isLoading: false });
-      return user as any;
+      const res = await authApi.getMe();
+      const mapped = mapBackendUserToSession(res);
+      set({ user: mapped, isLoading: false });
+      return mapped;
     } catch {
       set({ user: null, isLoading: false });
       return null;
@@ -31,17 +72,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (dto: LoginDto) => {
-    set({ isLoading: true });
-    try {
-      const res = await authApi.login(dto);
-      // Fetch profile sau khi login
-      const user = await authApi.getMe();
-      set({ user: user as any, isLoading: false });
-      return res;
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
+    const res = await authApi.login(dto);
+    // Fetch profile sau khi login thanh cong
+    const profile = await authApi.getMe();
+    const mapped = mapBackendUserToSession(profile);
+    set({ user: mapped });
+    return res;
   },
 
   logout: async () => {

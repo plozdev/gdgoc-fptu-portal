@@ -15,33 +15,39 @@ import { Organizers } from './components/Organizers';
 import { JoinCTA } from './components/JoinCTA';
 import { Footer } from './components/Footer';
 import { JoinModal } from './components/JoinModal';
-import { EventModal } from './components/EventModal';
 import { TrackDetailModal } from './components/TrackDetailModal';
-import { Department, EventItem } from './types';
+import { Department } from './types';
 import { DEPARTMENTS_DATA } from './data/gdgData';
 
 import { useAuthStore } from './store/useAuthStore';
+import { useLandingContentStore } from './store/useLandingContentStore';
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { DashboardLayout } from './components/layout/DashboardLayout';
-import { DevUserSwitcher } from './components/dev/DevUserSwitcher';
 
 // Internal Member Portal Pages
 import { DashboardOverview } from './pages/internal/DashboardOverview';
 import { HRManagement } from './pages/internal/HRManagement';
 import { TaskBoard } from './pages/internal/TaskBoard';
 import { LandingCMS } from './pages/internal/LandingCMS';
-import { EventAttendance } from './pages/internal/EventAttendance';
+import { EventManagement } from './pages/internal/EventManagement';
 import { AssetHub } from './pages/internal/AssetHub';
 import { GemsLeaderboard } from './pages/internal/GemsLeaderboard';
 import { GenerationSettings } from './pages/internal/GenerationSettings';
 import { InventoryManagement } from './pages/internal/InventoryManagement';
 import { MyProfile } from './pages/internal/MyProfile';
+import { FirstPasswordChange } from './components/FirstPasswordChange';
 
 function LandingPage() {
+  const { fetchCmsData } = useLandingContentStore();
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [selectedDefaultDept, setSelectedDefaultDept] = useState<string | undefined>(undefined);
-  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [activeDepartmentDetail, setActiveDepartmentDetail] = useState<Department | null>(null);
+
+  useEffect(() => {
+    fetchCmsData();
+  }, [fetchCmsData]);
 
   const handleOpenJoinModal = (defaultDept?: string) => {
     setSelectedDefaultDept(defaultDept);
@@ -65,14 +71,6 @@ function LandingPage() {
     setActiveDepartmentDetail(null);
   };
 
-  const handleSelectEvent = (event: EventItem) => {
-    setActiveEvent(event);
-  };
-
-  const handleCloseEvent = () => {
-    setActiveEvent(null);
-  };
-
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#1E1E1E] flex flex-col font-sans selection:bg-[#C3ECF6] selection:text-[#1E1E1E]">
       {/* Top Sticky Navigation */}
@@ -87,13 +85,13 @@ function LandingPage() {
           onOpenJoinModal={() => handleOpenJoinModal()}
           onOpenJdHandbook={handleOpenJdHandbook}
         />
-        <About onOpenJoinModal={() => handleOpenJoinModal()} />
+        <About />
         <Tracks
           onSelectDepartment={handleSelectDepartment}
           onOpenJoinModal={(deptName) => handleOpenJoinModal(deptName)}
         />
         <Impact />
-        <Events onSelectEvent={handleSelectEvent} />
+        <Events />
         <Organizers />
         <JoinCTA
           onOpenJoinModal={() => handleOpenJoinModal()}
@@ -102,22 +100,13 @@ function LandingPage() {
       </main>
 
       {/* Official Footer */}
-      <Footer
-        onOpenJoinModal={() => handleOpenJoinModal()}
-        onOpenJdHandbook={handleOpenJdHandbook}
-      />
+      <Footer />
 
       {/* Interactive Chapter Membership Application Modal */}
       <JoinModal
         isOpen={isJoinModalOpen}
         onClose={handleCloseJoinModal}
         defaultDepartment={selectedDefaultDept}
-      />
-
-      {/* Interactive Event Details & RSVP Modal */}
-      <EventModal
-        event={activeEvent}
-        onClose={handleCloseEvent}
       />
 
       {/* Interactive Department JD & Handbook Modal */}
@@ -131,32 +120,17 @@ function LandingPage() {
 }
 
 export default function App() {
-  const { user, isLoading, setUser, setLoading } = useAuthStore();
+  const { user, isLoading, fetchSession } = useAuthStore();
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-        } else {
-          setUser(null);
-        }
-      } catch (e) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initAuth();
-  }, [setUser, setLoading]);
+    fetchSession();
+  }, [fetchSession]);
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center text-blue-600 font-bold text-sm bg-slate-50 gap-2">
         <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-        <span>Đang khởi tạo hệ thống GDGoC-OS...</span>
+        <span>Đang khởi tạo hệ thống GDGoC FPTU OS...</span>
       </div>
     );
   }
@@ -169,6 +143,10 @@ export default function App() {
 
         {/* Member Login Page */}
         <Route path="/login" element={user ? <Navigate to="/app" /> : <Login />} />
+
+        {/* Member Password Recovery Routes */}
+        <Route path="/forgot-password" element={user ? <Navigate to="/app" /> : <ForgotPassword />} />
+        <Route path="/reset-password" element={user ? <Navigate to="/app" /> : <ResetPassword />} />
 
         {/* Internal Member Portal Routes (/app/*) */}
         <Route
@@ -248,7 +226,7 @@ export default function App() {
           element={
             user ? (
               <DashboardLayout>
-                <EventAttendance />
+                <EventManagement />
               </DashboardLayout>
             ) : (
               <Navigate to="/login" />
@@ -303,13 +281,20 @@ export default function App() {
             )
           }
         />
+        <Route
+          path="/app/change-password"
+          element={
+            user ? (
+              <FirstPasswordChange mode="standard" />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
 
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-
-      {/* Floating Dev User Switcher for RBAC testing */}
-      <DevUserSwitcher />
     </Router>
   );
 }

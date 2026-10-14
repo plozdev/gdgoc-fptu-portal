@@ -15,7 +15,7 @@ export const Header: React.FC = () => {
     if (pathname.includes('/app/hr')) return 'Nhân Sự & Niên Khóa';
     if (pathname.includes('/app/tasks')) return 'Bảng Công Việc (Kanban)';
     if (pathname.includes('/app/landing-cms')) return 'Quản Trị Hiển Thị Landing Page';
-    if (pathname.includes('/app/events')) return 'Sự Kiện & Điểm Danh';
+    if (pathname.includes('/app/events')) return 'Sự Kiện & Đóng Góp';
     if (pathname.includes('/app/assets')) return 'Smart Asset Hub (Google Drive)';
     if (pathname.includes('/app/inventory')) return 'Quản Lý Vật Tư & Quà Tặng';
     if (pathname.includes('/app/gems')) return 'Điểm Thưởng & Bảng Xếp Hạng';
@@ -23,13 +23,13 @@ export const Header: React.FC = () => {
     return 'Bảng Tổng Quan (Dashboard)';
   };
 
-  const isOrgAdmin = user?.tier === 'ORG_ADMIN';
+  const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-xs select-none shrink-0">
       {/* Breadcrumb & Title */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-slate-400 font-mono-code">GDGoC-OS</span>
+        <span className="text-xs font-bold text-slate-400 font-mono-code">GDGoC FPTU OS</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
         <h1 className="text-sm font-extrabold text-slate-800 tracking-tight">
           {getPageTitle(location.pathname)}

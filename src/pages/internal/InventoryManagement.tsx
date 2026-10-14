@@ -23,17 +23,24 @@ import { Navigate } from 'react-router-dom';
 
 export const InventoryManagement: React.FC = () => {
   const { user } = useAuthStore();
-  const { items, addItem, updateItem, deleteItem } = useInventoryStore();
-  const { members } = useMemberStore();
+  const { items, addItem, updateItem, deleteItem, fetchItems, isLoading, error } = useInventoryStore();
+  const { members, fetchMembers } = useMemberStore();
+
+  // Load items from PostgreSQL on mount
+  React.useEffect(() => {
+    fetchItems();
+    fetchMembers();
+  }, [fetchItems, fetchMembers]);
 
   // 🚨 CRITICAL RULE: Chỉ Ban Chủ Nhiệm (Chapter Lead & Co-Chapter Lead) mới có quyền truy cập.
-  if (user?.tier !== 'ORG_ADMIN') {
+  if (user?.readOnly || user?.tier !== 'ORG_ADMIN') {
     return <Navigate to="/app/dashboard" replace />;
   }
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | InventoryCategory>('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modals state
   const [showItemModal, setShowItemModal] = useState(false);
@@ -66,7 +73,7 @@ export const InventoryManagement: React.FC = () => {
     setItemQuantity(item.quantity);
     
     // Check if holder matches a member
-    const matchedMember = members.find(m => item.holderName.includes(m.name));
+    const matchedMember = members.find(m => m.id === item.holderUserId);
     if (matchedMember) {
       setSelectedHolderId(matchedMember.id);
       setCustomHolderName('');
@@ -82,7 +89,7 @@ export const InventoryManagement: React.FC = () => {
     setShowItemModal(true);
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim() || itemQuantity <= 0) return;
 
@@ -105,35 +112,48 @@ export const InventoryManagement: React.FC = () => {
       }
     }
 
-    if (itemToEdit) {
-      updateItem(itemToEdit.id, {
-        name: itemName.trim(),
-        category: itemCategory,
-        quantity: itemQuantity,
-        holderName,
-        holderStudentId,
-        holderPhone,
-        notes: itemNotes.trim()
-      });
-    } else {
-      addItem({
-        name: itemName.trim(),
-        category: itemCategory,
-        quantity: itemQuantity,
-        holderName,
-        holderStudentId,
-        holderPhone,
-        notes: itemNotes.trim()
-      });
+    setIsSubmitting(true);
+    try {
+      if (itemToEdit) {
+        await updateItem(itemToEdit.id, {
+          name: itemName.trim(),
+          category: itemCategory,
+          quantity: itemQuantity,
+          holderName,
+          holderUserId: ['club_cabinet', 'custom'].includes(selectedHolderId) ? null : selectedHolderId,
+          holderStudentId,
+          holderPhone,
+          notes: itemNotes.trim()
+        });
+      } else {
+        await addItem({
+          name: itemName.trim(),
+          category: itemCategory,
+          quantity: itemQuantity,
+          holderName,
+          holderUserId: ['club_cabinet', 'custom'].includes(selectedHolderId) ? null : selectedHolderId,
+          holderStudentId,
+          holderPhone,
+          notes: itemNotes.trim()
+        });
+      }
+      setShowItemModal(false);
+    } catch {
+      // Handled in store
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setShowItemModal(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (itemToDelete) {
-      deleteItem(itemToDelete.id);
-      setItemToDelete(null);
+      setIsSubmitting(true);
+      try {
+        await deleteItem(itemToDelete.id);
+        setItemToDelete(null);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 

@@ -21,7 +21,7 @@ import { BroadcastModal } from './BroadcastModal';
 
 export const NotificationCenter: React.FC = () => {
   const { user } = useAuthStore();
-  const { notifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
+  const { notifications, error, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
@@ -38,6 +38,8 @@ export const NotificationCenter: React.FC = () => {
     if (isOrgAdmin) return true;
     return notif.targetScope === 'all' || notif.targetScope === user?.banId;
   });
+
+  useEffect(() => { if (user?.id) void fetchNotifications(); }, [user?.id, isOpen, fetchNotifications]);
 
   const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
 
@@ -91,6 +93,7 @@ export const NotificationCenter: React.FC = () => {
       {/* Popover Dropdown */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl z-50 overflow-hidden animate-fadeIn">
+          {error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
           {/* Header */}
           <div className="p-3.5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -108,7 +111,7 @@ export const NotificationCenter: React.FC = () => {
               {unreadCount > 0 && (
                 <button
                   type="button"
-                  onClick={markAllAsRead}
+                  onClick={() => void markAllAsRead()}
                   className="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 px-2 py-1 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                   title="Đánh dấu tất cả đã đọc"
                 >
@@ -208,7 +211,7 @@ export const NotificationCenter: React.FC = () => {
 
           {/* Footer */}
           <div className="p-2 border-t border-slate-100 bg-slate-50/50 text-center text-[10px] text-slate-400">
-            Hệ thống thông báo thời gian thực GDGoC-OS
+            Hệ thống thông báo thời gian thực GDGoC FPTU OS
           </div>
         </div>
       )}

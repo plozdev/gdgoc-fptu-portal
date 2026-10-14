@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
-import { BAN_NAMES } from '../../mocks/fixtures/users';
+import { BAN_NAMES } from '../../types/auth';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -36,8 +36,8 @@ export const Sidebar: React.FC = () => {
     navigate('/login');
   };
 
-  const isOrgAdmin = user?.tier === 'ORG_ADMIN';
-  const isBanLead = user?.tier === 'BAN_LEAD';
+  const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';
+  const isBanLead = !user?.readOnly && user?.tier === 'BAN_LEAD';
 
   // Role display label
   const getRoleBadge = () => {
@@ -66,18 +66,17 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header */}
       <div className="p-4 border-b border-slate-800/80 bg-slate-900/50">
         <div className="flex items-center gap-2.5 mb-2">
-          {/* Google 4-color dot icon */}
-          <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center p-1.5 border border-slate-700">
-            <div className="grid grid-cols-2 gap-0.5 w-full h-full">
-              <div className="bg-[#4285F4] rounded-xs"></div>
-              <div className="bg-[#EA4335] rounded-xs"></div>
-              <div className="bg-[#34A853] rounded-xs"></div>
-              <div className="bg-[#FBBC04] rounded-xs"></div>
-            </div>
+          {/* Official GDGoC Google Developers Logomark */}
+          <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center p-1 border border-slate-700/80 shrink-0 shadow-xs">
+            <img
+              src="/google_developers_logomark.png"
+              alt="GDGoC Official Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-white text-base tracking-tight">GDGoC-OS</span>
+              <span className="font-extrabold text-white text-base tracking-tight">GDGoC FPTU OS</span>
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono-code">
                 v2.0
               </span>
@@ -145,7 +144,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="space-y-1">
             {/* Phân quyền Nhân sự: BCN (isOrgAdmin) và Ban HR-Event (Lead & Member) */}
-            {(isOrgAdmin || user?.banId === 'hr-event') ? (
+            {(!user?.readOnly && (isOrgAdmin || user?.banId === 'hr-event')) ? (
               <NavLink
                 to="/app/hr"
                 className={({ isActive }) =>
@@ -249,7 +248,7 @@ export const Sidebar: React.FC = () => {
               }
             >
               <Calendar className="w-4 h-4 text-indigo-400" />
-              <span>Sự Kiện & Điểm Danh</span>
+              <span>Sự Kiện & Đóng Góp</span>
             </NavLink>
 
             <NavLink

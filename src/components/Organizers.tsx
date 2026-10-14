@@ -88,7 +88,11 @@ export const Organizers: React.FC = () => {
                 {/* Avatar with Google colored dot badge */}
                 <div className="relative w-20 h-20">
                   <img
-                    src={org.avatarUrl}
+                    src={
+                      org.avatarUrl && !org.avatarUrl.includes('photo-1534528741775-53994a69daeb')
+                        ? org.avatarUrl
+                        : `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(org.name || 'Member')}&backgroundColor=4285F4,34A853,FBBC04,EA4335&textColor=ffffff`
+                    }
                     alt={org.name}
                     className="w-20 h-20 rounded-full object-cover border-2 border-[#1E1E1E] shadow-sm"
                   />

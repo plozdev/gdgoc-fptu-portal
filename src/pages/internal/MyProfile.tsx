@@ -31,7 +31,9 @@ import {
   Check,
   Camera,
   RefreshCw,
-  KeyRound
+  KeyRound,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 const SUGGESTED_SKILLS = [
@@ -109,6 +111,8 @@ export const MyProfile: React.FC = () => {
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isSavedToast, setIsSavedToast] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaveSuccess, setIsSaveSuccess] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
   // Stats from backend
   const [userTasks, setUserTasks] = useState<any[]>([]);
@@ -195,8 +199,12 @@ export const MyProfile: React.FC = () => {
       } else setCoverUrl(url);
       useMemberStore.setState(state => ({ members: state.members.map(member => member.id === user?.id
         ? { ...member, ...(kind === 'avatar' ? { avatar: url } : { coverUrl: url }) } : member) }));
+      const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      setLastSavedTime(nowTime);
+      setIsSaveSuccess(true);
       setIsSavedToast(true);
-      setTimeout(() => setIsSavedToast(false), 4000);
+      setTimeout(() => setIsSavedToast(false), 4500);
+      setTimeout(() => setIsSaveSuccess(false), 3500);
     } catch (error) {
       setImageError(error instanceof Error ? error.message : 'Không thể tải ảnh lên.');
     } finally {
@@ -235,6 +243,7 @@ export const MyProfile: React.FC = () => {
     }
 
     setIsSaving(true);
+    setIsSaveSuccess(false);
 
     const socialsData: MemberSocials = {
       facebook: fbTrimmed,
@@ -260,10 +269,16 @@ export const MyProfile: React.FC = () => {
         });
       }
 
+      const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      setLastSavedTime(nowTime);
+      setIsSaveSuccess(true);
       setIsSavedToast(true);
       setTimeout(() => {
         setIsSavedToast(false);
-      }, 4000);
+      }, 4500);
+      setTimeout(() => {
+        setIsSaveSuccess(false);
+      }, 3500);
     } catch (err) {
       console.error('Lỗi khi lưu profile:', err);
       setFormError(err instanceof Error ? err.message : 'Không thể lưu hồ sơ');
@@ -292,13 +307,20 @@ export const MyProfile: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto select-none pb-12">
       {/* Toast Notification */}
       {isSavedToast && (
-        <div className="fixed top-20 right-8 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-bounce">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="fixed bottom-6 right-6 z-[100] bg-slate-950/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3.5 max-w-sm animate-fadeIn">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </div>
-          <div>
-            <p className="text-xs font-bold">Lưu Thành Công!</p>
-            <p className="text-[11px] text-slate-300">Thông tin cá nhân và Bio của bạn đã được cập nhật trực tiếp vào hệ thống.</p>
+          <div className="min-w-0">
+            <p className="text-xs font-black text-white flex items-center gap-1.5">
+              <span>Đã Cập Nhật Thành Công!</span>
+              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-800/60 font-mono-code">
+                {lastSavedTime || 'Vừa xong'}
+              </span>
+            </p>
+            <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+              Thông tin cá nhân & bio của bạn đã được cập nhật trực tiếp vào hệ thống.
+            </p>
           </div>
         </div>
       )}
@@ -308,14 +330,17 @@ export const MyProfile: React.FC = () => {
       <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={Boolean(user?.readOnly) || Boolean(uploadingImage) || isSaving} onChange={e => void handleImageChange('cover', e)} />
 
       {/* Hero Header Card */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden relative">
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden relative">
+        {/* Google 4-color accent strip */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-[#4285F4] via-[#EA4335] via-[#FBBC04] to-[#34A853]" />
+
         {/* Cover Gradient or Image with Google Colors Accent */}
         <div
-          className="h-36 sm:h-48 relative overflow-hidden bg-cover bg-center transition-all"
+          className="h-44 sm:h-56 relative overflow-hidden bg-cover bg-center transition-all"
           style={{
             backgroundImage: coverUrl
               ? `url(${coverUrl})`
-              : 'linear-gradient(to right, #2563eb, #4f46e5, #9333ea)',
+              : 'linear-gradient(to right, #1d4ed8, #4338ca, #6d28d9)',
           }}
         >
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px]"></div>
@@ -324,7 +349,7 @@ export const MyProfile: React.FC = () => {
           <div className="absolute top-4 right-6 flex items-center gap-2">
             <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 text-white font-mono-code text-xs font-bold rounded-full flex items-center gap-1.5 shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>{currentMember.gen}</span>
+              <span>{currentMember.gen || 'GEN 4.0'}</span>
             </span>
           </div>
 
@@ -336,7 +361,7 @@ export const MyProfile: React.FC = () => {
             onClick={() => coverInput.current?.click()}
             className="absolute inset-0 z-10 group cursor-pointer focus-visible:outline-4 focus-visible:outline-blue-300 disabled:cursor-wait"
           >
-            <span className="absolute bottom-3 right-6 px-3 py-1.5 bg-black/60 text-white text-xs font-bold rounded-xl border border-white/30 flex items-center gap-1.5 opacity-80 group-hover:opacity-100">
+            <span className="absolute bottom-3 right-6 px-3 py-1.5 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-bold rounded-xl border border-white/30 flex items-center gap-1.5 transition-all shadow-md">
               <Camera className="w-3.5 h-3.5" />
               {uploadingImage === 'cover' ? 'Đang tải ảnh...' : 'Đổi ảnh bìa'}
             </span>
@@ -345,11 +370,11 @@ export const MyProfile: React.FC = () => {
         </div>
 
         {/* Profile Lockup Row */}
-        <div className="px-6 sm:px-8 pb-6 pt-0 relative z-20 pointer-events-none flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-14">
-          <div className="flex items-end gap-4 sm:gap-6 pointer-events-auto">
+        <div className="px-6 sm:px-8 pb-6 pt-3 relative z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
             {/* Avatar with Ring & Upload Overlay */}
-            <div className="relative group">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
+            <div className="relative group shrink-0 -mt-16 sm:-mt-20">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-extrabold shrink-0 select-none overflow-hidden">
                 {currentAvatar ? (
                   <img src={currentAvatar} alt={currentMember.name} className="w-full h-full object-cover" />
                 ) : (
@@ -357,28 +382,29 @@ export const MyProfile: React.FC = () => {
                 )}
               </div>
 
-              {!user?.readOnly && <button
-                type="button"
-                aria-label="Đổi ảnh đại diện"
-                title="Bấm để đổi ảnh đại diện (JPG, PNG, WebP; tối đa 5 MB)"
-                disabled={Boolean(uploadingImage) || isSaving}
-                onClick={() => avatarInput.current?.click()}
-                className="absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
-              >
-                <Camera className="w-6 h-6 mb-0.5" />
-                <span className="text-[10px] font-bold">{uploadingImage === 'avatar' ? 'Đang tải...' : 'Đổi avatar'}</span>
-              </button>}
-
+              {!user?.readOnly && (
+                <button
+                  type="button"
+                  aria-label="Đổi ảnh đại diện"
+                  title="Bấm để đổi ảnh đại diện (JPG, PNG, WebP; tối đa 5 MB)"
+                  disabled={Boolean(uploadingImage) || isSaving}
+                  onClick={() => avatarInput.current?.click()}
+                  className="absolute inset-0 rounded-3xl bg-black/60 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
+                >
+                  <Camera className="w-6 h-6 mb-0.5" />
+                  <span className="text-[10px] font-bold">{uploadingImage === 'avatar' ? 'Đang tải...' : 'Đổi avatar'}</span>
+                </button>
+              )}
             </div>
 
-            <div className="pt-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            <div className="pb-1 space-y-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                   {currentMember.name}
                 </h1>
-                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${
                   isAdmin
-                    ? 'bg-red-50 text-red-700 border-red-200'
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
                     : isLead
                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -386,26 +412,33 @@ export const MyProfile: React.FC = () => {
                   {isAdmin ? '👑 Ban Chủ Nhiệm' : isLead ? '⚡ Trưởng Ban' : 'Thành Viên'}
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5">
-                {currentMember.position} • {currentMember.banName}
+              <p className="text-xs sm:text-sm text-slate-600 font-semibold flex items-center gap-1.5 flex-wrap">
+                <span>{currentMember.position || 'Thành Viên'}</span>
+                <span className="text-slate-300">•</span>
+                <span className="text-indigo-600 font-bold">
+                  {currentMember.banName?.startsWith('Ban')
+                    ? currentMember.banName
+                    : (currentMember.banName ? `Ban ${currentMember.banName}` : 'Ban Thành Viên')}
+                </span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 pointer-events-auto">
+          <div className="flex items-center gap-2.5 shrink-0 pb-1">
             <button
+              type="button"
               onClick={() => {
                 fetchMembers();
                 fetchUserStats();
               }}
               disabled={isMembersLoading}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               title="Đồng bộ lại thông tin hồ sơ và nhiệm vụ từ server"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isMembersLoading ? 'animate-spin text-blue-600' : ''}`} />
               <span>Đồng bộ</span>
             </button>
-            <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
+            <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Đang Hoạt Động</span>
             </span>
@@ -731,18 +764,60 @@ export const MyProfile: React.FC = () => {
             </div>
 
             {/* Action Bar */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+            <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-h-[36px] w-full sm:w-auto">
+                {isSaving && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3.5 py-2 rounded-xl animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
+                    <span>Đang cập nhật hồ sơ vào hệ thống...</span>
+                  </div>
+                )}
+                {isSaveSuccess && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-xl shadow-2xs animate-fadeIn">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Đã cập nhật hồ sơ thành công lúc {lastSavedTime}!</span>
+                  </div>
+                )}
+                {formError && !isSaving && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-3.5 py-2 rounded-xl">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
+                {!isSaving && !isSaveSuccess && !formError && (
+                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                    Lưu các thông tin trên để cập nhật vào hệ thống GDGoC.
+                  </span>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={isSaving || Boolean(uploadingImage) || user?.readOnly}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className={`w-full sm:w-auto px-6 py-2.5 font-extrabold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md ${
+                  isSaveSuccess
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30 ring-2 ring-emerald-400/50 scale-[1.02]'
+                    : isSaving
+                    ? 'bg-blue-700 text-white shadow-blue-700/30 cursor-wait'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/30 hover:scale-[1.01]'
+                }`}
               >
                 {isSaving ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : isSaveSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <span>Đã Lưu Thay Đổi!</span>
+                  </>
                 ) : (
-                  <Check className="w-4 h-4" />
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Lưu Thay Đổi Hồ Sơ</span>
+                  </>
                 )}
-                <span>{isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi Hồ Sơ'}</span>
               </button>
             </div>
           </form></fieldset>

@@ -100,8 +100,12 @@ export const EventManagement: React.FC = () => {
 
   useEffect(() => {
     const refresh = () => void load();
+    window.addEventListener("gdgoc:sync:events", refresh);
     window.addEventListener("gdgoc:refresh", refresh);
-    return () => window.removeEventListener("gdgoc:refresh", refresh);
+    return () => {
+      window.removeEventListener("gdgoc:sync:events", refresh);
+      window.removeEventListener("gdgoc:refresh", refresh);
+    };
   }, [load]);
 
   const openContributors = async (event: any) => {

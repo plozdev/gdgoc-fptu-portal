@@ -140,7 +140,15 @@ export const GemsLeaderboard: React.FC = () => {
     return () => { requestVersion.current++; };
   }, [fetchGemsData]);
 
-  useEffect(()=>{const refresh=()=>void fetchGemsData();window.addEventListener('gdgoc:refresh',refresh);return()=>window.removeEventListener('gdgoc:refresh',refresh);},[fetchGemsData]);
+  useEffect(() => {
+    const refresh = () => void fetchGemsData();
+    window.addEventListener('gdgoc:sync:gems', refresh);
+    window.addEventListener('gdgoc:refresh', refresh);
+    return () => {
+      window.removeEventListener('gdgoc:sync:gems', refresh);
+      window.removeEventListener('gdgoc:refresh', refresh);
+    };
+  }, [fetchGemsData]);
   // Compute user rank
   const userRank = useMemo(() => {
     if (!user?.name) return null;

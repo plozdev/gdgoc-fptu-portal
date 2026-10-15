@@ -186,7 +186,15 @@ export const TaskBoard: React.FC = () => {
     fetchMembers();
   }, [loadTasksFromApi, fetchMembers]);
 
-  useEffect(()=>{const refresh=()=>void loadTasksFromApi();window.addEventListener('gdgoc:refresh',refresh);return()=>window.removeEventListener('gdgoc:refresh',refresh);},[loadTasksFromApi]);
+  useEffect(() => {
+    const refresh = () => void loadTasksFromApi();
+    window.addEventListener('gdgoc:sync:tasks', refresh);
+    window.addEventListener('gdgoc:refresh', refresh);
+    return () => {
+      window.removeEventListener('gdgoc:sync:tasks', refresh);
+      window.removeEventListener('gdgoc:refresh', refresh);
+    };
+  }, [loadTasksFromApi]);
   // RBAC checks
   const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';
   const isLead = !user?.readOnly && (user?.tier === 'BAN_LEAD' || isOrgAdmin);

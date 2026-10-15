@@ -61,10 +61,12 @@ export const DashboardOverview: React.FC = () => {
     };
 
     const refresh = () => void loadData();
+    window.addEventListener('gdgoc:sync:dashboard', refresh);
     window.addEventListener('gdgoc:refresh', refresh);
     loadData();
     return () => {
       isMounted = false;
+      window.removeEventListener('gdgoc:sync:dashboard', refresh);
       window.removeEventListener('gdgoc:refresh', refresh);
     };
   }, [fetchMembers]);

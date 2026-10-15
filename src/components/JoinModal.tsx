@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, Globe, Loader2, Mail, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, Globe, Loader2, Mail, X, AlertCircle } from 'lucide-react';
 import { api, ApiError } from '../api/client';
 import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
 
 interface JoinModalProps { isOpen: boolean; onClose: () => void; defaultDepartment?: string; }
-type Fields = Record<'fullName' | 'email' | 'phone' | 'studentId' | 'major' | 'semester' | 'facebookUrl' | 'nv1' | 'nv2' | 'portfolioUrl' | 'techStack' | 'nonTechSkills' | 'projectHighlight' | 'goals' | 'message' | 'website', string>;
-const emptyFields: Fields = { fullName: '', email: '', phone: '', studentId: '', major: '', semester: '', facebookUrl: '', nv1: '', nv2: '', portfolioUrl: '', techStack: '', nonTechSkills: '', projectHighlight: '', goals: '', message: '', website: '' };
+type Fields = Record<'fullName' | 'email' | 'phone' | 'studentId' | 'major' | 'semester' | 'facebookUrl' | 'nv1' | 'nv2' | 'portfolioUrl' | 'techStack' | 'nonTechSkills' | 'projectHighlight' | 'goals' | 'inspiration' | 'message' | 'website', string>;
+const emptyFields: Fields = { fullName: '', email: '', phone: '', studentId: '', major: '', semester: '', facebookUrl: '', nv1: '', nv2: '', portfolioUrl: '', techStack: '', nonTechSkills: '', projectHighlight: '', goals: '', inspiration: '', message: '', website: '' };
 const departments = ['AI', 'Cloud', 'Web Development', 'Research', 'Media', 'HR & Event'];
 const majors = [['SE', 'Kỹ thuật phần mềm (SE)'], ['IA', 'An toàn thông tin (IA)'], ['AI', 'Trí tuệ nhân tạo (AI)'], ['GD', 'Thiết kế mỹ thuật số (GD)'], ['MC', 'Truyền thông đa phương tiện (MC)'], ['IB', 'Quản trị kinh doanh (IB)'], ['OTHER', 'Ngành khác']];
 const semesters = [['FRESHMAN', 'Tân sinh viên'], ['SEM_1_3', 'Kỳ 1–3'], ['SEM_4_6', 'Kỳ 4–6'], ['SEM_7_PLUS', 'Kỳ 7+']];
 const steps = ['Thông tin cá nhân', 'Nguyện vọng', 'Năng lực', 'Hoàn tất'];
-const inputClass = 'w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100';
 
 function guessDepartment(name = '') {
   const value = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -30,6 +29,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Fields | 'consent', string>>>({});
   const [status, setStatus] = useState<{ enabled: boolean; cycleLabel: string } | null>(null);
   const [statusError, setStatusError] = useState(false);
   const [statusRetry, setStatusRetry] = useState(0);
@@ -44,14 +44,29 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
   busyRef.current = busy;
   const isTech = ['AI', 'Cloud', 'Web Development', 'Research'].includes(fields.nv1);
   const isClosed = !RECRUITMENT_CONFIG.isOpen || (status !== null && !status.enabled);
+
   const change = (key: keyof Fields, value: string) => {
-    setFields(previous => ({ ...previous, [key]: value, ...(key === 'nv1' && value === previous.nv2 ? { nv2: '' } : {}) }));
+    setFields(previous => ({
+      ...previous,
+      [key]: value,
+      ...(key === 'nv1' && value === previous.nv2 ? { nv2: '' } : {}),
+      ...(key === 'nv1' && ['AI', 'Cloud', 'Web Development', 'Research'].includes(value) !== ['AI', 'Cloud', 'Web Development', 'Research'].includes(previous.nv1) ? { inspiration: '' } : {})
+    }));
     requestId.current = '';
     setError('');
+    if (fieldErrors[key]) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
+
   useEffect(() => {
     if (isOpen && defaultDepartment) setFields(previous => previous.nv1 ? previous : { ...previous, nv1: guessDepartment(defaultDepartment) });
   }, [isOpen, defaultDepartment]);
+
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
@@ -60,6 +75,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
       .then(result => { if (!controller.signal.aborted) setStatus(result); }).catch(() => { if (!controller.signal.aborted) setStatusError(true); });
     return () => controller.abort();
   }, [isOpen, statusRetry]);
+
   useEffect(() => {
     if (!isOpen) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -81,45 +97,286 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const validateStep = (s: number): boolean => {
+    const errors: Partial<Record<keyof Fields | 'consent', string>> = {};
+
+    if (s === 0) {
+      if (!fields.fullName.trim()) {
+        errors.fullName = 'Vui lòng nhập họ và tên của bạn.';
+      } else if (fields.fullName.trim().length < 2) {
+        errors.fullName = 'Họ và tên cần có ít nhất 2 ký tự.';
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!fields.email.trim()) {
+        errors.email = 'Vui lòng nhập địa chỉ email.';
+      } else if (!emailRegex.test(fields.email.trim())) {
+        errors.email = 'Địa chỉ email không đúng định dạng (VD: name@fpt.edu.vn).';
+      }
+
+      const cleanPhone = fields.phone.replace(/[\s.-]/g, '');
+      const phoneRegex = /^(?:\+84|0)\d{9,10}$/;
+      if (!cleanPhone) {
+        errors.phone = 'Vui lòng nhập số điện thoại (Zalo).';
+      } else if (!phoneRegex.test(cleanPhone)) {
+        errors.phone = 'Số điện thoại không hợp lệ (10 số, VD: 0901234567).';
+      }
+
+      const studentIdRegex = /^[A-Za-z]{2,4}\d{6,8}$/;
+      if (!fields.studentId.trim()) {
+        errors.studentId = 'Vui lòng nhập mã số sinh viên.';
+      } else if (!studentIdRegex.test(fields.studentId.trim())) {
+        errors.studentId = 'Mã số sinh viên không hợp lệ (VD: SE190000).';
+      }
+
+      if (!fields.major) {
+        errors.major = 'Vui lòng chọn chuyên ngành học của bạn.';
+      }
+
+      if (!fields.semester) {
+        errors.semester = 'Vui lòng chọn kỳ học hiện tại.';
+      }
+
+      if (!fields.facebookUrl.trim()) {
+        errors.facebookUrl = 'Vui lòng cung cấp link Facebook cá nhân.';
+      } else if (!fields.facebookUrl.trim().startsWith('https://')) {
+        errors.facebookUrl = 'Link Facebook phải bắt đầu bằng https:// (VD: https://facebook.com/...)';
+      }
+    } else if (s === 1) {
+      if (!fields.nv1) {
+        errors.nv1 = 'Vui lòng chọn ban nguyện vọng 1.';
+      }
+      if (fields.nv2 && fields.nv2 === fields.nv1) {
+        errors.nv2 = 'Nguyện vọng 2 không được trùng với nguyện vọng 1.';
+      }
+    } else if (s === 2) {
+      if (!fields.portfolioUrl.trim()) {
+        errors.portfolioUrl = 'Vui lòng cung cấp link Portfolio, CV, GitHub hoặc sản phẩm.';
+      } else if (!fields.portfolioUrl.trim().startsWith('https://')) {
+        errors.portfolioUrl = 'Đường dẫn phải bắt đầu bằng https:// (VD: https://github.com/...)';
+      }
+
+      if (isTech) {
+        if (!fields.techStack.trim()) {
+          errors.techStack = 'Vui lòng chia sẻ công nghệ bạn đã tiếp xúc hoặc muốn học sâu.';
+        }
+      } else {
+        if (!fields.nonTechSkills.trim()) {
+          errors.nonTechSkills = 'Vui lòng chia sẻ kỹ năng hoặc công cụ bạn tự tin nhất.';
+        }
+      }
+
+      if (!fields.projectHighlight.trim()) {
+        errors.projectHighlight = 'Vui lòng chia sẻ dự án, hoạt động hoặc thành tích bạn tâm đắc.';
+      } else if (fields.projectHighlight.trim().length < 10) {
+        errors.projectHighlight = `Vui lòng chia sẻ chi tiết hơn (tối thiểu 10 ký tự, hiện có ${fields.projectHighlight.trim().length} ký tự).`;
+      }
+    } else if (s === 3) {
+      if (!fields.goals.trim()) {
+        errors.goals = 'Vui lòng chia sẻ mục tiêu khi gia nhập CLB GDGoC FPTU.';
+      } else if (fields.goals.trim().length < 10) {
+        errors.goals = `Mục tiêu cần chi tiết hơn (tối thiểu 10 ký tự, hiện có ${fields.goals.trim().length} ký tự).`;
+      }
+
+      if (!fields.inspiration.trim()) {
+        errors.inspiration = 'Vui lòng chia sẻ góc nhìn hoặc chiến dịch/sản phẩm bạn ấn tượng.';
+      } else if (fields.inspiration.trim().length < 10) {
+        errors.inspiration = `Câu trả lời cần chi tiết hơn (tối thiểu 10 ký tự, hiện có ${fields.inspiration.trim().length} ký tự).`;
+      }
+
+      if (!consent) {
+        errors.consent = 'Vui lòng xác nhận đồng ý điều khoản trước khi nộp hồ sơ.';
+      }
+    }
+
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError('Vui lòng kiểm tra và hoàn thành các trường được đánh dấu đỏ bên dưới.');
+      const firstKey = Object.keys(errors)[0];
+      const elem = dialog.current?.querySelector(`#recruit-${firstKey}`) as HTMLElement | null;
+      elem?.focus();
+      return false;
+    }
+
+    setError('');
+    return true;
+  };
+
   const advance = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (busyRef.current || !form.current?.reportValidity()) return;
+    if (busyRef.current) return;
     if (isClosed) {
       setError('Cổng đăng ký tuyển thành viên hiện đang tạm đóng.');
       return;
     }
-    if (step < 3) { setStep(step + 1); setError(''); scrollArea.current?.scrollTo({ top: 0 }); return; }
+
+    // Kiểm tra tính hợp lệ của bước hiện tại
+    if (!validateStep(step)) return;
+
+    // Chuyển sang bước kế tiếp
+    if (step < 3) {
+      setStep(step + 1);
+      setError('');
+      setFieldErrors({});
+      scrollArea.current?.scrollTo({ top: 0 });
+      return;
+    }
+
     if (!consent || !status?.enabled) return;
     busyRef.current = true;
-    setBusy(true); setError('');
+    setBusy(true);
+    setError('');
+    setFieldErrors({});
+
     try {
       if (!requestId.current) requestId.current = crypto.randomUUID();
       const result = await api.post<{ candidateId: string; cycleLabel: string }>('/api/recruitment/applications', {
-        ...fields, fullName: fields.fullName.trim(), email: fields.email.trim(), phone: fields.phone.replace(/[\s.-]/g, ''), studentId: fields.studentId.trim().toUpperCase(),
-        techStack: isTech ? fields.techStack : '', nonTechSkills: isTech ? '' : fields.nonTechSkills, consent, requestId: requestId.current,
+        ...fields,
+        fullName: fields.fullName.trim(),
+        email: fields.email.trim(),
+        phone: fields.phone.replace(/[\s.-]/g, ''),
+        studentId: fields.studentId.trim().toUpperCase(),
+        techStack: isTech ? fields.techStack : '',
+        nonTechSkills: isTech ? '' : fields.nonTechSkills,
+        consent,
+        requestId: requestId.current,
       }, { signal: AbortSignal.timeout(40_000) });
-      if (!/^UV\d{3,}$/.test(result.candidateId)) throw new Error('Chưa xác nhận được hồ sơ. Hãy giữ nguyên thông tin và thử gửi lại.');
-      setReceipt(result); setFields({ ...emptyFields }); setConsent(false); requestId.current = ''; setStep(0);
+
+      if (!/^UV\d{3,}$/.test(result.candidateId)) {
+        throw new Error('Chưa xác nhận được hồ sơ. Hãy giữ nguyên thông tin và thử gửi lại.');
+      }
+      setReceipt(result);
+      setFields({ ...emptyFields });
+      setConsent(false);
+      requestId.current = '';
+      setStep(0);
     } catch (failure) {
       const retryMessage = 'Chưa xác nhận được hồ sơ. Hãy giữ nguyên thông tin và thử gửi lại.';
-      setError(failure instanceof ApiError && failure.statusCode < 500 ? failure.message : retryMessage);
-    } finally { busyRef.current = false; setBusy(false); }
+      if (failure instanceof ApiError && failure.statusCode < 500) {
+        const rawMsg = failure.message || '';
+        const serverErrors: Partial<Record<keyof Fields, string>> = {};
+
+        if (/goals/i.test(rawMsg)) {
+          serverErrors.goals = 'Mục tiêu gia nhập CLB cần có tối thiểu 10 ký tự.';
+        }
+        if (/inspiration/i.test(rawMsg)) {
+          serverErrors.inspiration = 'Câu trả lời cảm hứng/ấn tượng cần tối thiểu 10 ký tự.';
+        }
+        if (/projectHighlight/i.test(rawMsg)) {
+          serverErrors.projectHighlight = 'Dự án tâm đắc cần tối thiểu 10 ký tự.';
+        }
+        if (/phone/i.test(rawMsg)) {
+          serverErrors.phone = 'Số điện thoại không đúng định dạng (10 số).';
+        }
+        if (/studentId/i.test(rawMsg)) {
+          serverErrors.studentId = 'Mã số sinh viên không hợp lệ (VD: SE190000).';
+        }
+        if (/email/i.test(rawMsg)) {
+          serverErrors.email = 'Địa chỉ email không đúng định dạng.';
+        }
+        if (/facebookUrl/i.test(rawMsg)) {
+          serverErrors.facebookUrl = 'Link Facebook phải bắt đầu bằng https://';
+        }
+        if (/portfolioUrl/i.test(rawMsg)) {
+          serverErrors.portfolioUrl = 'Link Portfolio phải bắt đầu bằng https://';
+        }
+
+        if (Object.keys(serverErrors).length > 0) {
+          setFieldErrors(serverErrors);
+          setError('Vui lòng kiểm tra lại các trường được đánh dấu đỏ bên dưới.');
+        } else {
+          setError(rawMsg || retryMessage);
+        }
+      } else {
+        setError(retryMessage);
+      }
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
   };
+
   const textField = (key: keyof Fields, label: string, options: { placeholder?: string; type?: string; area?: boolean; optional?: boolean; hint?: string; pattern?: string; minLength?: number; maxLength?: number; autoComplete?: string } = {}) => {
-    const props = { id: `recruit-${key}`, name: key, value: fields[key], onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => change(key, event.target.value), required: !options.optional, maxLength: options.maxLength || (options.area ? 3000 : 1000), minLength: options.minLength, placeholder: options.placeholder, className: inputClass, 'aria-describedby': options.hint ? `hint-${key}` : undefined };
-    return <div className={options.area ? 'sm:col-span-2' : ''} key={key}>
-      <label htmlFor={props.id} className="mb-1.5 block text-sm font-bold">{label}{!options.optional && <span className="text-red-600"> *</span>}</label>
-      {options.area ? <textarea {...props} rows={4} /> : <input {...props} type={options.type || 'text'} pattern={options.pattern} autoComplete={options.autoComplete} />}
-      {options.hint && <p id={`hint-${key}`} className="mt-1 text-xs leading-relaxed text-slate-500">{options.hint}</p>}
-    </div>;
+    const hasError = Boolean(fieldErrors[key]);
+    const charCount = (fields[key] || '').trim().length;
+    const inputStyle = `w-full rounded-xl border-2 px-3.5 py-2.5 text-sm outline-none transition-all disabled:bg-slate-100 ${
+      hasError
+        ? 'border-red-500 bg-red-50/40 text-red-950 focus:border-red-600 focus:ring-2 focus:ring-red-200'
+        : 'border-slate-300 bg-white text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+    }`;
+    const props = {
+      id: `recruit-${key}`,
+      name: key,
+      value: fields[key],
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => change(key, event.target.value),
+      maxLength: options.maxLength || (options.area ? 3000 : 1000),
+      placeholder: options.placeholder,
+      className: inputStyle,
+      'aria-invalid': hasError ? true : undefined,
+      'aria-describedby': hasError ? `err-${key}` : options.hint ? `hint-${key}` : undefined,
+    };
+    return (
+      <div className={options.area ? 'sm:col-span-2' : ''} key={key}>
+        <div className="flex items-center justify-between mb-1.5">
+          <label htmlFor={props.id} className="block text-sm font-bold text-slate-900">
+            {label}{!options.optional && <span className="text-red-600"> *</span>}
+          </label>
+          {options.minLength && (
+            <span className={`text-[11px] font-mono-code transition-colors ${charCount >= options.minLength ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
+              ({charCount}/{options.minLength} ký tự)
+            </span>
+          )}
+        </div>
+        {options.area ? (
+          <textarea {...props} rows={4} />
+        ) : (
+          <input {...props} type={options.type || 'text'} pattern={options.pattern} autoComplete={options.autoComplete} />
+        )}
+        {hasError ? (
+          <p id={`err-${key}`} className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600 animate-fadeIn">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{fieldErrors[key]}</span>
+          </p>
+        ) : options.hint ? (
+          <p id={`hint-${key}`} className="mt-1 text-xs leading-relaxed text-slate-500">{options.hint}</p>
+        ) : null}
+      </div>
+    );
   };
-  const selectField = (key: keyof Fields, label: string, choices: string[][], optional = false) => <div key={key}>
-    <label htmlFor={`recruit-${key}`} className="mb-1.5 block text-sm font-bold">{label}{!optional && <span className="text-red-600"> *</span>}</label>
-    <select id={`recruit-${key}`} value={fields[key]} onChange={event => change(key, event.target.value)} required={!optional} className={inputClass}>
-      <option value="">{optional ? 'Không có NV2' : 'Chọn một mục'}</option>
-      {choices.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-    </select>
-  </div>;
+
+  const selectField = (key: keyof Fields, label: string, choices: string[][], optional = false) => {
+    const hasError = Boolean(fieldErrors[key]);
+    const selectStyle = `w-full rounded-xl border-2 px-3.5 py-2.5 text-sm outline-none transition-all disabled:bg-slate-100 ${
+      hasError
+        ? 'border-red-500 bg-red-50/40 text-red-950 focus:border-red-600 focus:ring-2 focus:ring-red-200'
+        : 'border-slate-300 bg-white text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+    }`;
+    return (
+      <div key={key}>
+        <label htmlFor={`recruit-${key}`} className="mb-1.5 block text-sm font-bold text-slate-900">
+          {label}{!optional && <span className="text-red-600"> *</span>}
+        </label>
+        <select
+          id={`recruit-${key}`}
+          value={fields[key]}
+          onChange={event => change(key, event.target.value)}
+          className={selectStyle}
+          aria-invalid={hasError ? true : undefined}
+        >
+          <option value="">{optional ? 'Không có NV2' : 'Chọn một mục'}</option>
+          {choices.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        {hasError && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600 animate-fadeIn">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{fieldErrors[key]}</span>
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-sm sm:p-6 animate-backdrop" onClick={() => { if (!busy) onClose(); }}>
     <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="recruitment-title" onClick={event => event.stopPropagation()} className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border-[2.5px] border-slate-900 bg-white text-slate-900 shadow-[6px_6px_0_#1e293b] outline-none animate-modal-pop">
@@ -244,7 +501,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
             ) : !status ? (
               <p className="mb-4 text-sm text-slate-500">Đang kiểm tra đợt tuyển...</p>
             ) : null}
-            <form ref={form} onSubmit={event => void advance(event)}>
+            <form ref={form} noValidate onSubmit={event => void advance(event)}>
               <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
                 <legend className="mb-4 text-lg font-extrabold">Bước {step + 1}: {steps[step]}</legend>
                 {step === 0 && (
@@ -275,13 +532,50 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
                 {step === 3 && (
                   <>
                     {textField('goals', 'Mục tiêu lớn nhất khi gia nhập GDGoC FPTU?', { area: true, minLength: 10, maxLength: 5000, placeholder: 'Bạn muốn học gì, phát triển ra sao và cùng đồng đội làm điều gì?' })}
+                    {textField('inspiration', isTech
+                      ? 'Một sản phẩm công nghệ hoặc tính năng AI nào gần đây khiến bạn cảm thấy ấn tượng nhất, và điều gì ở nó làm bạn thích thú?'
+                      : 'Một chiến dịch truyền thông hoặc một sự kiện/hoạt động nào của trường FPTU hoặc một thương hiệu mà bạn thấy ấn tượng nhất gần đây? Bạn thích điều gì ở cách họ làm?',
+                    { area: true, minLength: 10, maxLength: 5000, placeholder: 'Chia sẻ ví dụ cụ thể và góc nhìn của bạn.' })}
                     {textField('message', 'Câu hỏi hoặc lời nhắn dành cho CLB', { area: true, optional: true })}
-                    <label className="flex items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" required checked={consent} onChange={event => { setConsent(event.target.checked); requestId.current = ''; }} className="mt-1" /><span>Tôi xác nhận thông tin đúng và đồng ý để CLB lưu hồ sơ, liên hệ phục vụ tuyển thành viên.</span></label>
+                    <div className="sm:col-span-2">
+                      <label className="flex items-start gap-3 text-sm cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={consent}
+                          onChange={event => {
+                            setConsent(event.target.checked);
+                            requestId.current = '';
+                            if (fieldErrors.consent) {
+                              setFieldErrors(prev => {
+                                const next = { ...prev };
+                                delete next.consent;
+                                return next;
+                              });
+                            }
+                          }}
+                          className="mt-1 accent-blue-600"
+                        />
+                        <span className={fieldErrors.consent ? 'text-red-700 font-semibold' : 'text-slate-800'}>
+                          Tôi xác nhận thông tin đúng và đồng ý để CLB lưu hồ sơ, liên hệ phục vụ tuyển thành viên.
+                        </span>
+                      </label>
+                      {fieldErrors.consent && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600 animate-fadeIn">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{fieldErrors.consent}</span>
+                        </p>
+                      )}
+                    </div>
                   </>
                 )}
                 <div hidden aria-hidden="true"><label>Website<input tabIndex={-1} autoComplete="off" value={fields.website} onChange={event => change('website', event.target.value)} /></label></div>
               </fieldset>
-              {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+              {error && (
+                <div role="alert" className="mt-4 rounded-2xl bg-red-50 border border-red-200 p-3.5 text-sm text-red-700 flex items-start gap-2.5 animate-fadeIn">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
+                  <span className="leading-snug font-medium">{error}</span>
+                </div>
+              )}
               <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
                 <button type="button" disabled={busy || step === 0} onClick={() => { setStep(step - 1); setError(''); scrollArea.current?.scrollTo({ top: 0 }); }} className="flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-bold disabled:opacity-30"><ArrowLeft size={16} />Quay lại</button>
                 <button type="submit" disabled={busy || (step === 3 && !status?.enabled)} className="flex items-center gap-2 rounded-xl border-2 border-slate-900 bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-[3px_3px_0_#1e293b] disabled:cursor-not-allowed disabled:opacity-50">{busy ? <><Loader2 size={16} className="animate-spin" />Đang gửi...</> : <>{step === 3 ? 'Nộp hồ sơ' : 'Tiếp tục'}<ArrowRight size={16} /></>}</button>

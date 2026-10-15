@@ -42,7 +42,7 @@ import { tasksApi } from '../../api/tasks.api';
 
 export type TaskLevel = 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER';
 
-export const BAN_ID_TO_DEPT_CODE: Record<BanId, string> = {
+const BAN_ID_TO_DEPT_CODE: Record<BanId, string> = {
   ai: 'TECH_AI',
   cloud: 'TECH_CLOUD',
   web: 'TECH_WEB',
@@ -51,7 +51,7 @@ export const BAN_ID_TO_DEPT_CODE: Record<BanId, string> = {
   'hr-event': 'HR_EVENT',
 };
 
-export const DEPT_CODE_TO_BAN_ID: Record<string, BanId> = {
+const DEPT_CODE_TO_BAN_ID: Record<string, BanId> = {
   TECH_AI: 'ai',
   TECH_CLOUD: 'cloud',
   TECH_WEB: 'web',
@@ -61,7 +61,7 @@ export const DEPT_CODE_TO_BAN_ID: Record<string, BanId> = {
 };
 
 // Helper: lấy thông tin Trưởng Ban thực tế từ danh sách thành viên trong DB
-export const getBanLead = (banId: BanId, mems: Member[]): Member | undefined => {
+const getBanLead = (banId: BanId, mems: Member[]): Member | undefined => {
   return mems.find(
     m => m.banId === banId && m.tier === 'BAN_LEAD' && ['ACTIVE','PROBATION'].includes(m.status)
   );
@@ -106,7 +106,7 @@ const parseDDMMYYYYtoIso = (str: string): string => {
   return new Date(Date.now() + 7 * 86400000).toISOString();
 };
 
-export const getTaskDeadlineDate = (deadline?: string | Date | null): Date | null => {
+const getTaskDeadlineDate = (deadline?: string | Date | null): Date | null => {
   if (!deadline) return null;
   if (deadline instanceof Date) return deadline;
   const str = String(deadline).trim();
@@ -124,7 +124,7 @@ export const getTaskDeadlineDate = (deadline?: string | Date | null): Date | nul
   return null;
 };
 
-export const getTaskOverdueInfo = (task: Task) => {
+const getTaskOverdueInfo = (task: Task) => {
   if (task.status === 'done' || !task.deadline) {
     return { isOverdue: false, daysOverdue: 0, deadlineDate: null };
   }

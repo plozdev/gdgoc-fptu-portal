@@ -284,10 +284,10 @@ export function MemberProfilePage() {
         </div>
 
         {/* Profile Lockup Row */}
-        <div className="px-6 sm:px-8 pb-6 pt-0 relative z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-14 sm:-mt-16">
-          <div className="flex items-end gap-4 sm:gap-6">
-            {/* Avatar with thick white border & fallback */}
-            <div className="relative shrink-0">
+        <div className="px-6 sm:px-8 pb-6 pt-3 relative z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
+            {/* Avatar with thick white border overlapping cover */}
+            <div className="relative shrink-0 -mt-16 sm:-mt-20">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl sm:text-4xl font-black select-none overflow-hidden">
                 {safeUrl(profile.avatarUrl) ? (
                   <img
@@ -301,8 +301,8 @@ export function MemberProfilePage() {
               </div>
             </div>
 
-            {/* Name, Title, Badges */}
-            <div className="pt-2">
+            {/* Name, Title, Badges (Cleanly situated on white card, not overlapping cover) */}
+            <div className="pb-1 space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                   {profile.fullName}
@@ -310,10 +310,12 @@ export function MemberProfilePage() {
                 {roleBadge}
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 font-semibold mt-1 flex items-center gap-1.5 flex-wrap">
+              <p className="text-xs sm:text-sm text-slate-600 font-semibold flex items-center gap-1.5 flex-wrap">
                 <span>{profile.position || roleLabel(profile.role)}</span>
                 <span className="text-slate-300">•</span>
-                <span className="text-indigo-600 font-bold">Ban {profile.departmentName}</span>
+                <span className="text-indigo-600 font-bold">
+                  {profile.departmentName.startsWith('Ban') ? profile.departmentName : `Ban ${profile.departmentName}`}
+                </span>
               </p>
             </div>
           </div>

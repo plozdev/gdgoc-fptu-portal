@@ -1416,7 +1416,7 @@ export const TaskBoard: React.FC = () => {
             onClick={() => setDetailModalTask(null)}
           >
             <div 
-              className="bg-white rounded-3xl max-w-xl w-full border-2 border-slate-900 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+              className="bg-white rounded-3xl max-w-lg sm:max-w-xl w-full border-2 border-slate-900 shadow-2xl overflow-hidden max-h-[82vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Overdue accent bar or normal bar */}
@@ -1431,31 +1431,31 @@ export const TaskBoard: React.FC = () => {
               }`} />
 
               {/* Modal Header */}
-              <div className="p-6 pb-4 border-b border-slate-200/80">
+              <div className="px-5 py-3.5 border-b border-slate-200/80">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono-code uppercase">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono-code uppercase">
                       {detailModalTask.banId}
                     </span>
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusConfig.bg}`}>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${statusConfig.bg}`}>
                       {statusConfig.label}
                     </span>
                   </div>
 
                   <button
                     onClick={() => setDetailModalTask(null)}
-                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+                    className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
                     title="Đóng modal"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-2.5 leading-snug">
+                <h3 className="text-base font-extrabold text-slate-900 mt-1 leading-snug">
                   {detailModalTask.title}
                 </h3>
 
-                <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-mono-code">
+                <div className="flex items-center gap-2.5 mt-1 text-[11px] text-slate-500 font-mono-code">
                   <span>Mã task: #{detailModalTask.id.slice(0, 8)}</span>
                   <button
                     onClick={() => {
@@ -1473,26 +1473,23 @@ export const TaskBoard: React.FC = () => {
 
               {/* Overdue Alert Banner if overdue */}
               {detailOverdue.isOverdue && (
-                <div className="mx-6 mt-4 p-3.5 bg-rose-50 border border-rose-300 rounded-2xl flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-pulse" />
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-rose-900">
-                      Nhiệm vụ này đã quá hạn {detailOverdue.daysOverdue} ngày!
-                    </p>
-                    <p className="text-[11px] text-rose-700 leading-relaxed">
-                      Hạn chót ban đầu: <strong className="font-mono-code">{formatDateToDDMMYYYY(detailModalTask.deadline)}</strong>. 
-                      Vui lòng khẩn trương hoàn thành nộp bài báo cáo hoặc liên hệ Trưởng Ban để được hỗ trợ/gia hạn.
-                    </p>
+                <div className="mx-5 mt-2.5 px-3 py-2 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-rose-800 font-medium">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 animate-pulse" />
+                    <span>
+                      <strong>Quá hạn {detailOverdue.daysOverdue} ngày</strong> (Hạn chót: {formatDateToDDMMYYYY(detailModalTask.deadline)})
+                    </span>
                   </div>
+                  <span className="text-[10px] text-rose-600 font-bold hidden sm:inline">Khẩn trương hoàn thành</span>
                 </div>
               )}
 
               {/* Modal Body: Scrollable Details */}
-              <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar text-xs">
+              <div className="px-5 py-3.5 space-y-3 overflow-y-auto flex-1 custom-scrollbar text-xs">
                 {/* Info Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {/* Campaign */}
-                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                  <div className="p-2 px-2.5 bg-slate-50 border border-slate-200/70 rounded-xl space-y-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                       <FolderGit2 className="w-3 h-3 text-blue-500" />
                       Chiến Dịch / Dự Án
@@ -1503,7 +1500,7 @@ export const TaskBoard: React.FC = () => {
                   </div>
 
                   {/* Department */}
-                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                  <div className="p-2 px-2.5 bg-slate-50 border border-slate-200/70 rounded-xl space-y-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                       <Tag className="w-3 h-3 text-purple-500" />
                       Ban Phụ Trách
@@ -1514,7 +1511,7 @@ export const TaskBoard: React.FC = () => {
                   </div>
 
                   {/* Assigner / Creator */}
-                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                  <div className="p-2 px-2.5 bg-slate-50 border border-slate-200/70 rounded-xl space-y-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                       <User className="w-3 h-3 text-purple-500" />
                       Người Giao Việc
@@ -1525,7 +1522,7 @@ export const TaskBoard: React.FC = () => {
                   </div>
 
                   {/* Assignee */}
-                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                  <div className="p-2 px-2.5 bg-slate-50 border border-slate-200/70 rounded-xl space-y-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                       <UserCheck className="w-3 h-3 text-emerald-500" />
                       Người Thực Hiện
@@ -1536,7 +1533,7 @@ export const TaskBoard: React.FC = () => {
                   </div>
 
                   {/* Priority */}
-                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                  <div className="p-2 px-2.5 bg-slate-50 border border-slate-200/70 rounded-xl space-y-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                       <Flame className="w-3 h-3 text-rose-500" />
                       Độ Ưu Tiên
@@ -1549,10 +1546,10 @@ export const TaskBoard: React.FC = () => {
                   </div>
 
                   {/* Deadline */}
-                  <div className={`p-3 border rounded-xl space-y-1 ${
+                  <div className={`p-2 px-2.5 border rounded-xl space-y-0.5 ${
                     detailOverdue.isOverdue 
                       ? 'bg-rose-50 border-rose-200' 
-                      : 'bg-slate-50 border-slate-200/80'
+                      : 'bg-slate-50 border-slate-200/70'
                   }`}>
                     <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
                       detailOverdue.isOverdue ? 'text-rose-600' : 'text-slate-400'
@@ -1570,11 +1567,11 @@ export const TaskBoard: React.FC = () => {
 
                 {/* Full Description */}
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5 text-blue-600" />
                     <span>Yêu Cầu & Mô Tả Chi Tiết:</span>
                   </h4>
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
+                  <div className="p-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 leading-relaxed max-h-24 overflow-y-auto font-normal text-xs">
                     {detailModalTask.description ? (
                       detailModalTask.description
                     ) : (
@@ -1585,14 +1582,14 @@ export const TaskBoard: React.FC = () => {
 
                 {/* Submission Proof Section */}
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
                     <Link2 className="w-3.5 h-3.5 text-blue-600" />
                     <span>Minh Chứng / Báo Cáo Nộp Bài:</span>
                   </h4>
                   {detailModalTask.submissionProof ? (
-                    <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center justify-between gap-3">
+                    <div className="p-2 px-3 bg-blue-50/70 border border-blue-200 rounded-xl flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Link2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <Link2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                         <a 
                           href={detailModalTask.submissionProof} 
                           target="_blank" 
@@ -1602,13 +1599,13 @@ export const TaskBoard: React.FC = () => {
                           {detailModalTask.submissionProof}
                         </a>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(detailModalTask.submissionProof || '');
                             showToast('Đã sao chép liên kết minh chứng!', 'success');
                           }}
-                          className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 text-[11px] cursor-pointer"
+                          className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 text-[11px] cursor-pointer"
                         >
                           <Copy className="w-3 h-3" />
                           <span>Sao chép</span>
@@ -1617,7 +1614,7 @@ export const TaskBoard: React.FC = () => {
                           href={detailModalTask.submissionProof}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1 text-[11px]"
+                          className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1 text-[11px]"
                         >
                           <ExternalLink className="w-3 h-3" />
                           <span>Mở link</span>
@@ -1625,7 +1622,7 @@ export const TaskBoard: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-400 italic text-[11px] flex items-center gap-2">
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 italic text-[11px] flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span>Chưa có báo cáo minh chứng nào được nộp cho công việc này.</span>
                     </div>
@@ -1635,11 +1632,11 @@ export const TaskBoard: React.FC = () => {
                 {/* Assigner Feedback / Note */}
                 {detailModalTask.feedback && (
                   <div>
-                    <h4 className="text-xs font-bold text-amber-900 mb-1.5 flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
                       <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
                       <span>Ghi Chú / Phản Hồi Từ Người Giao:</span>
                     </h4>
-                    <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-amber-900 leading-relaxed text-xs">
+                    <div className="p-2.5 px-3 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 leading-relaxed text-xs">
                       {detailModalTask.feedback}
                     </div>
                   </div>
@@ -1647,11 +1644,11 @@ export const TaskBoard: React.FC = () => {
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="p-4 px-6 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
+              <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setDetailModalTask(null)}
-                  className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                  className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl cursor-pointer transition-colors"
                 >
                   Đóng
                 </button>

@@ -312,9 +312,9 @@ export const GemsLeaderboard: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <MemberProfileLink id={u.userId}><img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100" /></MemberProfileLink>
+                    <MemberProfileLink id={u.userId} mssv={u.mssv}><img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100" /></MemberProfileLink>
                     <div className="min-w-0">
-                      <h4 className="text-sm font-extrabold text-slate-900 truncate"><MemberProfileLink id={u.userId}>{u.name}</MemberProfileLink></h4>
+                      <h4 className="text-sm font-extrabold text-slate-900 truncate"><MemberProfileLink id={u.userId} mssv={u.mssv}>{u.name}</MemberProfileLink></h4>
                       <p className="text-xs text-slate-500 truncate">{u.ban}</p>
                       {u.delta && (
                         <p className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
@@ -356,9 +356,9 @@ export const GemsLeaderboard: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <MemberProfileLink id={u.userId}><img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover" /></MemberProfileLink>
+                            <MemberProfileLink id={u.userId} mssv={u.mssv}><img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover" /></MemberProfileLink>
                             <div>
-                              <MemberProfileLink id={u.userId} className="font-bold text-slate-900 block leading-tight">{u.name}</MemberProfileLink>
+                              <MemberProfileLink id={u.userId} mssv={u.mssv} className="font-bold text-slate-900 block leading-tight">{u.name}</MemberProfileLink>
                               {u.mssv && <span className="text-[10px] text-slate-400 font-mono-code">{u.mssv}</span>}
                             </div>
                           </div>

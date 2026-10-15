@@ -39,16 +39,24 @@ function safeUrl(value?: unknown): string | undefined {
 }
 
 export function MemberProfilePage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: identifier } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const userId = useAuthStore((state) => state.user?.id);
-  const data = useMemberProfile(id === userId ? undefined : id);
+  const currentUser = useAuthStore((state) => state.user);
+  const userId = currentUser?.id;
+  const userMssv = currentUser?.mssv;
+
+  const isSelf = Boolean(
+    (userId && identifier === userId) ||
+    (userMssv && identifier && identifier.toLowerCase() === userMssv.toLowerCase())
+  );
+
+  const data = useMemberProfile(isSelf ? undefined : identifier);
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   // If viewing self, redirect to /app/profile
-  if (id === userId) {
+  if (isSelf) {
     return <Navigate to="/app/profile" replace />;
   }
 
@@ -66,7 +74,13 @@ export function MemberProfilePage() {
   // ==========================================
   // SKELETON LOADING STATE
   // ==========================================
-  if (data.loading || (data.profile && data.profile.id !== id)) {
+  const isLoadedForCurrentTarget = Boolean(
+    data.profile &&
+    (data.profile.id === identifier ||
+     (data.profile.mssv && identifier && data.profile.mssv.toLowerCase() === identifier.toLowerCase()))
+  );
+
+  if (data.loading || (data.profile && !isLoadedForCurrentTarget)) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 pb-12 animate-pulse select-none">
         {/* Top bar skeleton */}
@@ -233,7 +247,7 @@ export function MemberProfilePage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => handleCopy(window.location.href, 'link')}
+            onClick={() => handleCopy(`${window.location.origin}/app/members/${profile.mssv || profile.id}`, 'link')}
             className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
             title="Sao chép đường dẫn hồ sơ"
           >

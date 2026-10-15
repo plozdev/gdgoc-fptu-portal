@@ -222,7 +222,7 @@ export const DashboardOverview: React.FC = () => {
                 </div>
 
                 <h3 className="text-sm font-bold text-slate-900 truncate mb-1">{ban.name}</h3>
-                <p className="text-xs text-slate-600 mb-3">Trưởng Ban: <MemberProfileLink id={leadMember?.id} className="font-semibold text-slate-800">{designatedLead}</MemberProfileLink></p>
+                <p className="text-xs text-slate-600 mb-3">Trưởng Ban: <MemberProfileLink id={leadMember?.id} mssv={leadMember?.studentId} className="font-semibold text-slate-800">{designatedLead}</MemberProfileLink></p>
 
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-200/80">
                   <span>{banMembersCount} thành viên</span>

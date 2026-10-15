@@ -305,11 +305,11 @@ export const HRManagement: React.FC = () => {
                       {/* Cột 1: Tên & MSSV */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <MemberProfileLink id={m.id} className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getBanColor(m.banId, m.tier)}`}>
+                          <MemberProfileLink id={m.id} mssv={m.studentId} className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getBanColor(m.banId, m.tier)}`}>
                             {m.name.charAt(0)}
                           </MemberProfileLink>
                           <div>
-                            <MemberProfileLink id={m.id} className="font-extrabold text-slate-900 text-sm">{m.name}</MemberProfileLink>
+                            <MemberProfileLink id={m.id} mssv={m.studentId} className="font-extrabold text-slate-900 text-sm">{m.name}</MemberProfileLink>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="font-mono-code text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
                                 {m.studentId}
@@ -406,11 +406,11 @@ export const HRManagement: React.FC = () => {
                 <div key={m.id} className="bg-slate-50/60 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all hover:shadow-xs space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <MemberProfileLink id={m.id} className={`w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black shadow-xs ${getBanColor(m.banId, m.tier)}`}>
+                      <MemberProfileLink id={m.id} mssv={m.studentId} className={`w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black shadow-xs ${getBanColor(m.banId, m.tier)}`}>
                         {m.name.charAt(0)}
                       </MemberProfileLink>
                       <div>
-                        <h3 className="font-extrabold text-slate-900 text-sm"><MemberProfileLink id={m.id}>{m.name}</MemberProfileLink></h3>
+                        <h3 className="font-extrabold text-slate-900 text-sm"><MemberProfileLink id={m.id} mssv={m.studentId}>{m.name}</MemberProfileLink></h3>
                         <p className="text-xs text-slate-500 font-medium">{m.status === 'ALUMNI' ? 'Alumni' : m.banName || 'Chưa phân ban'}</p>
                       </div>
                     </div>

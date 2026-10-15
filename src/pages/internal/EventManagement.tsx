@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { subscribeSync } from '../../sync/subscriptions';
 import {
   eventsApi,
   EventContributor,
@@ -88,24 +89,15 @@ export const EventManagement: React.FC = () => {
     try {
       const data = await eventsApi.getEvents();
       setEvents(Array.isArray(data) ? data : []);
+      return true;
     } catch (e: any) {
       setError(e.message);
+      return false;
     }
   }, []);
 
   useEffect(() => {
-    void load();
-    if (manager) void fetchMembers();
-  }, [load, fetchMembers, manager]);
-
-  useEffect(() => {
-    const refresh = () => void load();
-    window.addEventListener("gdgoc:sync:events", refresh);
-    window.addEventListener("gdgoc:refresh", refresh);
-    return () => {
-      window.removeEventListener("gdgoc:sync:events", refresh);
-      window.removeEventListener("gdgoc:refresh", refresh);
-    };
+    return subscribeSync(['events', 'scope'], load);
   }, [load]);
 
   const openContributors = async (event: any) => {

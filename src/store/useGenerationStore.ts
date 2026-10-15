@@ -6,7 +6,7 @@ interface GenerationState {
   currentSemesterId: string;
   isLoading: boolean;
   error: string | null;
-  fetchGenerationConfig: () => Promise<void>;
+  fetchGenerationConfig: () => Promise<boolean>;
 }
 export const useGenerationStore = create<GenerationState>((set) => ({
   currentGen: "",
@@ -25,8 +25,10 @@ export const useGenerationStore = create<GenerationState>((set) => ({
         isLoading: false,
         error: null,
       });
+      return true;
     } catch (e: any) {
       set({ isLoading: false, error: e.message });
+      return false;
     }
   },
 }));

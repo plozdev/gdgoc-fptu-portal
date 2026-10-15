@@ -61,7 +61,7 @@ interface MemberState {
   members: Member[];
   isLoading: boolean;
   error: string | null;
-  fetchMembers: (params?: QueryMembersParams) => Promise<void>;
+  fetchMembers: (params?: QueryMembersParams) => Promise<boolean>;
   addMember: (member: Omit<Member, 'id'>) => Promise<void>;
   updateMember: (id: string, updates: Partial<Member>) => Promise<void>;
   deleteMember: (id: string) => Promise<void>;
@@ -219,9 +219,11 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       const rawList = res.items || res.data?.items || (Array.isArray(res) ? res : Array.isArray(res.data) ? res.data : []);
       const mapped = rawList.map(mapBackendMemberToMember);
       set({ members: mapped, isLoading: false });
+      return true;
     } catch (err: any) {
       console.error('[MemberStore] Failed to fetch members from API:', err);
       set({ error: err.message || 'Lỗi tải danh sách thành viên', isLoading: false });
+      return false;
     }
   },
 

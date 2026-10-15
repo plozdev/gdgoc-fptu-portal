@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { LiveUpdates } from '../LiveUpdates';
+import { PollingUpdates } from '../PollingUpdates';
 import { FirstPasswordChange } from '../FirstPasswordChange';
 import { useAuthStore } from '../../store/useAuthStore';
 import React from 'react';
@@ -22,7 +22,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         <Header />
         <main className="flex-1 overflow-auto p-6">
           {user?.readOnly && <p className="mb-4 rounded-lg bg-slate-100 p-3 text-sm text-slate-600">Alumni — hồ sơ, công việc, Gems và tài liệu được chia sẻ chỉ đọc.</p>}
-          <LiveUpdates />
+          <PollingUpdates />
           {children}
         </main>
       </div>

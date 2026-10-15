@@ -1,4 +1,5 @@
 import { generationApi } from '../../api/generation.api';
+import { subscribeSync } from '../../sync/subscriptions';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Sparkles, 
@@ -57,7 +58,17 @@ export const GemsLeaderboard: React.FC = () => {
 
   const [periods, setPeriods] = useState<any[]>([]);
   const [semesterId, setSemesterId] = useState('');
-  useEffect(()=>{void generationApi.getGenerationConfig().then((c:any)=>{setPeriods([c.currentSemester,...(c.archivedTenures||[])].filter(Boolean));setSemesterId(c.currentSemester?.id||'');}).catch(()=>setDataError('Không tải được danh sách kỳ. Vui lòng tải lại trang.'));},[]);
+  useEffect(() => subscribeSync(['semesters', 'scope'], async () => {
+    try {
+      const c: any = await generationApi.getGenerationConfig();
+      setPeriods([c.currentSemester, ...(c.archivedTenures || [])].filter(Boolean));
+      setSemesterId(previous => previous || c.currentSemester?.id || '');
+      return true;
+    } catch {
+      setDataError('Không tải được danh sách kỳ. Hệ thống sẽ tự thử lại.');
+      return false;
+    }
+  }), []);
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [selectedDept, setSelectedDept] = useState<string>('all');
@@ -75,15 +86,14 @@ export const GemsLeaderboard: React.FC = () => {
 
   // Fetch real leaderboard and transaction history from backend
   const fetchGemsData = useCallback(async () => {
-    if (!semesterId) return;
+    if (!semesterId) return false;
     const version = ++requestVersion.current;
     setIsLoading(true);
-    setTransactions([]);
     setDataError('');
     try {
       const params = { limit: 100, semesterId: semesterId || undefined, ...(selectedDept !== 'all' && { departmentCode: selectedDept }) };
       const lbRes: any = await gemsApi.getLeaderboard(params);
-      if (version !== requestVersion.current) return;
+      if (version !== requestVersion.current) return false;
 
       if (lbRes && Array.isArray(lbRes.rankings)) {
         setIsFrozen(Boolean(lbRes.isFrozen));
@@ -110,43 +120,38 @@ export const GemsLeaderboard: React.FC = () => {
       // Fetch personal transaction ledger
       try {
         const txRes: any = await gemsApi.getTransactions({ page: transactionPage, limit: 15, semesterId: semesterId || undefined });
-        if (version !== requestVersion.current) return;
+        if (version !== requestVersion.current) return false;
         if (txRes && Array.isArray(txRes.transactions)) {
           const lastPage = Math.max(1, Math.ceil((txRes.total ?? 0) / 15));
-          if (transactionPage > lastPage) { setTransactionPage(lastPage); return; }
+          if (transactionPage > lastPage) { setTransactionPage(lastPage); return false; }
           setTransactions(txRes.transactions);
           setTransactionTotal(txRes.total ?? 0);
           setLifetimeBalance(txRes.lifetimeBalance ?? 0);
           if (txRes.balance !== undefined) {
             setUserBalance(txRes.balance);
           }
+          return true;
         }
+        return false;
       } catch (txErr) {
-        if (version !== requestVersion.current) return;
-        setTransactionTotal(0);
+        if (version !== requestVersion.current) return false;
         setDataError('Không tải được số dư và lịch sử Gems. Vui lòng thử lại.');
+        return false;
       }
     } catch (err) {
-      if (version !== requestVersion.current) return;
+      if (version !== requestVersion.current) return false;
       setDataError('Không tải được bảng xếp hạng. Vui lòng thử lại.');
-      setLeaderboardUsers([]);
+      return false;
     } finally {
       if (version === requestVersion.current) setIsLoading(false);
     }
   }, [selectedDept, semesterId, transactionPage, user?.id, user?.name]);
 
   useEffect(() => {
-    void fetchGemsData();
-    return () => { requestVersion.current++; };
-  }, [fetchGemsData]);
-
-  useEffect(() => {
-    const refresh = () => void fetchGemsData();
-    window.addEventListener('gdgoc:sync:gems', refresh);
-    window.addEventListener('gdgoc:refresh', refresh);
+    const unsubscribe = subscribeSync(['gems', 'members', 'semesters', 'scope'], fetchGemsData);
     return () => {
-      window.removeEventListener('gdgoc:sync:gems', refresh);
-      window.removeEventListener('gdgoc:refresh', refresh);
+      unsubscribe();
+      requestVersion.current++;
     };
   }, [fetchGemsData]);
   // Compute user rank

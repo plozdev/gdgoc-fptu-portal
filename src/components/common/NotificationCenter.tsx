@@ -39,7 +39,7 @@ export const NotificationCenter: React.FC = () => {
     return notif.targetScope === 'all' || notif.targetScope === user?.banId;
   });
 
-  useEffect(() => { if (user?.id) void fetchNotifications(); }, [user?.id, isOpen, fetchNotifications]);
+  useEffect(() => { if (user?.id && isOpen) void fetchNotifications(); }, [user?.id, isOpen, fetchNotifications]);
 
   const unreadCount = visibleNotifications.filter((n) => !n.isRead).length;
 

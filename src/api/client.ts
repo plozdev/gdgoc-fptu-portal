@@ -26,6 +26,26 @@ export async function request<T = any>(
   url: string,
   options: RequestInit = {},
 ): Promise<T> {
+  // Bound background reads, including response-body parsing. Mutations keep their
+  // existing semantics: timing out a write does not imply the write was rejected.
+  if ((options.method || 'GET') !== 'GET') return performRequest<T>(url, options);
+  const controller = new AbortController();
+  const abort = () => controller.abort(options.signal?.reason);
+  if (options.signal?.aborted) abort();
+  else options.signal?.addEventListener('abort', abort, { once: true });
+  const timeout = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), 20_000);
+  try {
+    return await performRequest<T>(url, { ...options, cache: 'no-store', signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', abort);
+  }
+}
+
+async function performRequest<T>(
+  url: string,
+  options: RequestInit,
+): Promise<T> {
   const defaultHeaders: Record<string, string> = {};
 
   if (!(options.body instanceof FormData)) {
@@ -49,7 +69,8 @@ export async function request<T = any>(
   let json: any;
   try {
     json = await response.json();
-  } catch {
+  } catch (error) {
+    if (options.signal?.aborted || response.ok) throw error;
     json = null;
   }
 

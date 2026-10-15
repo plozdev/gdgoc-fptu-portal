@@ -1,6 +1,7 @@
 import { eventsApi } from '../../api/events.api';
+import { subscribeSync } from '../../sync/subscriptions';
 import { useGenerationStore } from '../../store/useGenerationStore';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { 
   Plus, 
@@ -142,7 +143,7 @@ const mapBackendTaskToFrontend = (item: any): Task => {
 
 export const TaskBoard: React.FC = () => {
   const { user } = useAuthStore();
-  const { members, fetchMembers } = useMemberStore();
+  const { members } = useMemberStore();
 
   const currentSemester = useGenerationStore(s=>s.currentSemester);
   const currentSemesterId = useGenerationStore(s=>s.currentSemesterId);
@@ -151,6 +152,9 @@ export const TaskBoard: React.FC = () => {
   const [doneDays, setDoneDays] = useState(14);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const taskRequest = useRef(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const PROJECTS_LIST = ['Tất Cả Dự Án',...new Set(tasks.map(t=>t.project))];
 
@@ -166,34 +170,29 @@ export const TaskBoard: React.FC = () => {
   }, []);
 
   // Fetch real tasks from backend API
-  const loadTasksFromApi = useCallback(async (nextPage = 1) => {
+  const loadTasksFromApi = useCallback(async (nextPage = 1, background = false) => {
+    const version = ++taskRequest.current;
     try {
-      setIsLoading(true);
-      const res: any = await tasksApi.getTasks({ limit: 100, page: nextPage, doneDays, semesterId: user?.readOnly ? 'all' : currentSemesterId || undefined });
-      const rawList = Array.isArray(res) ? res : res?.data || [];
-      const mappedTasks = rawList.map(mapBackendTaskToFrontend);
-      setTasks(prev=>nextPage===1?mappedTasks:[...prev,...mappedTasks]);
-      setPage(nextPage);setTotal(res.total ?? mappedTasks.length);
+      if (!background) setIsLoading(true);
+      // Refresh every already loaded page without resetting the board's pagination.
+      const pages = background ? Array.from({ length: nextPage }, (_, i) => i + 1) : [nextPage];
+      const results: any[] = await Promise.all(pages.map(page => tasksApi.getTasks({ limit: 100, page, doneDays, semesterId: user?.readOnly ? 'all' : currentSemesterId || undefined })));
+      if (version !== taskRequest.current) return false;
+      const mappedTasks = results.flatMap(res => (Array.isArray(res) ? res : res?.data || []).map(mapBackendTaskToFrontend));
+      setTasks(prev => background || nextPage === 1 ? mappedTasks : [...prev, ...mappedTasks]);
+      setPage(nextPage);setTotal(results[0].total ?? mappedTasks.length);
+      return true;
     } catch (err: any) {
-      showToast(err?.message || 'Không thể tải công việc', 'error');
+      if (version === taskRequest.current && !background) showToast(err?.message || 'Không thể tải công việc', 'error');
+      return false;
     } finally {
-      setIsLoading(false);
+      if (version === taskRequest.current) setIsLoading(false);
     }
-  }, []);
+  }, [doneDays, currentSemesterId, user?.readOnly, showToast]);
 
   useEffect(() => {
-    loadTasksFromApi();
-    fetchMembers();
-  }, [loadTasksFromApi, fetchMembers]);
-
-  useEffect(() => {
-    const refresh = () => void loadTasksFromApi();
-    window.addEventListener('gdgoc:sync:tasks', refresh);
-    window.addEventListener('gdgoc:refresh', refresh);
-    return () => {
-      window.removeEventListener('gdgoc:sync:tasks', refresh);
-      window.removeEventListener('gdgoc:refresh', refresh);
-    };
+    const unsubscribe = subscribeSync(['tasks', 'semesters', 'scope'], () => loadTasksFromApi(pageRef.current, true));
+    return () => { unsubscribe(); taskRequest.current++; };
   }, [loadTasksFromApi]);
   // RBAC checks
   const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';

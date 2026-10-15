@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { subscribeSync } from '../../sync/subscriptions';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
@@ -14,7 +15,7 @@ import { BanId } from '../../types/auth';
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuthStore();
-  const { members, fetchMembers } = useMemberStore();
+  const { members } = useMemberStore();
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
 
   const [tasks, setTasks] = useState<any[]>([]);
@@ -23,7 +24,6 @@ export const DashboardOverview: React.FC = () => {
   // Fetch actual data from backend
   useEffect(() => {
     let isMounted = true;
-    fetchMembers();
 
     const loadData = async () => {
       try {
@@ -32,7 +32,7 @@ export const DashboardOverview: React.FC = () => {
           eventsApi.getEvents(),
         ]);
 
-        if (!isMounted) return;
+        if (!isMounted) return false;
 
         if (tasksRes.status === 'fulfilled' && tasksRes.value) {
           const raw = tasksRes.value;
@@ -45,7 +45,7 @@ export const DashboardOverview: React.FC = () => {
             : [];
 
           setTasks(list);
-        } else { setTasks([]); }
+        }
 
         if (eventsRes.status === 'fulfilled' && eventsRes.value) {
           const evList = Array.isArray(eventsRes.value)
@@ -55,21 +55,19 @@ export const DashboardOverview: React.FC = () => {
             : [];
           setBackendEvents(evList);
         }
+        return tasksRes.status === 'fulfilled' && eventsRes.status === 'fulfilled';
       } catch (err) {
         console.warn('[DashboardOverview] Error loading data:', err);
+        return false;
       }
     };
 
-    const refresh = () => void loadData();
-    window.addEventListener('gdgoc:sync:dashboard', refresh);
-    window.addEventListener('gdgoc:refresh', refresh);
-    loadData();
+    const unsubscribe = subscribeSync(['tasks', 'events', 'gems', 'semesters', 'scope'], loadData);
     return () => {
       isMounted = false;
-      window.removeEventListener('gdgoc:sync:dashboard', refresh);
-      window.removeEventListener('gdgoc:refresh', refresh);
+      unsubscribe();
     };
-  }, [fetchMembers]);
+  }, []);
 
   const activeMembersCount = members.filter(m => m.status === 'ACTIVE').length;
   const runningTasksCount = tasks.filter(t => t.status !== 'DONE' && t.status !== 'done' && t.status !== 'CANCELLED').length;

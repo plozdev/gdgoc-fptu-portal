@@ -23,7 +23,7 @@ export interface AppNotification {
 interface NotificationState {
   notifications: AppNotification[];
   error: string | null;
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: () => Promise<boolean>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -43,7 +43,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         senderName: notification.sender?.fullName || '', senderRole: '',
         createdAt: new Date(notification.createdAt).toLocaleString('vi-VN'), isRead: notification.isRead, link: notification.link,
       })), error: null });
-    } catch (err) { set({ error: err instanceof Error ? err.message : 'Không thể tải thông báo' }); }
+      return true;
+    } catch (err) { set({ error: err instanceof Error ? err.message : 'Không thể tải thông báo' }); return false; }
   },
   addNotification: async (notification) => {
     await notificationsApi.createNotification({ title: notification.title, message: notification.message,

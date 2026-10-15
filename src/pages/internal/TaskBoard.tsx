@@ -27,7 +27,6 @@ import {
   Copy,
   Calendar,
   X,
-  Eye,
   Flame,
   FileText,
   Tag,
@@ -286,7 +285,6 @@ export const TaskBoard: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<string>('Tất Cả Dự Án');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [levelFilter, setLevelFilter] = useState<'all' | 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER'>('all');
   const [myTasksOnly, setMyTasksOnly] = useState<boolean>(false);
 
   // Modals
@@ -336,25 +334,23 @@ export const TaskBoard: React.FC = () => {
         ? overdue.isOverdue
         : t.status === statusFilter;
 
-      // 2. Level Filter
-      const matchesLevel = levelFilter === 'all' || t.level === levelFilter;
-      // 3. Ban Scope
+      // 2. Ban Scope
       const matchesBan = activeBanScope === 'all' || t.banId === activeBanScope;
-      // 4. Project
+      // 3. Project
       const matchesProject = selectedProject === 'Tất Cả Dự Án' || t.project === selectedProject;
-      // 5. Priority
+      // 4. Priority
       const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-      // 6. Search
+      // 5. Search
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             t.assignee.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             t.creatorName.toLowerCase().includes(searchQuery.toLowerCase());
-      // 7. My Tasks
+      // 6. My Tasks
       const matchesMyTask = !myTasksOnly || t.assigneeUserIds.includes(user?.id || '') || (t.creatorId === user?.id);
 
-      return matchesStatus && matchesLevel && matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
+      return matchesStatus && matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
     });
-  }, [tasks, isMember, statusFilter, levelFilter, activeBanScope, selectedProject, priorityFilter, searchQuery, myTasksOnly, user?.id]);
+  }, [tasks, isMember, statusFilter, activeBanScope, selectedProject, priorityFilter, searchQuery, myTasksOnly, user?.id]);
 
   const totalTasksCount = tasks.length;
   const inProgressTasksCount = tasks.filter(t => t.status === 'in_progress').length;
@@ -385,7 +381,7 @@ export const TaskBoard: React.FC = () => {
       if (type === 'approve') {
         await tasksApi.approveTask(task.id, { feedback: reviewFeedback.trim() || 'Đã hoàn thành xuất sắc nhiệm vụ!' });
         setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'done', feedback: reviewFeedback.trim() || 'Đã hoàn thành xuất sắc nhiệm vụ!' } : t));
-        showToast('Phê duyệt công việc thành công! Gems thưởng đã được cộng tự động.', 'success');
+        showToast('Phê duyệt công việc thành công!', 'success');
       } else {
         await tasksApi.rejectTask(task.id, { feedback: reviewFeedback.trim() });
         setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'in_progress', feedback: reviewFeedback.trim() } : t));
@@ -559,7 +555,7 @@ export const TaskBoard: React.FC = () => {
           </div>
 
           <h1 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-            <span>Quản Lý Công Việc & Tiến Độ (Kanban Board)</span>
+            <span>Quản Lý Công Việc & Tiến Độ</span>
             {!isOrgAdmin && (
               <span className="text-sm font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-blue-600 border border-slate-200">
                 {user?.banName || 'Ban Chuyên Môn'}
@@ -568,11 +564,10 @@ export const TaskBoard: React.FC = () => {
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {isOrgAdmin
-              ? 'Phân cấp BCN: Giám sát toàn bộ tiến độ, giao việc trực tiếp cho các Trưởng Ban (BCN → Lead). Đồng bộ thực tế với cơ sở dữ liệu.'
+              ? 'Giám sát tiến độ toàn bộ công việc và giao việc trực tiếp cho các Trưởng Ban.'
               : isLead
-              ? 'Phân cấp Lead: Tiếp nhận chỉ đạo từ BCN và phân bổ, giao việc cho các Thành viên trong Ban (Lead → Member).'
-              : 'Thành viên theo dõi nhiệm vụ do Trưởng Ban giao, chủ động bắt đầu làm và nộp báo cáo minh chứng để nhận Gems.'
-            }
+              ? 'Quản lý tiến độ công việc và phân bổ nhiệm vụ cho các thành viên trong ban.'
+              : 'Theo dõi nhiệm vụ được giao, chủ động thực hiện và nộp báo cáo minh chứng.'}
           </p>
         </div>
 
@@ -615,7 +610,7 @@ export const TaskBoard: React.FC = () => {
               }`}
             >
               <Plus className="w-4 h-4" />
-              <span>{isOrgAdmin ? 'Giao Việc Cho Trưởng Ban (BCN → Lead)' : `Giao Việc Cho Member (${user?.banId?.toUpperCase()})`}</span>
+              <span>{isOrgAdmin ? 'Giao Việc Cho Trưởng Ban' : `Giao Việc Cho Thành Viên (${user?.banId?.toUpperCase()})`}</span>
             </button>
           )}
         </div>
@@ -704,22 +699,6 @@ export const TaskBoard: React.FC = () => {
               <option value="Thấp">Thấp</option>
             </select>
           </div>
-
-          {/* Hierarchy Level Filter (Only for BCN & Lead) */}
-          {!isMember && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Phân cấp:</span>
-              <select
-                value={levelFilter}
-                onChange={(e: any) => setLevelFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
-              >
-                <option value="all">Tất Cả Cấp Bậc</option>
-                <option value="BCN_TO_LEAD">👑 BCN → Lead</option>
-                <option value="LEAD_TO_MEMBER">⚡ Lead → Member</option>
-              </select>
-            </div>
-          )}
         </div>
 
         {/* Row 2: Search, My Tasks Toggle & View Mode Switcher */}
@@ -837,25 +816,21 @@ export const TaskBoard: React.FC = () => {
       {/* 5. TABLE LIST VIEW */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-xs text-slate-600 min-w-[960px]">
+          <table className="w-full text-left text-xs text-slate-600 min-w-[720px]">
             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3.5">Mã & Tiêu Đề Công Việc</th>
-                <th className="px-4 py-3.5">Dự Án / Chiến Dịch</th>
-                <th className="px-4 py-3.5">Ban</th>
+                <th className="px-5 py-3.5">Công Việc</th>
                 <th className="px-4 py-3.5">Người Nhận</th>
                 <th className="px-4 py-3.5">Người Giao</th>
-                <th className="px-4 py-3.5">Trạng Thái</th>
-                <th className="px-4 py-3.5">Ưu Tiên</th>
                 <th className="px-4 py-3.5">Hạn Chót</th>
-                <th className="px-4 py-3.5">Gems</th>
-                <th className="px-4 py-3.5 text-right">Thao Tác</th>
+                <th className="px-4 py-3.5">Trạng Thái</th>
+                <th className="px-5 py-3.5 text-right">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-14 text-center text-slate-400">
+                  <td colSpan={6} className="py-14 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FolderGit2 className="w-8 h-8 text-slate-300" />
                       <span className="text-xs font-semibold">Chưa có công việc nào phù hợp với bộ lọc</span>
@@ -892,96 +867,62 @@ export const TaskBoard: React.FC = () => {
                         overdue.isOverdue ? 'bg-rose-50/30 hover:bg-rose-50/60' : 'hover:bg-slate-50/80'
                       }`}
                     >
-                      {/* 1. Mã & Tiêu Đề */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="font-mono-code font-bold text-slate-400 text-[10px]">
-                            #{task.id.slice(0, 8)}
+                      {/* 1. Công Việc (Tiêu đề + Tags Dự án & Ban + Mô tả ngắn) */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                            {task.title}
                           </span>
-                          {task.level === 'BCN_TO_LEAD' ? (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
-                              👑 BCN → LEAD
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
-                              ⚡ LEAD → MEMBER
+                          {task.priority === 'Cao' && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-200 shrink-0">
+                              🔥 Cao
                             </span>
                           )}
                         </div>
-                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                          {task.title}
-                        </span>
-                        {task.description && (
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-normal">
-                            {task.description}
-                          </p>
-                        )}
-                      </td>
-
-                      {/* 2. Dự Án */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 text-blue-700 bg-blue-50/70 border border-blue-100 px-2.5 py-1 rounded-lg text-xs font-semibold max-w-[150px] truncate" title={task.project}>
-                          <FolderGit2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="truncate">{task.project}</span>
+                        <div className="flex items-center gap-1.5 text-xs flex-wrap">
+                          <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md truncate max-w-[160px]" title={task.project}>
+                            {task.project}
+                          </span>
+                          <span className="font-mono-code font-bold uppercase text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                            {task.banId}
+                          </span>
+                          {task.description && (
+                            <span className="text-[11px] text-slate-400 truncate max-w-sm hidden md:inline">
+                              • {task.description}
+                            </span>
+                          )}
                         </div>
                       </td>
 
-                      {/* 3. Ban */}
+                      {/* 2. Người Nhận */}
                       <td className="px-4 py-3.5">
-                        <span className="font-mono-code font-bold uppercase text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                          {task.banId}
-                        </span>
-                      </td>
-
-                      {/* 4. Người Nhận */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 min-w-0" title={`Người nhận: ${task.assignee}`}>
-                          <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
+                        <div className="flex items-center gap-2 min-w-0" title={`Người nhận: ${task.assignee}`}>
+                          <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
                             {task.assignee ? task.assignee.trim()[0] : '?'}
                           </div>
-                          <span className="font-semibold text-slate-800 text-xs truncate max-w-[110px]">
+                          <span className="font-semibold text-slate-800 text-xs truncate max-w-[130px]">
                             {task.assignee}
                           </span>
                         </div>
                       </td>
 
-                      {/* 5. Người Giao */}
+                      {/* 3. Người Giao */}
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 min-w-0" title={`Người giao: ${task.creatorName}`}>
-                          <div className="w-5 h-5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
+                        <div className="flex items-center gap-2 min-w-0" title={`Người giao: ${task.creatorName}`}>
+                          <div className="w-6 h-6 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
                             {task.creatorName ? task.creatorName.trim()[0] : '?'}
                           </div>
-                          <span className="text-slate-600 text-xs font-medium truncate max-w-[110px]">
+                          <span className="text-slate-600 text-xs font-medium truncate max-w-[130px]">
                             {task.creatorName}
                           </span>
                         </div>
                       </td>
 
-                      {/* 6. Trạng Thái */}
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${statusConfig.bg}`}>
-                          {task.status === 'in_progress' && <Play className="w-2.5 h-2.5 fill-blue-600 text-blue-600" />}
-                          {task.status === 'review' && <Clock className="w-3 h-3 text-amber-600" />}
-                          {task.status === 'done' && <Check className="w-3 h-3 text-emerald-600" />}
-                          <span>{statusConfig.label}</span>
-                        </span>
-                      </td>
-
-                      {/* 7. Ưu Tiên */}
-                      <td className="px-4 py-3.5">
-                        <span className={`font-semibold flex items-center gap-1 ${
-                          task.priority === 'Cao' ? 'text-rose-600 font-bold' : 'text-slate-600'
-                        }`}>
-                          {task.priority === 'Cao' && <Flame className="w-3 h-3 text-rose-600 shrink-0" />}
-                          <span>{task.priority}</span>
-                        </span>
-                      </td>
-
-                      {/* 8. Hạn Chót */}
+                      {/* 4. Hạn Chót */}
                       <td className="px-4 py-3.5 font-mono-code">
                         {overdue.isOverdue ? (
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-rose-700 font-bold flex items-center gap-1 text-[11px]">
+                            <span className="text-rose-700 font-bold flex items-center gap-1 text-xs">
                               <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-pulse" />
                               {formatDateToDDMMYYYY(task.deadline)}
                             </span>
@@ -991,34 +932,30 @@ export const TaskBoard: React.FC = () => {
                           </div>
                         ) : (
                           <span className="text-slate-600 font-medium text-xs flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
                             {formatDateToDDMMYYYY(task.deadline)}
                           </span>
                         )}
                       </td>
 
-                      {/* 9. Gems */}
-                      <td className="px-4 py-3.5 font-bold text-amber-700 font-mono-code">
-                        💎 +{task.gems}
+                      {/* 5. Trạng Thái */}
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 ${statusConfig.bg}`}>
+                          {task.status === 'in_progress' && <Play className="w-2.5 h-2.5 fill-blue-600 text-blue-600" />}
+                          {task.status === 'review' && <Clock className="w-3 h-3 text-amber-600" />}
+                          {task.status === 'done' && <Check className="w-3 h-3 text-emerald-600" />}
+                          <span>{statusConfig.label}</span>
+                        </span>
                       </td>
 
-                      {/* 10. Thao Tác */}
-                      <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      {/* 6. Thao Tác (Không có con mắt, chỉ có nút Submit/Review) */}
+                      <td className="px-5 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Eye button for details */}
-                          <button
-                            onClick={() => setDetailModalTask(task)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                            title="Xem chi tiết công việc"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-
                           {/* Member only: Submit button */}
                           {canSubmit && (
                             <button
                               onClick={() => setSubmitModalTask(task)}
-                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer flex items-center gap-1 transition-transform active:scale-95"
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1 transition-transform active:scale-95"
                               title="Nộp báo cáo hoàn thành"
                             >
                               <Send className="w-3 h-3" />
@@ -1033,18 +970,18 @@ export const TaskBoard: React.FC = () => {
                                 onClick={() => handleOpenReviewModal(task, 'reject')}
                                 disabled={isActionLoading || !!reviewBlockedReason(task)}
                                 title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
-                                className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                                className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
                               >
-                                <XCircle className="w-3 h-3 text-amber-700" />
+                                <XCircle className="w-3.5 h-3.5 text-amber-700" />
                                 <span>Sửa</span>
                               </button>
                               <button
                                 onClick={() => handleOpenReviewModal(task, 'approve')}
                                 disabled={isActionLoading || !!reviewBlockedReason(task)}
-                                title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems'}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                                title={reviewBlockedReason(task) || 'Duyệt kết quả'}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
                               >
-                                <Check className="w-3 h-3" />
+                                <Check className="w-3.5 h-3.5" />
                                 <span>Duyệt</span>
                               </button>
                             </div>
@@ -1052,14 +989,14 @@ export const TaskBoard: React.FC = () => {
 
                           {/* Member awaiting review chip */}
                           {isAssignee && task.status === 'review' && (
-                            <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold">
+                            <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
                               Chờ duyệt
                             </span>
                           )}
 
                           {/* Completed chip */}
                           {task.status === 'done' && (
-                            <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
                               Đã duyệt
                             </span>
                           )}
@@ -1138,7 +1075,7 @@ export const TaskBoard: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-extrabold text-slate-900">
-                    {reviewModal.type === 'approve' ? 'Phê Duyệt Nhiệm Vụ & Cấp Gems' : 'Yêu Cầu Chỉnh Sửa Nhiệm Vụ'}
+                    {reviewModal.type === 'approve' ? 'Phê Duyệt Hoàn Thành Nhiệm Vụ' : 'Yêu Cầu Chỉnh Sửa Nhiệm Vụ'}
                   </h3>
                   <p className="text-xs text-slate-500 truncate max-w-xs sm:max-w-sm">
                     Task: <strong className="text-slate-800">{reviewModal.task.title}</strong>
@@ -1205,7 +1142,7 @@ export const TaskBoard: React.FC = () => {
               />
               <p className="text-[11px] text-slate-400">
                 {reviewModal.type === 'approve' 
-                  ? `Khi phê duyệt, thành viên sẽ được tự động cộng +${reviewModal.task.gems} Gems vào ví.` 
+                  ? 'Nhiệm vụ sẽ được đánh dấu Hoàn Thành và lưu vào lịch sử công việc.' 
                   : 'Task sẽ được chuyển lại trạng thái "Đang làm" để thành viên tiếp tục cập nhật và nộp lại.'}
               </p>
             </div>
@@ -1237,7 +1174,7 @@ export const TaskBoard: React.FC = () => {
                 ) : reviewModal.type === 'approve' ? (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>Xác Nhận Phê Duyệt (+{reviewModal.task.gems} Gems)</span>
+                    <span>Xác Nhận Phê Duyệt</span>
                   </>
                 ) : (
                   <>
@@ -1256,13 +1193,6 @@ export const TaskBoard: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <form onSubmit={handleCreateTask} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="pb-2 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  isOrgAdmin ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200'
-                }`}>
-                  {isOrgAdmin ? '👑 PHÂN CẤP 1: BCN → TRƯỞNG BAN' : '⚡ PHÂN CẤP 2: TRƯỞNG BAN → THÀNH VIÊN'}
-                </span>
-              </div>
               <h3 className="text-base font-extrabold text-slate-900 mt-1 flex items-center gap-2">
                 <Plus className="w-5 h-5 text-blue-600" />
                 <span>{isOrgAdmin ? 'Giao Nhiệm Vụ Cho Trưởng Ban' : `Giao Nhiệm Vụ Cho Thành Viên (${user?.banName})`}</span>
@@ -1391,7 +1321,7 @@ export const TaskBoard: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Chiến Dịch / Dự Án</label>
                 <select
@@ -1406,38 +1336,25 @@ export const TaskBoard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Hạn Chót (Deadline: dd/MM/yyyy)</label>
-                <DateInput
-                  value={newDeadline}
-                  onChange={setNewDeadline}
-                  placeholder="dd/MM/yyyy"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Gems thưởng khi hoàn thành</label>
-                <input
-                  type="number"
-                  min={10}
-                  step={10}
-                  value={newGems}
-                  onChange={(e) => setNewGems(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Độ ưu tiên</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Độ Ưu Tiên</label>
                 <select
                   value={newPriority}
                   onChange={(e: any) => setNewPriority(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="Cao">Cao</option>
+                  <option value="Cao">🔥 Cao</option>
                   <option value="Trung bình">Trung bình</option>
                   <option value="Thấp">Thấp</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Hạn Chót (dd/MM/yyyy)</label>
+                <DateInput
+                  value={newDeadline}
+                  onChange={setNewDeadline}
+                  placeholder="dd/MM/yyyy"
+                />
               </div>
             </div>
 
@@ -1516,15 +1433,6 @@ export const TaskBoard: React.FC = () => {
               <div className="p-6 pb-4 border-b border-slate-200/80">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {detailModalTask.level === 'BCN_TO_LEAD' ? (
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
-                        👑 BCN → LEAD
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
-                        ⚡ LEAD → MEMBER
-                      </span>
-                    )}
                     <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono-code uppercase">
                       {detailModalTask.banId}
                     </span>
@@ -1636,17 +1544,6 @@ export const TaskBoard: React.FC = () => {
                       detailModalTask.priority === 'Cao' ? 'text-rose-600' : 'text-slate-800'
                     }`}>
                       {detailModalTask.priority}
-                    </p>
-                  </div>
-
-                  {/* Gems Reward */}
-                  <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-xl space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-amber-500" />
-                      Gems Thưởng
-                    </span>
-                    <p className="font-extrabold text-amber-800 font-mono-code text-sm">
-                      💎 +{detailModalTask.gems} Gems
                     </p>
                   </div>
 
@@ -1794,10 +1691,10 @@ export const TaskBoard: React.FC = () => {
                         }}
                         disabled={isActionLoading || !!reviewBlockedReason(detailModalTask)}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={reviewBlockedReason(detailModalTask) || 'Duyệt kết quả và cấp Gems'}
+                        title={reviewBlockedReason(detailModalTask) || 'Phê duyệt hoàn thành'}
                       >
                         <Check className="w-3.5 h-3.5" />
-                        <span>Phê Duyệt & Tặng Gems</span>
+                        <span>Phê Duyệt Hoàn Thành</span>
                       </button>
                     </>
                   )}

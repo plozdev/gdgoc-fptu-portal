@@ -1,4 +1,5 @@
 import { generationApi } from '../../api/generation.api';
+import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 import { subscribeSync } from '../../sync/subscriptions';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
@@ -311,9 +312,9 @@ export const GemsLeaderboard: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100" />
+                    <MemberProfileLink id={u.userId}><img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100" /></MemberProfileLink>
                     <div className="min-w-0">
-                      <h4 className="text-sm font-extrabold text-slate-900 truncate">{u.name}</h4>
+                      <h4 className="text-sm font-extrabold text-slate-900 truncate"><MemberProfileLink id={u.userId}>{u.name}</MemberProfileLink></h4>
                       <p className="text-xs text-slate-500 truncate">{u.ban}</p>
                       {u.delta && (
                         <p className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
@@ -334,7 +335,6 @@ export const GemsLeaderboard: React.FC = () => {
                   <Medal className="w-4 h-4 text-amber-600" />
                   <span>Bảng Xếp Hạng Đóng Góp · {periodName}</span>
                 </h3>
-                <span className="text-xs text-slate-500 font-mono-code">Cập nhật theo thời gian thực</span>
               </div>
 
               <div className="overflow-x-auto">
@@ -356,9 +356,9 @@ export const GemsLeaderboard: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover" />
+                            <MemberProfileLink id={u.userId}><img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover" /></MemberProfileLink>
                             <div>
-                              <span className="font-bold text-slate-900 block leading-tight">{u.name}</span>
+                              <MemberProfileLink id={u.userId} className="font-bold text-slate-900 block leading-tight">{u.name}</MemberProfileLink>
                               {u.mssv && <span className="text-[10px] text-slate-400 font-mono-code">{u.mssv}</span>}
                             </div>
                           </div>
@@ -434,7 +434,7 @@ export const GemsLeaderboard: React.FC = () => {
                         <td className="px-4 py-3 font-medium text-slate-900">
                           {tx.reason || 'Cộng điểm thưởng tự động'}
                         </td>
-                        <td className="px-4 py-3">{tx.actor?.fullName || (tx.type === 'MANUAL_ADJUSTMENT' ? 'Chưa ghi nhận (lịch sử cũ)' : 'Hệ thống')}</td>
+                        <td className="px-4 py-3"><MemberProfileLink id={tx.actor?.id}>{tx.actor?.fullName || (tx.type === 'MANUAL_ADJUSTMENT' ? 'Chưa ghi nhận (lịch sử cũ)' : 'Hệ thống')}</MemberProfileLink></td>
                         <td className="px-4 py-3 text-slate-400 font-mono-code text-[11px]">
                           {formatDateToDDMMYYYY(tx.createdAt)}
                         </td>

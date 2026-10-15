@@ -38,6 +38,7 @@ import { GemsLeaderboard } from './pages/internal/GemsLeaderboard';
 import { GenerationSettings } from './pages/internal/GenerationSettings';
 import { InventoryManagement } from './pages/internal/InventoryManagement';
 import { MyProfile } from './pages/internal/MyProfile';
+import { MemberProfilePage } from './pages/internal/MemberProfile';
 import { FirstPasswordChange } from './components/FirstPasswordChange';
 
 function LandingPage() {
@@ -312,6 +313,10 @@ export default function App() {
               <Navigate to="/login" />
             )
           }
+        />
+        <Route
+          path="/app/members/:id"
+          element={user ? <DashboardLayout><MemberProfilePage /></DashboardLayout> : <Navigate to="/login" />}
         />
         <Route
           path="/app/change-password"

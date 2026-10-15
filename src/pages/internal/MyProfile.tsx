@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore, Member, MemberSocials } from '../../store/useMemberStore';
 import { membersApi } from '../../api/members.api';
+import { MyRoleHistory } from '../../components/members/RoleHistory';
 import { tasksApi } from '../../api/tasks.api';
 import { eventsApi } from '../../api/events.api';
 import {
@@ -747,6 +748,7 @@ export const MyProfile: React.FC = () => {
           </form></fieldset>
         </div>
       </div>
+      {user?.id && <MyRoleHistory id={user.id} />}
     </div>
   );
 };

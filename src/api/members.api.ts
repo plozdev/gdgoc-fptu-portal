@@ -1,5 +1,19 @@
 import { api } from './client';
 
+export interface MemberRoleHistory {
+  id: string; tenureId: string; tenureName: string; genLabel: string;
+  startDate: string; endDate: string; joinedAt: string; isArchived: boolean;
+  role: string; position: string | null; status: string; departmentName: string;
+}
+export interface MemberProfile {
+  id: string; fullName: string; avatarUrl: string | null; coverUrl: string | null;
+  bio: string; skills: string[]; position: string | null; role: string; status: string;
+  departmentName: string; genLabel: string;
+  email?: string; phoneNumber?: string | null; mssv?: string;
+  socials: { github: string | null; linkedin: string | null; facebook: string | null };
+  roleHistory: MemberRoleHistory[];
+}
+
 export interface QueryMembersParams {
   tenureId?: string;
   departmentCode?: string;
@@ -45,6 +59,7 @@ export interface UpdateProfileDto {
 }
 
 export const membersApi = {
+  getProfile: (id: string, options?: RequestInit) => api.get<MemberProfile>(`/api/members/${encodeURIComponent(id)}/profile`, options),
   uploadProfileImage: (kind: 'avatar' | 'cover', file: File) => {
     const form = new FormData();
     form.append('file', file);

@@ -38,6 +38,7 @@ import { DateInput } from '../../components/common/DateInput';
 import { formatDateToDDMMYYYY } from '../../utils/dateUtils';
 import { useMemberStore, Member } from '../../store/useMemberStore';
 import { tasksApi } from '../../api/tasks.api';
+import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 
 export type TaskLevel = 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER';
 
@@ -896,26 +897,26 @@ export const TaskBoard: React.FC = () => {
 
                       {/* 2. Người Nhận */}
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2 min-w-0" title={`Người nhận: ${task.assignee}`}>
+                        <MemberProfileLink id={task.assigneeUserIds[0]} className="flex items-center gap-2 min-w-0">
                           <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
                             {task.assignee ? task.assignee.trim()[0] : '?'}
                           </div>
                           <span className="font-semibold text-slate-800 text-xs truncate max-w-[130px]">
                             {task.assignee}
                           </span>
-                        </div>
+                        </MemberProfileLink>
                       </td>
 
                       {/* 3. Người Giao */}
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2 min-w-0" title={`Người giao: ${task.creatorName}`}>
+                        <MemberProfileLink id={task.creatorId} className="flex items-center gap-2 min-w-0">
                           <div className="w-6 h-6 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
                             {task.creatorName ? task.creatorName.trim()[0] : '?'}
                           </div>
                           <span className="text-slate-600 text-xs font-medium truncate max-w-[130px]">
                             {task.creatorName}
                           </span>
-                        </div>
+                        </MemberProfileLink>
                       </td>
 
                       {/* 4. Hạn Chót */}
@@ -1518,9 +1519,9 @@ export const TaskBoard: React.FC = () => {
                       <User className="w-3 h-3 text-purple-500" />
                       Người Giao Việc
                     </span>
-                    <p className="font-bold text-slate-900 truncate" title={detailModalTask.creatorName || detailModalTask.assignedBy}>
+                    <MemberProfileLink id={detailModalTask.creatorId} className="block font-bold text-slate-900 truncate">
                       {detailModalTask.creatorName || detailModalTask.assignedBy || 'Ban Quản Trị'}
-                    </p>
+                    </MemberProfileLink>
                   </div>
 
                   {/* Assignee */}
@@ -1529,9 +1530,9 @@ export const TaskBoard: React.FC = () => {
                       <UserCheck className="w-3 h-3 text-emerald-500" />
                       Người Thực Hiện
                     </span>
-                    <p className="font-bold text-slate-900 truncate" title={detailModalTask.assignee}>
+                    <MemberProfileLink id={detailModalTask.assigneeUserIds[0]} className="block font-bold text-slate-900 truncate">
                       {detailModalTask.assignee}
-                    </p>
+                    </MemberProfileLink>
                   </div>
 
                   {/* Priority */}

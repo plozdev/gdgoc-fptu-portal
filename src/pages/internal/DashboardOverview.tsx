@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 import { subscribeSync } from '../../sync/subscriptions';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -199,7 +200,8 @@ export const DashboardOverview: React.FC = () => {
               const isRunning = t.status !== 'DONE' && t.status !== 'done' && t.status !== 'CANCELLED';
               return inBan && isRunning;
             }).length;
-            const designatedLead = members.find(m => m.banId === ban.id && (m.tier === 'BAN_LEAD' || m.position.toLowerCase().includes('trưởng ban') || m.position.toLowerCase().includes('lead')))?.name || ban.defaultLead;
+            const leadMember = members.find(m => m.banId === ban.id && (m.tier === 'BAN_LEAD' || m.position.toLowerCase().includes('trưởng ban') || m.position.toLowerCase().includes('lead')));
+            const designatedLead = leadMember?.name || ban.defaultLead;
 
             return (
               <div 
@@ -220,7 +222,7 @@ export const DashboardOverview: React.FC = () => {
                 </div>
 
                 <h3 className="text-sm font-bold text-slate-900 truncate mb-1">{ban.name}</h3>
-                <p className="text-xs text-slate-600 mb-3">Trưởng Ban: <span className="font-semibold text-slate-800">{designatedLead}</span></p>
+                <p className="text-xs text-slate-600 mb-3">Trưởng Ban: <MemberProfileLink id={leadMember?.id} className="font-semibold text-slate-800">{designatedLead}</MemberProfileLink></p>
 
                 <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-200/80">
                   <span>{banMembersCount} thành viên</span>

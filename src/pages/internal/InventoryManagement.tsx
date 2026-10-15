@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useInventoryStore, InventoryItem, InventoryCategory } from '../../store/useInventoryStore';
 import { useMemberStore } from '../../store/useMemberStore';
@@ -318,13 +319,13 @@ export const InventoryManagement: React.FC = () => {
                       {/* Người Đang Giữ */}
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0 ${
+                          <MemberProfileLink id={item.holderUserId || undefined} className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0 ${
                             isClubCabinet ? 'bg-slate-500' : 'bg-gradient-to-br from-blue-500 to-indigo-600'
                           }`}>
                             {isClubCabinet ? '🏠' : item.holderName.charAt(0)}
-                          </div>
+                          </MemberProfileLink>
                           <div>
-                            <p className="font-bold text-slate-800 text-xs">{item.holderName}</p>
+                            <p className="font-bold text-slate-800 text-xs"><MemberProfileLink id={item.holderUserId || undefined}>{item.holderName}</MemberProfileLink></p>
                             {item.holderPhone && (
                               <p className="text-[10px] text-slate-500 font-mono-code flex items-center gap-1">
                                 <Phone className="w-2.5 h-2.5 text-slate-400" />

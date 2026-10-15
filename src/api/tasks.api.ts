@@ -40,7 +40,7 @@ export const tasksApi = {
       });
     }
     const queryString = query.toString();
-    return api.get(`/api/tasks${queryString ? `?${queryString}` : ''}`);
+    return api.getPage(`/api/tasks${queryString ? `?${queryString}` : ''}`);
   },
 
   getTask: (id: string) => api.get(`/api/tasks/${id}`),
@@ -64,5 +64,4 @@ export const tasksApi = {
   rejectTask: (id: string, dto: { feedback: string }) =>
     api.post(`/api/tasks/${id}/reject`, dto),
 
-  deleteTask: (id: string) => api.delete(`/api/tasks/${id}`),
 };

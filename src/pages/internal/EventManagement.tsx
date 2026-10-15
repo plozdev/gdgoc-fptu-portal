@@ -470,13 +470,14 @@ export const EventManagement: React.FC = () => {
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        disabled={busy}
+                        disabled={busy || event.semester?.isClosed}
                         onClick={() => {
-                          if (window.confirm(`Xóa sự kiện "${event.title}"?\n\nGems đã cộng từ sự kiện này cho ${event.rewardedCount || 0} người sẽ bị thu hồi. Task và tài nguyên liên quan được giữ lại, bỏ liên kết event. ${event.semester?.isClosed ? "Sự kiện thuộc kỳ đã chốt: điểm của kỳ đó cũng sẽ cập nhật. " : ""}Thao tác này không thể hoàn tác.`))
+                          if (event.semester?.isClosed) return;
+                          if (window.confirm(`Xóa sự kiện "${event.title}"?\n\nGems đã cộng từ sự kiện này cho ${event.rewardedCount || 0} người sẽ bị thu hồi. Task và tài nguyên liên quan được giữ lại, bỏ liên kết event. Thao tác này không thể hoàn tác.`))
                             void run(() => eventsApi.deleteEvent(event.id));
                         }}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                        title="Xóa sự kiện và thu hồi Gems liên quan"
+                        title={event.semester?.isClosed ? 'Kỳ đã lưu trữ, không thể xóa hoặc thay đổi Gems lịch sử.' : 'Xóa sự kiện và thu hồi Gems liên quan'}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { generationApi } from "../api/generation.api";
 interface GenerationState {
+  semesters: { id: string; name: string; isClosed: boolean }[];
   currentGen: string;
   currentSemester: string;
   currentSemesterId: string;
@@ -9,6 +10,7 @@ interface GenerationState {
   fetchGenerationConfig: () => Promise<boolean>;
 }
 export const useGenerationStore = create<GenerationState>((set) => ({
+  semesters: [],
   currentGen: "",
   currentSemester: "",
   currentSemesterId: "",
@@ -22,6 +24,7 @@ export const useGenerationStore = create<GenerationState>((set) => ({
         currentGen: c.currentTenure?.genLabel || "",
         currentSemester: c.currentSemester?.name || "",
         currentSemesterId: c.currentSemester?.id || "",
+        semesters: [c.currentSemester, ...(c.archivedTenures || [])].filter(Boolean),
         isLoading: false,
         error: null,
       });

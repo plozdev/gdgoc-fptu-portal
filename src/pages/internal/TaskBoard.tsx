@@ -10,7 +10,6 @@ import {
   Clock, 
   Send, 
   Check, 
-  Trash2, 
   Sparkles,
   Link2, 
   Lock, 
@@ -66,7 +65,7 @@ export interface Task {
   project: string; // Chiến dịch / Dự án / Milestone
   status: 'todo' | 'in_progress' | 'review' | 'done';
   assignee: string;
-  assigneeUserId?: string;
+  assigneeUserIds: string[];
   gems: number;
   priority: 'Cao' | 'Trung bình' | 'Thấp';
   submissionProof?: string;
@@ -132,7 +131,7 @@ const mapBackendTaskToFrontend = (item: any): Task => {
     project: item.event?.title || 'Vận Hành Thường Nhật',
     status: statusMap[item.status] || 'todo',
     assignee: assigneeName,
-    assigneeUserId: firstAssignee?.id,
+    assigneeUserIds: (item.assignees || []).map((a: any) => a.userId || a.user?.id).filter(Boolean),
     gems: item.gemsReward ?? 20,
     priority: priorityMap[item.priority] || 'Trung bình',
     submissionProof: item.submissionUrl || undefined,
@@ -147,6 +146,7 @@ export const TaskBoard: React.FC = () => {
 
   const currentSemester = useGenerationStore(s=>s.currentSemester);
   const currentSemesterId = useGenerationStore(s=>s.currentSemesterId);
+  const semesters = useGenerationStore(s => s.semesters);
   const [eventOptions,setEventOptions] = useState<any[]>([]);
   useEffect(()=>{void eventsApi.getEvents().then((events:any)=>setEventOptions(Array.isArray(events)?events:[])).catch(()=>{});},[]);
   const [doneDays, setDoneDays] = useState(14);
@@ -156,11 +156,16 @@ export const TaskBoard: React.FC = () => {
   pageRef.current = page;
   const taskRequest = useRef(0);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState('');
+  const historyView = !!selectedSemesterId && selectedSemesterId !== currentSemesterId;
+  const boardReadOnly = !!user?.readOnly || historyView;
   const PROJECTS_LIST = ['Tất Cả Dự Án',...new Set(tasks.map(t=>t.project))];
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [createTaskError, setCreateTaskError] = useState<string | null>(null);
+  const [submitModalError, setSubmitModalError] = useState<string | null>(null);
 
   const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
     setFeedbackMsg({ text, type });
@@ -176,7 +181,7 @@ export const TaskBoard: React.FC = () => {
       if (!background) setIsLoading(true);
       // Refresh every already loaded page without resetting the board's pagination.
       const pages = background ? Array.from({ length: nextPage }, (_, i) => i + 1) : [nextPage];
-      const results: any[] = await Promise.all(pages.map(page => tasksApi.getTasks({ limit: 100, page, doneDays, semesterId: user?.readOnly ? 'all' : currentSemesterId || undefined })));
+      const results: any[] = await Promise.all(pages.map(page => tasksApi.getTasks({ limit: 100, page, doneDays: historyView ? 0 : doneDays, semesterId: selectedSemesterId || (user?.readOnly ? 'all' : currentSemesterId || undefined) })));
       if (version !== taskRequest.current) return false;
       const mappedTasks = results.flatMap(res => (Array.isArray(res) ? res : res?.data || []).map(mapBackendTaskToFrontend));
       setTasks(prev => background || nextPage === 1 ? mappedTasks : [...prev, ...mappedTasks]);
@@ -188,7 +193,7 @@ export const TaskBoard: React.FC = () => {
     } finally {
       if (version === taskRequest.current) setIsLoading(false);
     }
-  }, [doneDays, currentSemesterId, user?.readOnly, showToast]);
+  }, [doneDays, currentSemesterId, selectedSemesterId, historyView, user?.readOnly, showToast]);
 
   useEffect(() => {
     const unsubscribe = subscribeSync(['tasks', 'semesters', 'scope'], () => loadTasksFromApi(pageRef.current, true));
@@ -196,8 +201,13 @@ export const TaskBoard: React.FC = () => {
   }, [loadTasksFromApi]);
   // RBAC checks
   const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';
-  const isLead = !user?.readOnly && (user?.tier === 'BAN_LEAD' || isOrgAdmin);
+  const isLead = !boardReadOnly && (user?.tier === 'BAN_LEAD' || isOrgAdmin);
   const isMember = !user?.readOnly && user?.tier === 'BAN_MEMBER';
+  const reviewBlockedReason = (task: Task) => {
+    if (task.assigneeUserIds.includes(user?.id || '')) return 'Không thể tự duyệt hoặc yêu cầu sửa công việc của mình. Cần người quản lý khác duyệt.';
+    if (!task.submissionProof) return 'Công việc chưa có minh chứng.';
+    return '';
+  };
 
   // Trưởng Ban chỉ xem được Ban của mình!
   const [selectedBan, setSelectedBan] = useState<string>(isOrgAdmin ? 'all' : (user?.banId || 'ai'));
@@ -265,11 +275,11 @@ export const TaskBoard: React.FC = () => {
                             t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             t.assignee.toLowerCase().includes(searchQuery.toLowerCase());
       // 6. My Tasks
-      const matchesMyTask = !myTasksOnly || (user?.name && t.assignee.toLowerCase().includes(user.name.toLowerCase()));
+      const matchesMyTask = !myTasksOnly || t.assigneeUserIds.includes(user?.id || '');
 
       return matchesLevel && matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
     });
-  }, [tasks, isMember, levelFilter, activeBanScope, selectedProject, priorityFilter, searchQuery, myTasksOnly, user?.name]);
+  }, [tasks, isMember, levelFilter, activeBanScope, selectedProject, priorityFilter, searchQuery, myTasksOnly, user?.id]);
 
   const totalTasksCount = filteredTasks.length;
   const doneTasksCount = filteredTasks.filter(t => t.status === 'done').length;
@@ -285,6 +295,8 @@ export const TaskBoard: React.FC = () => {
 
   // Lead action: Approve task -> calls backend approveTask (awards Gems in DB)
   const handleApproveTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || reviewBlockedReason(task)) return;
     try {
       setIsActionLoading(true);
       await tasksApi.approveTask(taskId, { feedback: 'Đã hoàn thành xuất sắc nhiệm vụ!' });
@@ -301,6 +313,8 @@ export const TaskBoard: React.FC = () => {
 
   // Lead action: Reject task -> moves back to in_progress with feedback
   const handleRejectTask = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || reviewBlockedReason(task)) return;
     try {
       setIsActionLoading(true);
       await tasksApi.rejectTask(taskId, { feedback: 'Vui lòng bổ sung thêm tài liệu minh chứng.' });
@@ -326,22 +340,6 @@ export const TaskBoard: React.FC = () => {
     } catch (err: any) {
       console.error('Lỗi khi cập nhật trạng thái:', err);
       showToast(`Không thể chuyển trạng thái: ${err?.message || 'Lỗi Backend'}`, 'error');
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Lead action: Delete task
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa task này khỏi kế hoạch?')) return;
-    try {
-      setIsActionLoading(true);
-      await tasksApi.deleteTask(taskId);
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      showToast('Đã xóa công việc khỏi cơ sở dữ liệu PostgreSQL.', 'success');
-    } catch (err: any) {
-      console.error('Lỗi khi xóa task:', err);
-      showToast(`Không thể xóa task: ${err?.message || 'Lỗi Backend'}`, 'error');
     } finally {
       setIsActionLoading(false);
     }
@@ -373,7 +371,11 @@ export const TaskBoard: React.FC = () => {
   // Lead / BCN action: Create task
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    setCreateTaskError(null);
+    if (!newTitle.trim()) {
+      setCreateTaskError('Vui lòng nhập tiêu đề công việc.');
+      return;
+    }
 
     const targetBan: BanId = isOrgAdmin 
       ? selectedCreateBan 
@@ -387,12 +389,16 @@ export const TaskBoard: React.FC = () => {
       chosenAssigneeName = `${chosenMember.name} (${chosenMember.position})`;
       assigneeUserIds = [chosenMember.id];
     } else {
-      showToast('Hãy chọn người nhận hợp lệ; không tự giao cho tài khoản khác hoặc bản thân.', 'error');return;
+      setCreateTaskError('Hãy chọn người nhận hợp lệ; không tự giao cho tài khoản khác hoặc bản thân.');
+      return;
     }
 
     const parts = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(newDeadline);
     const chosenDate = parts ? new Date(Number(parts[3]), Number(parts[2]) - 1, Number(parts[1])) : null;
-    if (!parts || !chosenDate || chosenDate.getDate() !== Number(parts[1]) || chosenDate.getMonth() !== Number(parts[2]) - 1) { showToast('Hãy chọn hạn chót hợp lệ theo dd/MM/yyyy.', 'error'); return; }
+    if (!parts || !chosenDate || chosenDate.getDate() !== Number(parts[1]) || chosenDate.getMonth() !== Number(parts[2]) - 1) {
+      setCreateTaskError('Hãy chọn hạn chót hợp lệ theo dd/MM/yyyy.');
+      return;
+    }
     const isoDeadline = parseDDMMYYYYtoIso(newDeadline);
     const deptCode = BAN_ID_TO_DEPT_CODE[targetBan] || 'TECH_AI';
 
@@ -415,6 +421,7 @@ export const TaskBoard: React.FC = () => {
         setTasks(prev => [createdFrontendTask, ...prev]);
         showToast('Đã lưu nhiệm vụ mới thành công vào cơ sở dữ liệu PostgreSQL!', 'success');
         setShowCreateModal(false);
+        setCreateTaskError(null);
         setNewTitle('');
         setNewDesc('');
         await loadTasksFromApi();
@@ -423,7 +430,7 @@ export const TaskBoard: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Lỗi khi tạo task qua API:', err);
-      showToast(`Lỗi lưu task vào cơ sở dữ liệu: ${err?.message || 'Không thể kết nối Backend'}`, 'error');
+      setCreateTaskError(`Lỗi lưu task vào cơ sở dữ liệu: ${err?.message || 'Không thể kết nối Backend'}`);
     } finally {
       setIsActionLoading(false);
     }
@@ -455,7 +462,14 @@ export const TaskBoard: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 text-sm"><label>Task Done: <select value={doneDays} onChange={e=>setDoneDays(Number(e.target.value))} className="border rounded-lg p-2"><option value={14}>14 ngày gần nhất</option><option value={30}>30 ngày gần nhất</option><option value={0}>Toàn bộ lịch sử</option></select></label><span className="text-slate-500">Đã tải {tasks.length}/{total} công việc</span>{tasks.length<total&&<button disabled={isLoading} className="text-blue-600" onClick={()=>void loadTasksFromApi(page+1)}>Tải thêm 100 công việc</button>}</div>
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {isOrgAdmin && <label>Xem kỳ: <select aria-label="Xem kỳ công việc" value={selectedSemesterId} onChange={e => { pageRef.current = 1; setPage(1); setSelectedSemesterId(e.target.value); }} className="border rounded-lg p-2">
+          <option value="">{currentSemester || 'Kỳ hiện tại'} · Hiện tại</option>
+          {semesters.filter(s => s.isClosed).map(s => <option key={s.id} value={s.id}>{s.name} · Đã lưu trữ</option>)}
+        </select></label>}
+        <label>Task Done: <select disabled={historyView} value={historyView ? 0 : doneDays} onChange={e=>setDoneDays(Number(e.target.value))} className="border rounded-lg p-2"><option value={14}>14 ngày gần nhất</option><option value={30}>30 ngày gần nhất</option><option value={0}>Toàn bộ lịch sử</option></select></label><span className="text-slate-500">Đã tải {tasks.length}/{total} công việc</span>{tasks.length<total&&<button disabled={isLoading} className="text-blue-600" onClick={()=>void loadTasksFromApi(page+1)}>Tải thêm 100 công việc</button>}
+      </div>
+      {historyView && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Kỳ đã lưu trữ — chỉ xem. Task và trạng thái được giữ nguyên; không chuyển sang kỳ mới hoặc cộng thêm Gems.</p>}
       {/* 1. TOP HEADER & PERMISSION BADGE */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -474,7 +488,7 @@ export const TaskBoard: React.FC = () => {
                 : `👁️ THÀNH VIÊN BAN ${user?.banId?.toUpperCase()} (XEM & SUBMIT)`}
             </span>
             <span className="text-xs text-slate-400">•</span>
-            <span className="text-xs font-semibold text-slate-500">{currentSemester}</span>
+            <span className="text-xs font-semibold text-slate-500">{semesters.find(s => s.id === selectedSemesterId)?.name || currentSemester}</span>
           </div>
 
           <h1 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
@@ -526,6 +540,7 @@ export const TaskBoard: React.FC = () => {
                   const regularMem = banMems.find(m => m.tier === 'BAN_MEMBER');
                   setSelectedMemberAssigneeId(regularMem ? regularMem.id : (banMems[0]?.id || ''));
                 }
+                setCreateTaskError(null);
                 setShowCreateModal(true);
               }}
               className={`px-4 py-2.5 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -796,7 +811,7 @@ export const TaskBoard: React.FC = () => {
                         {/* ACTIONS BASED ON ROLE & STATUS */}
                         <div className="flex items-center gap-1">
                           {/* Todo: Button to start task */}
-                          {!user?.readOnly && task.status === 'todo' && (
+                          {!boardReadOnly && task.status === 'todo' && (
                             <button
                               onClick={() => handleChangeStatus(task.id, 'in_progress')}
                               disabled={isActionLoading}
@@ -809,7 +824,7 @@ export const TaskBoard: React.FC = () => {
                           )}
 
                           {/* In Progress: Move back to Todo */}
-                          {task.status === 'in_progress' && (
+                          {!boardReadOnly && task.status === 'in_progress' && (
                             <button
                               onClick={() => handleChangeStatus(task.id, 'todo')}
                               disabled={isActionLoading}
@@ -821,7 +836,7 @@ export const TaskBoard: React.FC = () => {
                           )}
 
                           {/* Member Action: Submit Button */}
-                          {!user?.readOnly && (task.status === 'in_progress' || task.status === 'todo') && (
+                          {!boardReadOnly && (task.status === 'in_progress' || task.status === 'todo') && (
                             <button
                               onClick={() => setSubmitModalTask(task)}
                               className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-md shadow-xs flex items-center gap-1 transition-colors cursor-pointer"
@@ -835,9 +850,9 @@ export const TaskBoard: React.FC = () => {
                           {isLead && task.status === 'review' && (
                             <button
                               onClick={() => handleRejectTask(task.id)}
-                              disabled={isActionLoading}
-                              className="px-1.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[10px] rounded-md shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer"
-                              title="Yêu cầu sửa lại"
+                              disabled={isActionLoading || !!reviewBlockedReason(task)}
+                              className="px-1.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[10px] rounded-md shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
                             >
                               <XCircle className="w-3 h-3 text-amber-700" />
                               <span>Sửa lại</span>
@@ -848,26 +863,15 @@ export const TaskBoard: React.FC = () => {
                           {isLead && task.status === 'review' && (
                             <button
                               onClick={() => handleApproveTask(task.id)}
-                              disabled={isActionLoading}
-                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-md shadow-xs flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Duyệt kết quả và cấp Gems trực tiếp"
+                              disabled={isActionLoading || !!reviewBlockedReason(task)}
+                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-md shadow-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems trực tiếp'}
                             >
                               <Check className="w-3 h-3" />
                               <span>Duyệt</span>
                             </button>
                           )}
 
-                          {/* Lead Action: Delete Button */}
-                          {isLead && (
-                            <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              disabled={isActionLoading}
-                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                              title="Xóa task"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -977,7 +981,7 @@ export const TaskBoard: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {!user?.readOnly && task.status === 'todo' && (
+                            {!boardReadOnly && task.status === 'todo' && (
                               <button
                                 onClick={() => handleChangeStatus(task.id, 'in_progress')}
                                 className="px-2 py-1 bg-blue-50 text-blue-700 font-bold text-[10px] rounded hover:bg-blue-100 cursor-pointer"
@@ -985,7 +989,7 @@ export const TaskBoard: React.FC = () => {
                                 Bắt đầu
                               </button>
                             )}
-                            {!user?.readOnly && (task.status === 'in_progress' || task.status === 'todo') && (
+                            {!boardReadOnly && (task.status === 'in_progress' || task.status === 'todo') && (
                               <button
                                 onClick={() => setSubmitModalTask(task)}
                                 className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer"
@@ -997,25 +1001,21 @@ export const TaskBoard: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => handleRejectTask(task.id)}
-                                  className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] rounded-lg cursor-pointer"
+                                  disabled={isActionLoading || !!reviewBlockedReason(task)}
+                                  title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
+                                  className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                   Sửa lại
                                 </button>
                                 <button
                                   onClick={() => handleApproveTask(task.id)}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer"
+                                  disabled={isActionLoading || !!reviewBlockedReason(task)}
+                                  title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems'}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                   Duyệt
                                 </button>
                               </>
-                            )}
-                            {isLead && (
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="p-1 text-slate-400 hover:text-red-600 rounded cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
                             )}
                           </div>
                         </td>
@@ -1098,6 +1098,24 @@ export const TaskBoard: React.FC = () => {
                   : 'Trưởng Ban giao việc trực tiếp cho thành viên trong Ban để thực hiện và nộp báo cáo.'}
               </p>
             </div>
+
+            {/* Error Announcement Inside Modal */}
+            {createTaskError && (
+              <div className="p-3 bg-red-50 text-red-900 border border-red-300 rounded-xl flex items-center justify-between gap-2 text-xs font-bold animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{createTaskError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCreateTaskError(null)}
+                  className="text-red-400 hover:text-red-700 font-bold p-1 cursor-pointer"
+                  title="Đóng thông báo lỗi"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             {/* Ban and Assignee Selection */}
             {isOrgAdmin ? (
@@ -1259,7 +1277,10 @@ export const TaskBoard: React.FC = () => {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setCreateTaskError(null);
+                  setShowCreateModal(false);
+                }}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
               >
                 Hủy

@@ -25,17 +25,18 @@ export class ApiError extends Error {
 export async function request<T = any>(
   url: string,
   options: RequestInit = {},
+  unwrapData = true,
 ): Promise<T> {
   // Bound background reads, including response-body parsing. Mutations keep their
   // existing semantics: timing out a write does not imply the write was rejected.
-  if ((options.method || 'GET') !== 'GET') return performRequest<T>(url, options);
+  if ((options.method || 'GET') !== 'GET') return performRequest<T>(url, options, unwrapData);
   const controller = new AbortController();
   const abort = () => controller.abort(options.signal?.reason);
   if (options.signal?.aborted) abort();
   else options.signal?.addEventListener('abort', abort, { once: true });
   const timeout = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), 20_000);
   try {
-    return await performRequest<T>(url, { ...options, cache: 'no-store', signal: controller.signal });
+    return await performRequest<T>(url, { ...options, cache: 'no-store', signal: controller.signal }, unwrapData);
   } finally {
     clearTimeout(timeout);
     options.signal?.removeEventListener('abort', abort);
@@ -45,6 +46,7 @@ export async function request<T = any>(
 async function performRequest<T>(
   url: string,
   options: RequestInit,
+  unwrapData: boolean,
 ): Promise<T> {
   const defaultHeaders: Record<string, string> = {};
 
@@ -83,7 +85,7 @@ async function performRequest<T>(
   }
 
   // Nếu backend trả về cấu trúc { data: T, ... } thì unwrap data
-  if (json && typeof json === 'object' && 'data' in json) {
+  if (unwrapData && json && typeof json === 'object' && 'data' in json) {
     return json.data as T;
   }
 
@@ -91,6 +93,9 @@ async function performRequest<T>(
 }
 
 export const api = {
+  // Task pagination includes sibling items/data/total fields. Keep the envelope.
+  getPage: <T = any>(url: string, options?: RequestInit) =>
+    request<T>(url, { ...options, method: 'GET' }, false),
   get: <T = any>(url: string, options?: RequestInit) =>
     request<T>(url, { ...options, method: 'GET' }),
 

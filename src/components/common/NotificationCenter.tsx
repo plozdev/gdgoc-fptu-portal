@@ -21,7 +21,23 @@ import { BroadcastModal } from './BroadcastModal';
 
 export const NotificationCenter: React.FC = () => {
   const { user } = useAuthStore();
-  const { notifications, error, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
+  const { notifications, ownerId, error, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore();
+  const [taskToast, setTaskToast] = useState<AppNotification[]>([]);
+  const seenNotifications = useRef<{ userId: string; ids: Set<string> } | null>(null);
+  useEffect(() => {
+    if (!user?.id || ownerId !== user.id) { seenNotifications.current = null; setTaskToast([]); return; }
+    const previous = seenNotifications.current;
+    if (previous?.userId === user.id) {
+      const newTasks = notifications.filter(n => n.type === 'task' && !n.isRead && !previous.ids.has(n.id));
+      if (newTasks.length) setTaskToast(newTasks);
+    }
+    seenNotifications.current = { userId: user.id, ids: new Set([...(previous?.userId === user.id ? previous.ids : []), ...notifications.map(n => n.id)]) };
+  }, [notifications, ownerId, user?.id]);
+  useEffect(() => {
+    if (!taskToast.length) return;
+    const timer = setTimeout(() => setTaskToast([]), 10_000);
+    return () => clearTimeout(timer);
+  }, [taskToast]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
@@ -34,7 +50,7 @@ export const NotificationCenter: React.FC = () => {
   // Lọc thông báo phù hợp với role và ban của user:
   // - Org Admin: thấy tất cả
   // - Thành viên / Trưởng ban: thấy 'all' + banId của mình
-  const visibleNotifications = notifications.filter((notif) => {
+  const visibleNotifications = (ownerId === user?.id ? notifications : []).filter((notif) => {
     if (isOrgAdmin) return true;
     return notif.targetScope === 'all' || notif.targetScope === user?.banId;
   });
@@ -75,6 +91,14 @@ export const NotificationCenter: React.FC = () => {
 
   return (
     <div className="relative" ref={containerRef}>
+      {taskToast.length > 0 && <div role="status" aria-live="polite" className="fixed right-5 top-20 z-[100] flex max-w-sm items-start gap-3 rounded-xl border border-blue-200 bg-white p-4 text-sm shadow-lg">
+        <Bell className="h-5 w-5 shrink-0 text-blue-600" />
+        <div><p className="font-bold text-slate-900">{taskToast.length === 1 ? taskToast[0].title : `Bạn có ${taskToast.length} thông báo công việc mới`}</p>
+          <p className="mt-1 text-slate-600">{taskToast[0].message}</p>
+          <Link to="/app/tasks" className="mt-2 inline-block font-semibold text-blue-600" onClick={() => setTaskToast([])}>Xem công việc</Link>
+        </div>
+        <button type="button" aria-label="Đóng thông báo" onClick={() => setTaskToast([])}><X className="h-4 w-4 text-slate-500" /></button>
+      </div>}
       {/* Bell Trigger Button */}
       <button
         type="button"

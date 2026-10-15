@@ -60,7 +60,10 @@ export const PollingUpdates: React.FC = () => {
       try {
         const data = await api.get<SyncStatusResponse>('/api/sync/status', { signal: current.signal });
         if (!mounted || current.signal.aborted) return;
-        if (!data?.revisions || !data.fingerprint) throw new Error('Invalid sync response');
+        const resources = ['tasks', 'events', 'gems', 'notifications', 'semesters', 'members'];
+        if (!data?.fingerprint || resources.some(resource => !data.revisions?.[resource])) {
+          throw new Error('Dữ liệu đồng bộ chưa được khởi tạo. Cần kiểm tra migration của BE.');
+        }
         const nextFingerprint = JSON.stringify(data.fingerprint);
         if (fingerprint !== undefined && fingerprint !== nextFingerprint) {
           await refreshSession(current.signal);
@@ -103,6 +106,7 @@ export const PollingUpdates: React.FC = () => {
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('online', resume);
     window.addEventListener('offline', pause);
+    window.addEventListener('gdgoc:sync-now', resume);
     void poll();
     return () => {
       mounted = false;
@@ -111,7 +115,9 @@ export const PollingUpdates: React.FC = () => {
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('online', resume);
       window.removeEventListener('offline', pause);
+      window.removeEventListener('gdgoc:sync-now', resume);
     };
   }, [userId, mustChangePassword]);
+
   return null;
 };

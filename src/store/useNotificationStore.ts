@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { BanId } from '../types/auth';
 import { notificationsApi } from '../api/notifications.api';
+import { useAuthStore } from './useAuthStore';
 
 export type NotificationType = 'task' | 'event' | 'gems' | 'broadcast' | 'system';
 export type NotificationPriority = 'normal' | 'important' | 'urgent';
@@ -21,6 +22,7 @@ export interface AppNotification {
 
 
 interface NotificationState {
+  ownerId: string | null;
   notifications: AppNotification[];
   error: string | null;
   fetchNotifications: () => Promise<boolean>;
@@ -32,11 +34,15 @@ interface NotificationState {
 const departmentCodes: Record<BanId, string> = { ai: 'TECH_AI', cloud: 'TECH_CLOUD', web: 'TECH_WEB', research: 'TECH_RESEARCH', media: 'MEDIA', 'hr-event': 'HR_EVENT' };
 const departmentIds = Object.fromEntries(Object.entries(departmentCodes).map(([id, code]) => [code, id]));
 export const useNotificationStore = create<NotificationState>((set, get) => ({
+  ownerId: null,
   notifications: [], error: null,
   fetchNotifications: async () => {
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) return false;
     try {
       const response: any = await notificationsApi.getNotifications({ limit: 100 });
-      set({ notifications: response.items.map((notification: any) => ({
+      if (useAuthStore.getState().user?.id !== userId) return false;
+      set({ ownerId: userId, notifications: response.items.map((notification: any) => ({
         id: notification.id, title: notification.title, message: notification.message,
         type: notification.type.toLowerCase(), priority: notification.priority.toLowerCase(),
         targetScope: notification.targetDepartment ? departmentIds[notification.targetDepartment.code] : 'all',

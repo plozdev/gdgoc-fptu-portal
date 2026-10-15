@@ -35,10 +35,11 @@ export function subscribeSync(resources: string[], loader: () => Promise<boolean
   return () => { subscriptions.delete(entry); };
 }
 
-export async function refreshSync(revisions: Revisions): Promise<void> {
+export async function refreshSync(revisions: Revisions): Promise<boolean> {
   latest = { ...revisions };
   // A page runs once even if several dependencies changed together.
   await Promise.all([...subscriptions].map(refresh));
+  return [...subscriptions].every(entry => entry.acknowledged === signature(entry));
 }
 
 export function resetSync(): void {

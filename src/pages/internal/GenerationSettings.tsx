@@ -230,7 +230,7 @@ export const GenerationSettings: React.FC = () => {
             </div>
             <ul className="space-y-1 pl-6 list-disc text-amber-800/90 leading-relaxed font-normal">
               <li>
-                <strong>Chuyển kỳ (Semester):</strong> Chốt bảng xếp hạng & điểm Gems của kỳ cũ, đóng các task chưa xử lý, giữ nguyên toàn bộ thành viên và vai trò để tiếp tục hoạt động trong kỳ mới.
+                <strong>Chuyển kỳ học (Semester):</strong> Lưu toàn bộ task và Gems kỳ cũ ở chế độ chỉ đọc, kể cả task chưa xong. Kỳ mới bắt đầu với bảng task trống và điểm Gems của kỳ bằng 0; nhân sự, vai trò và số dư tích lũy được giữ nguyên.
               </li>
               <li>
                 <strong>Chuyển nhiệm kỳ (Tenure):</strong> Lưu trữ toàn bộ dữ liệu lịch sử của nhiệm kỳ cũ, tăng số thế hệ Gen và sao chép nhân sự sang nhiệm kỳ mới để BCN cấu trúc lại.
@@ -350,9 +350,10 @@ export const GenerationSettings: React.FC = () => {
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
                 {confirmModal.kind === "semester"
-                  ? "Thao tác này sẽ khóa bảng xếp hạng Gems của kỳ hiện tại, đóng các task đang chạy và tự động mở kỳ mới. Thành viên sẽ tiếp tục hoạt động bình thường."
+                  ? "Thao tác này sẽ khóa dữ liệu kỳ hiện tại và mở kỳ mới. Task chưa xong giữ nguyên trạng thái trong lịch sử, không tự cộng Gems và không chuyển sang kỳ mới. BCN có thể xem lại bằng bộ chọn kỳ trên bảng công việc."
                   : "Thao tác này sẽ chốt sổ toàn bộ kỳ hiện tại, lưu trữ hồ sơ nhiệm kỳ cũ và tạo nhiệm kỳ mới. Toàn bộ danh sách nhân sự sẽ được sao chép sang nhiệm kỳ kế tiếp."}
               </p>
+              {!!config?.pendingTasks && <p className="mt-2 text-xs font-semibold text-amber-700">Có {config.pendingTasks} task chưa hoàn thành sẽ được lưu trữ nguyên trạng.</p>}
             </div>
 
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-600 space-y-1">

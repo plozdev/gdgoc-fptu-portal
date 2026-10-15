@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, UserPlus, UserCheck, Shield, Award } from 'lucide-react';
 import { Member, useMemberStore } from '../../store/useMemberStore';
 import { Tier, BanId, BAN_NAMES } from '../../types/auth';
@@ -148,8 +149,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     } catch (err: any) { setError(err?.message || 'Không thể lưu thành viên'); }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-backdrop">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-backdrop">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-modal-pop">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -389,6 +390,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

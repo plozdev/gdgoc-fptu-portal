@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { subscribeSync } from '../../sync/subscriptions';
 import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 import {
@@ -492,8 +493,8 @@ export const EventManagement: React.FC = () => {
       )}
 
       {/* MODAL 1: Quản Lý Đóng Góp & Thưởng Gems */}
-      {selected && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      {selected && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <section className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl border border-slate-200 custom-scrollbar">
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
@@ -633,12 +634,13 @@ export const EventManagement: React.FC = () => {
             </div>
 
           </section>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: Tạo / Chỉnh Sửa Sự Kiện */}
-      {form && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      {form && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <form
             onSubmit={save}
             className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-xl max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl border border-slate-200 custom-scrollbar"
@@ -796,7 +798,8 @@ export const EventManagement: React.FC = () => {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

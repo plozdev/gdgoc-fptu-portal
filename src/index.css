@@ -79,7 +79,7 @@ body {
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
@@ -172,6 +172,13 @@ body {
 /* Modal and Overlay Animations */
 .animate-backdrop {
   animation: backdropFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-xs {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 .animate-modal-pop {
@@ -202,7 +209,6 @@ body {
 /* Page Screen Transition & Route Animation */
 .page-transition {
   animation: pageEntrance 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
 }
 
 .animate-route-progress {

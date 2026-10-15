@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../store/useAuthStore';
 import { BAN_NAMES, BanId } from '../../types/auth';
@@ -1071,8 +1072,8 @@ export const AssetHub: React.FC = () => {
       {/* ======================================================== */}
       {/* MODAL 1: THÊM / CHỈNH SỬA THƯ MỤC SỰ KIỆN (GOOGLE DRIVE) */}
       {/* ======================================================== */}
-      {isEventFolderModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      {isEventFolderModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <form
             onSubmit={handleSaveEventFolder}
             className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-lg space-y-4 shadow-2xl border border-slate-200"
@@ -1185,14 +1186,15 @@ export const AssetHub: React.FC = () => {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ======================================================== */}
       {/* MODAL 2: ĐĂNG KÝ / SỬA TÀI NGUYÊN DÙNG CHUNG */}
       {/* ======================================================== */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <form
             onSubmit={handleCreateAsset}
             className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl border border-slate-200 custom-scrollbar"
@@ -1311,7 +1313,8 @@ export const AssetHub: React.FC = () => {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

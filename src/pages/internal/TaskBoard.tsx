@@ -2,6 +2,7 @@ import { eventsApi } from '../../api/events.api';
 import { subscribeSync } from '../../sync/subscriptions';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { 
   Plus, 
@@ -1013,9 +1014,9 @@ export const TaskBoard: React.FC = () => {
       </div>
 
       {/* Member Submit Modal */}
-      {submitModalTask && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 border-2 border-slate-900 shadow-2xl">
+      {submitModalTask && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop" onClick={() => setSubmitModalTask(null)}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 border-2 border-slate-900 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-extrabold text-slate-900 mb-1 flex items-center gap-2">
               <Send className="w-4 h-4 text-blue-600" />
               Nộp Báo Cáo Hoàn Thành Công Việc
@@ -1056,13 +1057,18 @@ export const TaskBoard: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Review Modal (Approve / Reject with feedback note) */}
-      {reviewModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4">
+      {reviewModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop" onClick={() => {
+          setReviewModal(null);
+          setReviewFeedback('');
+          setReviewError(null);
+        }}>
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className={`p-2 rounded-xl ${
@@ -1186,13 +1192,14 @@ export const TaskBoard: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Task Creation Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <form onSubmit={handleCreateTask} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+      {showCreateModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop" onClick={() => setShowCreateModal(false)}>
+          <form onSubmit={handleCreateTask} onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="pb-2 border-b border-slate-200">
               <h3 className="text-base font-extrabold text-slate-900 mt-1 flex items-center gap-2">
                 <Plus className="w-5 h-5 text-blue-600" />
@@ -1393,7 +1400,8 @@ export const TaskBoard: React.FC = () => {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
       {/* 4D. TASK DETAIL MODAL */}
       {detailModalTask && (() => {
@@ -1410,9 +1418,9 @@ export const TaskBoard: React.FC = () => {
         const canSubmit = !boardReadOnly && isAssignee && detailModalTask.status === 'in_progress';
         const canReview = !boardReadOnly && detailModalTask.status === 'review' && (isCreator || isOrgAdmin) && !isAssignee;
 
-        return (
+        return createPortal(
           <div 
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+            className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop"
             onClick={() => setDetailModalTask(null)}
           >
             <div 
@@ -1706,7 +1714,8 @@ export const TaskBoard: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
     </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { generationApi } from "../../api/generation.api";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGenerationStore } from "../../store/useGenerationStore";
@@ -335,8 +336,8 @@ export const GenerationSettings: React.FC = () => {
       </div>
 
       {/* CONFIRMATION MODAL */}
-      {confirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+      {confirmModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <div className="bg-white max-w-md w-full rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 text-center">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-100">
               <AlertTriangle className="w-6 h-6" />
@@ -388,7 +389,8 @@ export const GenerationSettings: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

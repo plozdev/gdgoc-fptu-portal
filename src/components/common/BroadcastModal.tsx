@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Megaphone, X, Send, AlertTriangle, Sparkles, Layers, Shield } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore, NotificationType, NotificationPriority } from '../../store/useNotificationStore';
@@ -52,8 +53,8 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
     finally { setIsSending(false); }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-backdrop">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 animate-modal-pop"
@@ -194,6 +195,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose 
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 };

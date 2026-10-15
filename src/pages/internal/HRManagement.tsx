@@ -1,6 +1,7 @@
 import { matchesMemberGroup } from '../../utils/memberGroups';
 import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import { useMemberStore, Member } from '../../store/useMemberStore';
@@ -472,8 +473,8 @@ export const HRManagement: React.FC = () => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {memberToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+      {memberToDelete && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <div className="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-4 text-center">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
@@ -501,7 +502,8 @@ export const HRManagement: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add / Edit Member Modal */}

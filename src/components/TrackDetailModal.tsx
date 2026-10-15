@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, ArrowRight, CheckCircle2, ShieldAlert, Award, FileText, Sparkles, Layers } from 'lucide-react';
 import { Department } from '../types';
 
@@ -15,10 +16,10 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
 }) => {
   if (!department) return null;
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E1E1E]/60 backdrop-blur-sm animate-backdrop"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-backdrop"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -176,6 +177,7 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

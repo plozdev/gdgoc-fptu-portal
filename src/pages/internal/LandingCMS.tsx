@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, Navigate } from 'react-router-dom';
 import { useLandingContentStore } from '../../store/useLandingContentStore';
 import { useMemberStore, Member } from '../../store/useMemberStore';
@@ -622,8 +623,8 @@ export const LandingCMS: React.FC = () => {
 
 
       {/* MODAL: CHỌN SỰ KIỆN XUẤT BẢN RA LANDING PAGE */}
-      {showEventPickerModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      {showEventPickerModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200">
               <div>
@@ -713,12 +714,13 @@ export const LandingCMS: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL: CHỌN THÀNH VIÊN VÀO CORE TEAM */}
-      {showMemberPickerModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      {showMemberPickerModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-200">
               <div>
@@ -849,12 +851,13 @@ export const LandingCMS: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Event Modal */}
-      {editingEvent && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      {editingEvent && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <form onSubmit={handleUpdateEditingEvent} className="bg-white rounded-2xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-3.5">
             <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <Edit3 className="w-4 h-4 text-blue-600" />
@@ -960,7 +963,8 @@ export const LandingCMS: React.FC = () => {
               </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

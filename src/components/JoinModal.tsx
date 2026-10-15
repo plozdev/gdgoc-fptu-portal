@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, Globe, Loader2, Mail, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
 import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
@@ -120,7 +121,8 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
       {choices.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
     </select>
   </div>;
-  return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6 animate-backdrop" onClick={() => { if (!busy) onClose(); }}>
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-sm sm:p-6 animate-backdrop" onClick={() => { if (!busy) onClose(); }}>
     <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="recruitment-title" onClick={event => event.stopPropagation()} className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border-[2.5px] border-slate-900 bg-white text-slate-900 shadow-[6px_6px_0_#1e293b] outline-none animate-modal-pop">
       <header className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-slate-900 bg-[#E8F0FE] px-5 py-4 sm:px-7">
         <div>
@@ -291,5 +293,7 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
         )}
       </div>
     </div>
-  </div>;
+  </div>,
+  document.body
+);
 };

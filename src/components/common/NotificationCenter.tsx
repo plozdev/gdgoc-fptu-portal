@@ -232,11 +232,6 @@ export const NotificationCenter: React.FC = () => {
               ))
             )}
           </div>
-
-          {/* Footer */}
-          <div className="p-2 border-t border-slate-100 bg-slate-50/50 text-center text-[10px] text-slate-400">
-            Tự cập nhật khoảng 30 giây • GDGoC FPTU OS
-          </div>
         </div>
       )}
 

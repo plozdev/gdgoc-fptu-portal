@@ -32,7 +32,7 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-2">
         <span className="text-xs font-bold text-slate-400 font-mono-code">GDGoC FPTU OS</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-        <h1 className="text-sm font-extrabold text-slate-800 tracking-tight">
+        <h1 key={location.pathname} className="text-sm font-extrabold text-slate-800 tracking-tight animate-fadeIn">
           {getPageTitle(location.pathname)}
         </h1>
       </div>

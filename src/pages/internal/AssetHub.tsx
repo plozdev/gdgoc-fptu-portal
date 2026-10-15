@@ -563,7 +563,7 @@ export const AssetHub: React.FC = () => {
       {/* VIEW 1: KHO SỰ KIỆN (EVENTS DIRECTORY - GOOGLE DRIVE TREE) */}
       {/* ======================================================== */}
       {activeTab === 'EVENTS' && (
-        <div className="space-y-4">
+        <div key="EVENTS" className="space-y-4 animate-tab-content">
           {/* Breadcrumb Bar (Styled exactly like Google Drive breadcrumb) */}
           <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold flex-wrap">
@@ -897,7 +897,7 @@ export const AssetHub: React.FC = () => {
       {/* VIEW 2: DANH MỤC DÙNG CHUNG (GENERAL VAULT) */}
       {/* ======================================================== */}
       {activeTab === 'GENERAL' && (
-        <div className="space-y-4">
+        <div key="GENERAL" className="space-y-4 animate-tab-content">
           <p className="text-xs text-slate-500 px-1">
             Kho tài nguyên dùng chung toàn CLB: Brand Kit, Sổ tay vận hành, Tài liệu bàn giao và Ngân sách BCN.
           </p>

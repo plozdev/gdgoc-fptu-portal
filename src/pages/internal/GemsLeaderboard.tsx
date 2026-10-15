@@ -286,7 +286,7 @@ export const GemsLeaderboard: React.FC = () => {
             </div>
           </div>
         ) : (
-          <>
+          <div key="leaderboard" className="space-y-6 animate-tab-content">
             {/* Top 3 Podium */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {leaderboardUsers.filter(u => u.gems > 0).slice(0, 3).map((u, idx) => (
@@ -378,11 +378,11 @@ export const GemsLeaderboard: React.FC = () => {
                 </table>
               </div>
             </div>
-          </>
+          </div>
         )
       ) : (
         /* Sổ cái giao dịch Gems */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div key="history" className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden animate-tab-content">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
               <Coins className="w-4 h-4 text-amber-600" />

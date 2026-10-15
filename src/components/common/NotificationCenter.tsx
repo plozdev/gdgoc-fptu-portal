@@ -91,7 +91,7 @@ export const NotificationCenter: React.FC = () => {
 
   return (
     <div className="relative" ref={containerRef}>
-      {taskToast.length > 0 && <div role="status" aria-live="polite" className="fixed right-5 top-20 z-[100] flex max-w-sm items-start gap-3 rounded-xl border border-blue-200 bg-white p-4 text-sm shadow-lg">
+      {taskToast.length > 0 && <div role="status" aria-live="polite" className="fixed right-5 top-20 z-[100] flex max-w-sm items-start gap-3 rounded-2xl border border-blue-200 bg-white p-4 text-sm shadow-xl animate-toast">
         <Bell className="h-5 w-5 shrink-0 text-blue-600" />
         <div><p className="font-bold text-slate-900">{taskToast.length === 1 ? taskToast[0].title : `Bạn có ${taskToast.length} thông báo công việc mới`}</p>
           <p className="mt-1 text-slate-600">{taskToast[0].message}</p>
@@ -116,7 +116,7 @@ export const NotificationCenter: React.FC = () => {
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl z-50 overflow-hidden animate-fadeIn">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl z-50 overflow-hidden animate-pop-in">
           {error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
           {/* Header */}
           <div className="p-3.5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">

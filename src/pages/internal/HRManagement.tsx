@@ -274,16 +274,17 @@ export const HRManagement: React.FC = () => {
         </div>
 
         {/* Content View: Table or Cards */}
-        {filteredMembers.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 space-y-2">
-            <Users className="w-10 h-10 mx-auto text-slate-300 opacity-60" />
-            <p className="text-sm font-medium text-slate-500">
-              Không tìm thấy thành viên nào phù hợp với bộ lọc hiện tại.
-            </p>
-          </div>
-        ) : viewMode === 'table' ? (
-          /* TABLE VIEW: Tinh gọn, chỉ 5 cột, không tràn chữ Gen */
-          <div className="overflow-x-auto">
+        <div key={`${selectedBan}-${viewMode}`} className="animate-tab-content">
+          {filteredMembers.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 space-y-2">
+              <Users className="w-10 h-10 mx-auto text-slate-300 opacity-60" />
+              <p className="text-sm font-medium text-slate-500">
+                Không tìm thấy thành viên nào phù hợp với bộ lọc hiện tại.
+              </p>
+            </div>
+          ) : viewMode === 'table' ? (
+            /* TABLE VIEW: Tinh gọn, chỉ 5 cột, không tràn chữ Gen */
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50/70 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                 <tr>
@@ -467,6 +468,7 @@ export const HRManagement: React.FC = () => {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

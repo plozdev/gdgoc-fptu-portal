@@ -271,7 +271,7 @@ export const InventoryManagement: React.FC = () => {
         </div>
 
         {/* Inventory Items Table */}
-        <div className="overflow-x-auto">
+        <div key={categoryFilter} className="overflow-x-auto animate-tab-content">
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
               <tr>

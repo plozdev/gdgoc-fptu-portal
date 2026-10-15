@@ -30,7 +30,9 @@ import {
   Eye,
   Flame,
   FileText,
-  Tag
+  Tag,
+  MessageSquare,
+  User
 } from 'lucide-react';
 import { BAN_NAMES, BanId } from '../../types/auth';
 import { DateInput } from '../../components/common/DateInput';
@@ -72,12 +74,15 @@ export interface Task {
   banId: BanId;
   level: TaskLevel; // BCN_TO_LEAD hoặc LEAD_TO_MEMBER
   project: string; // Chiến dịch / Dự án / Milestone
-  status: 'todo' | 'in_progress' | 'review' | 'done';
+  status: 'in_progress' | 'review' | 'done';
   assignee: string;
   assigneeUserIds: string[];
+  creatorId: string;
+  creatorName: string;
   gems: number;
   priority: 'Cao' | 'Trung bình' | 'Thấp';
   submissionProof?: string;
+  feedback?: string;
   deadline?: string;
   completedAt?: string;
 }
@@ -140,13 +145,13 @@ const mapBackendTaskToFrontend = (item: any): Task => {
   const deptCode = item.department?.code || '';
   const banId: BanId = DEPT_CODE_TO_BAN_ID[deptCode] || 'ai';
   
-  const statusMap: Record<string, 'todo' | 'in_progress' | 'review' | 'done'> = {
-    TODO: 'todo',
-    BACKLOG: 'todo',
+  const statusMap: Record<string, 'in_progress' | 'review' | 'done'> = {
+    TODO: 'in_progress',
+    BACKLOG: 'in_progress',
     IN_PROGRESS: 'in_progress',
     IN_REVIEW: 'review',
     DONE: 'done',
-    OVERDUE: 'todo',
+    OVERDUE: 'in_progress',
   };
 
   const priorityMap: Record<string, 'Cao' | 'Trung bình' | 'Thấp'> = {
@@ -166,6 +171,9 @@ const mapBackendTaskToFrontend = (item: any): Task => {
     a.role === 'PRIMARY' || a.user?.role === 'LEAD' || a.user?.role === 'DEPARTMENT_LEAD'
   ) || false;
 
+  const creatorUser = item.creator;
+  const creatorName = creatorUser ? (creatorUser.fullName || creatorUser.email) : 'Người giao việc';
+
   return {
     id: item.id,
     title: item.title,
@@ -173,12 +181,15 @@ const mapBackendTaskToFrontend = (item: any): Task => {
     banId,
     level: isBcnToLead ? 'BCN_TO_LEAD' : 'LEAD_TO_MEMBER',
     project: item.event?.title || 'Vận Hành Thường Nhật',
-    status: statusMap[item.status] || 'todo',
+    status: statusMap[item.status] || 'in_progress',
     assignee: assigneeName,
     assigneeUserIds: (item.assignees || []).map((a: any) => a.userId || a.user?.id).filter(Boolean),
+    creatorId: item.creatorId || creatorUser?.id || '',
+    creatorName,
     gems: item.gemsReward ?? 20,
     priority: priorityMap[item.priority] || 'Trung bình',
     submissionProof: item.submissionUrl || undefined,
+    feedback: item.feedback || undefined,
     completedAt: item.completedAt,
     deadline: item.deadline ? item.deadline : undefined,
   };
@@ -248,7 +259,13 @@ export const TaskBoard: React.FC = () => {
   const isLead = !boardReadOnly && (user?.tier === 'BAN_LEAD' || isOrgAdmin);
   const isMember = !user?.readOnly && user?.tier === 'BAN_MEMBER';
   const reviewBlockedReason = (task: Task) => {
-    if (task.assigneeUserIds.includes(user?.id || '')) return 'Không thể tự duyệt hoặc yêu cầu sửa công việc của mình. Cần người quản lý khác duyệt.';
+    if (task.assigneeUserIds.includes(user?.id || '')) {
+      return 'Không thể tự duyệt hoặc yêu cầu sửa công việc của mình.';
+    }
+    const isCreator = Boolean(task.creatorId && task.creatorId === user?.id);
+    if (!isCreator && !isOrgAdmin) {
+      return 'Chỉ người giao việc (hoặc Ban Chủ Nhiệm) mới có quyền phê duyệt/yêu cầu sửa.';
+    }
     if (!task.submissionProof) return 'Công việc chưa có minh chứng.';
     return '';
   };
@@ -265,16 +282,20 @@ export const TaskBoard: React.FC = () => {
   }, [user?.id, user?.tier, user?.banId, isOrgAdmin]);
 
   // Filters
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in_progress' | 'review' | 'done' | 'overdue'>('all');
   const [selectedProject, setSelectedProject] = useState<string>('Tất Cả Dự Án');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [levelFilter, setLevelFilter] = useState<'all' | 'BCN_TO_LEAD' | 'LEAD_TO_MEMBER'>('all');
   const [myTasksOnly, setMyTasksOnly] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
   // Modals
   const [detailModalTask, setDetailModalTask] = useState<Task | null>(null);
   const [submitModalTask, setSubmitModalTask] = useState<Task | null>(null);
+  const [reviewModal, setReviewModal] = useState<{ task: Task; type: 'approve' | 'reject' } | null>(null);
+  const [reviewFeedback, setReviewFeedback] = useState<string>('');
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
   const [submissionLink, setSubmissionLink] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -307,84 +328,85 @@ export const TaskBoard: React.FC = () => {
       if (isMember && t.level === 'BCN_TO_LEAD') {
         return false;
       }
-      // 1. Level Filter
+      // 1. Status Filter
+      const overdue = getTaskOverdueInfo(t);
+      const matchesStatus = statusFilter === 'all'
+        ? true
+        : statusFilter === 'overdue'
+        ? overdue.isOverdue
+        : t.status === statusFilter;
+
+      // 2. Level Filter
       const matchesLevel = levelFilter === 'all' || t.level === levelFilter;
-      // 2. Ban Scope
+      // 3. Ban Scope
       const matchesBan = activeBanScope === 'all' || t.banId === activeBanScope;
-      // 3. Project
+      // 4. Project
       const matchesProject = selectedProject === 'Tất Cả Dự Án' || t.project === selectedProject;
-      // 4. Priority
+      // 5. Priority
       const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-      // 5. Search
+      // 6. Search
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            t.assignee.toLowerCase().includes(searchQuery.toLowerCase());
-      // 6. My Tasks
-      const matchesMyTask = !myTasksOnly || t.assigneeUserIds.includes(user?.id || '');
+                            t.assignee.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            t.creatorName.toLowerCase().includes(searchQuery.toLowerCase());
+      // 7. My Tasks
+      const matchesMyTask = !myTasksOnly || t.assigneeUserIds.includes(user?.id || '') || (t.creatorId === user?.id);
 
-      return matchesLevel && matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
+      return matchesStatus && matchesLevel && matchesBan && matchesProject && matchesPriority && matchesSearch && matchesMyTask;
     });
-  }, [tasks, isMember, levelFilter, activeBanScope, selectedProject, priorityFilter, searchQuery, myTasksOnly, user?.id]);
+  }, [tasks, isMember, statusFilter, levelFilter, activeBanScope, selectedProject, priorityFilter, searchQuery, myTasksOnly, user?.id]);
 
-  const totalTasksCount = filteredTasks.length;
-  const doneTasksCount = filteredTasks.filter(t => t.status === 'done').length;
-  const reviewTasksCount = filteredTasks.filter(t => t.status === 'review').length;
+  const totalTasksCount = tasks.length;
+  const inProgressTasksCount = tasks.filter(t => t.status === 'in_progress').length;
+  const reviewTasksCount = tasks.filter(t => t.status === 'review').length;
+  const doneTasksCount = tasks.filter(t => t.status === 'done').length;
+  const overdueTasksCount = tasks.filter(t => getTaskOverdueInfo(t).isOverdue).length;
   const completionPercentage = totalTasksCount > 0 ? Math.round((doneTasksCount / totalTasksCount) * 100) : 0;
 
-  const columns = [
-    { id: 'todo', title: 'Cần Làm (To Do)', color: 'border-slate-300 bg-slate-50/50', badge: 'bg-slate-200 text-slate-700' },
-    { id: 'in_progress', title: 'Đang Làm (In Progress)', color: 'border-blue-400 bg-blue-50/30', badge: 'bg-blue-100 text-blue-800' },
-    { id: 'review', title: 'Chờ Duyệt (In Review)', color: 'border-amber-400 bg-amber-50/30', badge: 'bg-amber-100 text-amber-800' },
-    { id: 'done', title: 'Hoàn Thành (Done)', color: 'border-emerald-400 bg-emerald-50/30', badge: 'bg-emerald-100 text-emerald-800' },
-  ];
-
-  // Lead action: Approve task -> calls backend approveTask (awards Gems in DB)
-  const handleApproveTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task || reviewBlockedReason(task)) return;
-    try {
-      setIsActionLoading(true);
-      await tasksApi.approveTask(taskId, { feedback: 'Đã hoàn thành xuất sắc nhiệm vụ!' });
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'done' } : t));
-      showToast('Phê duyệt công việc thành công! Gems thưởng đã được cộng tự động vào PostgreSQL.', 'success');
-      loadTasksFromApi();
-    } catch (err: any) {
-      console.error('Lỗi khi duyệt task:', err);
-      showToast(`Không thể duyệt task: ${err?.message || 'Lỗi kết nối Backend'}`, 'error');
-    } finally {
-      setIsActionLoading(false);
-    }
+  // Open Review note modal
+  const handleOpenReviewModal = (task: Task, type: 'approve' | 'reject') => {
+    setReviewModal({ task, type });
+    setReviewFeedback(type === 'approve' ? (task.feedback || 'Đã hoàn thành xuất sắc nhiệm vụ!') : '');
+    setReviewError(null);
   };
 
-  // Lead action: Reject task -> moves back to in_progress with feedback
-  const handleRejectTask = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task || reviewBlockedReason(task)) return;
-    try {
-      setIsActionLoading(true);
-      await tasksApi.rejectTask(taskId, { feedback: 'Vui lòng bổ sung thêm tài liệu minh chứng.' });
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'in_progress' } : t));
-      showToast('Đã yêu cầu thành viên chỉnh sửa và bổ sung thêm minh chứng.', 'success');
-      loadTasksFromApi();
-    } catch (err: any) {
-      console.error('Lỗi khi từ chối task:', err);
-      showToast(`Không thể từ chối task: ${err?.message || 'Lỗi kết nối Backend'}`, 'error');
-    } finally {
-      setIsActionLoading(false);
+  // Review action: Approve or Reject task with note/feedback
+  const handleConfirmReview = async () => {
+    if (!reviewModal) return;
+    const { task, type } = reviewModal;
+    if (type === 'reject' && !reviewFeedback.trim()) {
+      setReviewError('Vui lòng nhập lý do hoặc nội dung cần chỉnh sửa bổ sung.');
+      return;
     }
-  };
 
-  // Action: Change status
-  const handleChangeStatus = async (taskId: string, targetStatus: 'todo' | 'in_progress') => {
     try {
       setIsActionLoading(true);
-      const apiStatus = targetStatus === 'in_progress' ? 'IN_PROGRESS' : 'TODO';
-      await tasksApi.updateStatus(taskId, { status: apiStatus });
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: targetStatus } : t));
-      showToast(`Đã chuyển công việc sang "${targetStatus === 'in_progress' ? 'Đang Làm' : 'Cần Làm'}".`, 'success');
+      setReviewError(null);
+      if (type === 'approve') {
+        await tasksApi.approveTask(task.id, { feedback: reviewFeedback.trim() || 'Đã hoàn thành xuất sắc nhiệm vụ!' });
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'done', feedback: reviewFeedback.trim() || 'Đã hoàn thành xuất sắc nhiệm vụ!' } : t));
+        showToast('Phê duyệt công việc thành công! Gems thưởng đã được cộng tự động.', 'success');
+      } else {
+        await tasksApi.rejectTask(task.id, { feedback: reviewFeedback.trim() });
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'in_progress', feedback: reviewFeedback.trim() } : t));
+        showToast('Đã yêu cầu thành viên chỉnh sửa và bổ sung thêm minh chứng.', 'success');
+      }
+
+      setReviewModal(null);
+      setReviewFeedback('');
+      setReviewError(null);
+      loadTasksFromApi();
+
+      if (detailModalTask?.id === task.id) {
+        setDetailModalTask(prev => prev ? {
+          ...prev,
+          status: type === 'approve' ? 'done' : 'in_progress',
+          feedback: reviewFeedback.trim()
+        } : null);
+      }
     } catch (err: any) {
-      console.error('Lỗi khi cập nhật trạng thái:', err);
-      showToast(`Không thể chuyển trạng thái: ${err?.message || 'Lỗi Backend'}`, 'error');
+      console.error('Lỗi khi review task:', err);
+      setReviewError(err?.message || 'Lỗi khi xử lý phê duyệt/từ chối task');
     } finally {
       setIsActionLoading(false);
     }
@@ -729,431 +751,328 @@ export const TaskBoard: React.FC = () => {
               <span className="whitespace-nowrap">Việc Của Tôi</span>
             </button>
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200 shrink-0">
-              <button
-                onClick={() => setViewMode('board')}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewMode === 'board' ? 'bg-white shadow-xs text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
-                }`}
-                title="Dạng Bảng Kanban (Board View)"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  viewMode === 'list' ? 'bg-white shadow-xs text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
-                }`}
-                title="Dạng Danh Sách Gọn (List View)"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* 4A. VIEW MODE: BOARD VIEW */}
-      {viewMode === 'board' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-          {columns.map(col => {
-            const colTasks = filteredTasks.filter(t => t.status === col.id);
+      {/* 4. STATUS FILTER TABS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border whitespace-nowrap flex items-center gap-1.5 shadow-2xs ${
+            statusFilter === 'all'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <span>Tất Cả</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono-code ${
+            statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+          }`}>{totalTasksCount}</span>
+        </button>
 
-            return (
-              <div 
-                key={col.id} 
-                className={`rounded-2xl border ${col.color} p-3.5 flex flex-col shadow-xs bg-white/70`}
-              >
-                {/* Column Header */}
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>{col.title}</span>
-                  </h3>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full font-mono-code ${col.badge}`}>
-                    {colTasks.length}
-                  </span>
-                </div>
+        <button
+          onClick={() => setStatusFilter('in_progress')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border whitespace-nowrap flex items-center gap-1.5 shadow-2xs ${
+            statusFilter === 'in_progress'
+              ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+              : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
+          }`}
+        >
+          <Play className="w-3 h-3 fill-current" />
+          <span>Đang Làm</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono-code ${
+            statusFilter === 'in_progress' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
+          }`}>{inProgressTasksCount}</span>
+        </button>
 
-                {/* Column Tasks Container */}
-                <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1 custom-scrollbar">
-                  {colTasks.map(task => {
-                    const overdue = getTaskOverdueInfo(task);
-                    return (
-                      <div 
-                        key={task.id}
-                        onClick={() => setDetailModalTask(task)}
-                        className={`relative bg-white p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer space-y-2.5 group select-none ${
-                          overdue.isOverdue
-                            ? 'border-rose-300 ring-1 ring-rose-200/70 bg-gradient-to-b from-rose-50/25 to-white hover:border-rose-400 hover:shadow-md shadow-xs'
-                            : task.status === 'done'
-                            ? 'border-emerald-200/80 hover:border-emerald-400 hover:shadow-md'
-                            : 'border-slate-200 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5'
-                        }`}
-                      >
-                        {/* Overdue Top Accent Stripe */}
-                        {overdue.isOverdue && (
-                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 rounded-t-2xl" />
-                        )}
+        <button
+          onClick={() => setStatusFilter('review')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border whitespace-nowrap flex items-center gap-1.5 shadow-2xs ${
+            statusFilter === 'review'
+              ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+          }`}
+        >
+          <Clock className="w-3 h-3" />
+          <span>Chờ Duyệt</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono-code ${
+            statusFilter === 'review' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+          }`}>{reviewTasksCount}</span>
+        </button>
 
-                        {/* Row 1: Hierarchy / Department (Left) & Priority / Gems (Right) */}
-                        <div className="flex items-center justify-between gap-1.5 text-[10px]">
-                          <div className="flex items-center gap-1 min-w-0">
-                            {task.level === 'BCN_TO_LEAD' ? (
-                              <span className="font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/80 shrink-0">
-                                👑 BCN → LEAD
-                              </span>
-                            ) : (
-                              <span className="font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 shrink-0">
-                                ⚡ LEAD → MEMBER
-                              </span>
-                            )}
-                            <span className="font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200/80 font-mono-code uppercase shrink-0">
-                              {task.banId}
+        <button
+          onClick={() => setStatusFilter('done')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border whitespace-nowrap flex items-center gap-1.5 shadow-2xs ${
+            statusFilter === 'done'
+              ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+              : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+          }`}
+        >
+          <Check className="w-3 h-3" />
+          <span>Hoàn Thành</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono-code ${
+            statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+          }`}>{doneTasksCount}</span>
+        </button>
+
+        {overdueTasksCount > 0 && (
+          <button
+            onClick={() => setStatusFilter('overdue')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border whitespace-nowrap flex items-center gap-1.5 shadow-2xs ${
+              statusFilter === 'overdue'
+                ? 'bg-rose-600 text-white border-rose-700 shadow-xs'
+                : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 animate-pulse text-rose-500" />
+            <span>Quá Hạn</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono-code font-bold ${
+              statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800'
+            }`}>{overdueTasksCount}</span>
+          </button>
+        )}
+      </div>
+
+      {/* 5. TABLE LIST VIEW */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left text-xs text-slate-600 min-w-[960px]">
+            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3.5">Mã & Tiêu Đề Công Việc</th>
+                <th className="px-4 py-3.5">Dự Án / Chiến Dịch</th>
+                <th className="px-4 py-3.5">Ban</th>
+                <th className="px-4 py-3.5">Người Nhận</th>
+                <th className="px-4 py-3.5">Người Giao</th>
+                <th className="px-4 py-3.5">Trạng Thái</th>
+                <th className="px-4 py-3.5">Ưu Tiên</th>
+                <th className="px-4 py-3.5">Hạn Chót</th>
+                <th className="px-4 py-3.5">Gems</th>
+                <th className="px-4 py-3.5 text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredTasks.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="py-14 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <FolderGit2 className="w-8 h-8 text-slate-300" />
+                      <span className="text-xs font-semibold">Chưa có công việc nào phù hợp với bộ lọc</span>
+                      {isLead && (
+                        <button
+                          onClick={() => setShowCreateModal(true)}
+                          className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                        >
+                          + Giao Công Việc Mới
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredTasks.map(task => {
+                  const overdue = getTaskOverdueInfo(task);
+                  const isAssignee = task.assigneeUserIds.includes(user?.id || '');
+                  const canSubmit = !boardReadOnly && isAssignee && task.status === 'in_progress';
+                  const isCreator = Boolean(task.creatorId && task.creatorId === user?.id);
+                  const canReview = !boardReadOnly && task.status === 'review' && (isCreator || isOrgAdmin) && !isAssignee;
+
+                  const statusConfig = {
+                    in_progress: { label: 'Đang Làm', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+                    review: { label: 'Chờ Duyệt', bg: 'bg-amber-50 text-amber-800 border-amber-200 font-bold' },
+                    done: { label: 'Hoàn Thành', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                  }[task.status];
+
+                  return (
+                    <tr 
+                      key={task.id} 
+                      onClick={() => setDetailModalTask(task)}
+                      className={`transition-colors cursor-pointer select-none group ${
+                        overdue.isOverdue ? 'bg-rose-50/30 hover:bg-rose-50/60' : 'hover:bg-slate-50/80'
+                      }`}
+                    >
+                      {/* 1. Mã & Tiêu Đề */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="font-mono-code font-bold text-slate-400 text-[10px]">
+                            #{task.id.slice(0, 8)}
+                          </span>
+                          {task.level === 'BCN_TO_LEAD' ? (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+                              👑 BCN → LEAD
                             </span>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className={`font-bold px-1.5 py-0.5 rounded-md border text-[10px] flex items-center gap-0.5 ${
-                              task.priority === 'Cao'
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : task.priority === 'Trung bình'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}>
-                              {task.priority === 'Cao' && <Flame className="w-2.5 h-2.5 text-rose-600 shrink-0" />}
-                              <span>{task.priority}</span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
+                              ⚡ LEAD → MEMBER
                             </span>
-                            <span className="font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/80 flex items-center gap-0.5 font-mono-code shadow-2xs">
-                              💎 {task.gems}
-                            </span>
-                          </div>
+                          )}
                         </div>
+                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                          {task.title}
+                        </span>
+                        {task.description && (
+                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-normal">
+                            {task.description}
+                          </p>
+                        )}
+                      </td>
 
-                        {/* Row 2: Campaign / Project Badge */}
-                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                      {/* 2. Dự Án */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5 text-blue-700 bg-blue-50/70 border border-blue-100 px-2.5 py-1 rounded-lg text-xs font-semibold max-w-[150px] truncate" title={task.project}>
                           <FolderGit2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                           <span className="truncate">{task.project}</span>
                         </div>
+                      </td>
 
-                        {/* Row 3: Title & Desc */}
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
-                            {task.title}
-                          </h4>
-                          {task.description && (
-                            <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                              {task.description}
-                            </p>
-                          )}
-                        </div>
+                      {/* 3. Ban */}
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono-code font-bold uppercase text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                          {task.banId}
+                        </span>
+                      </td>
 
-                        {/* Submission Link Preview if any */}
-                        {task.submissionProof && (
-                          <div 
-                            onClick={(e) => e.stopPropagation()} 
-                            className="p-1.5 rounded-lg bg-blue-50/60 border border-blue-200/60 text-[11px] text-blue-700 truncate flex items-center gap-1.5"
-                          >
-                            <Link2 className="w-3.5 h-3.5 shrink-0 text-blue-500" />
-                            <a 
-                              href={task.submissionProof} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="truncate hover:underline font-medium"
-                            >
-                              {task.submissionProof}
-                            </a>
+                      {/* 4. Người Nhận */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5 min-w-0" title={`Người nhận: ${task.assignee}`}>
+                          <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
+                            {task.assignee ? task.assignee.trim()[0] : '?'}
                           </div>
-                        )}
+                          <span className="font-semibold text-slate-800 text-xs truncate max-w-[110px]">
+                            {task.assignee}
+                          </span>
+                        </div>
+                      </td>
 
-                        {/* Row 4: Deadline & Overdue Warning */}
-                        {task.deadline && (
-                          overdue.isOverdue ? (
-                            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-rose-100/90 text-rose-800 border border-rose-300/80 text-[11px] font-bold">
-                              <span className="flex items-center gap-1.5">
-                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-pulse" />
-                                <span>Quá hạn {overdue.daysOverdue} ngày</span>
-                              </span>
-                              <span className="font-mono-code text-[10px] text-rose-700">
-                                {formatDateToDDMMYYYY(task.deadline)}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
-                              <span className="flex items-center gap-1.5">
-                                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Hạn chót:</span>
-                              </span>
-                              <span className="font-mono-code font-semibold text-slate-700">
-                                {formatDateToDDMMYYYY(task.deadline)}
-                              </span>
-                            </div>
-                          )
-                        )}
+                      {/* 5. Người Giao */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5 min-w-0" title={`Người giao: ${task.creatorName}`}>
+                          <div className="w-5 h-5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
+                            {task.creatorName ? task.creatorName.trim()[0] : '?'}
+                          </div>
+                          <span className="text-slate-600 text-xs font-medium truncate max-w-[110px]">
+                            {task.creatorName}
+                          </span>
+                        </div>
+                      </td>
 
-                        {/* Row 5: Assignee & Action Buttons */}
-                        <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
-                          <div className="flex items-center gap-1.5 min-w-0" title={`Người nhận: ${task.assignee}`}>
-                            <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
-                              {task.assignee ? task.assignee.trim()[0] : '?'}
-                            </div>
-                            <span className="text-slate-700 font-semibold truncate max-w-[105px]">
-                              {task.assignee}
+                      {/* 6. Trạng Thái */}
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${statusConfig.bg}`}>
+                          {task.status === 'in_progress' && <Play className="w-2.5 h-2.5 fill-blue-600 text-blue-600" />}
+                          {task.status === 'review' && <Clock className="w-3 h-3 text-amber-600" />}
+                          {task.status === 'done' && <Check className="w-3 h-3 text-emerald-600" />}
+                          <span>{statusConfig.label}</span>
+                        </span>
+                      </td>
+
+                      {/* 7. Ưu Tiên */}
+                      <td className="px-4 py-3.5">
+                        <span className={`font-semibold flex items-center gap-1 ${
+                          task.priority === 'Cao' ? 'text-rose-600 font-bold' : 'text-slate-600'
+                        }`}>
+                          {task.priority === 'Cao' && <Flame className="w-3 h-3 text-rose-600 shrink-0" />}
+                          <span>{task.priority}</span>
+                        </span>
+                      </td>
+
+                      {/* 8. Hạn Chót */}
+                      <td className="px-4 py-3.5 font-mono-code">
+                        {overdue.isOverdue ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-rose-700 font-bold flex items-center gap-1 text-[11px]">
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-pulse" />
+                              {formatDateToDDMMYYYY(task.deadline)}
+                            </span>
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md w-fit">
+                              Quá hạn {overdue.daysOverdue} ngày
                             </span>
                           </div>
+                        ) : (
+                          <span className="text-slate-600 font-medium text-xs flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {formatDateToDDMMYYYY(task.deadline)}
+                          </span>
+                        )}
+                      </td>
 
-                          {/* ACTIONS BASED ON ROLE & STATUS */}
-                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            {/* Todo: Button to start task */}
-                            {!boardReadOnly && task.status === 'todo' && (
-                              <button
-                                onClick={() => handleChangeStatus(task.id, 'in_progress')}
-                                disabled={isActionLoading}
-                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] rounded-lg border border-blue-200 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                                title="Bắt đầu thực hiện task"
-                              >
-                                <Play className="w-2.5 h-2.5 fill-blue-600 text-blue-600" />
-                                <span>Bắt đầu</span>
-                              </button>
-                            )}
+                      {/* 9. Gems */}
+                      <td className="px-4 py-3.5 font-bold text-amber-700 font-mono-code">
+                        💎 +{task.gems}
+                      </td>
 
-                            {/* In Progress: Move back to Todo */}
-                            {!boardReadOnly && task.status === 'in_progress' && (
-                              <button
-                                onClick={() => handleChangeStatus(task.id, 'todo')}
-                                disabled={isActionLoading}
-                                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                                title="Chuyển lại về To Do"
-                              >
-                                <RotateCcw className="w-3 h-3" />
-                              </button>
-                            )}
+                      {/* 10. Thao Tác */}
+                      <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Eye button for details */}
+                          <button
+                            onClick={() => setDetailModalTask(task)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title="Xem chi tiết công việc"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
 
-                            {/* Member Action: Submit Button */}
-                            {!boardReadOnly && (task.status === 'in_progress' || task.status === 'todo') && (
-                              <button
-                                onClick={() => setSubmitModalTask(task)}
-                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-                              >
-                                <Send className="w-2.5 h-2.5" />
-                                <span>Submit</span>
-                              </button>
-                            )}
+                          {/* Member only: Submit button */}
+                          {canSubmit && (
+                            <button
+                              onClick={() => setSubmitModalTask(task)}
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer flex items-center gap-1 transition-transform active:scale-95"
+                              title="Nộp báo cáo hoàn thành"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Submit</span>
+                            </button>
+                          )}
 
-                            {/* Lead Action: Reject / Request Fix */}
-                            {isLead && task.status === 'review' && (
+                          {/* Assigner only: Approve and Reject buttons */}
+                          {canReview && (
+                            <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleRejectTask(task.id)}
+                                onClick={() => handleOpenReviewModal(task, 'reject')}
                                 disabled={isActionLoading || !!reviewBlockedReason(task)}
-                                className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
+                                className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
                               >
                                 <XCircle className="w-3 h-3 text-amber-700" />
-                                <span>Sửa lại</span>
+                                <span>Sửa</span>
                               </button>
-                            )}
-
-                            {/* Lead Action: Approve Button */}
-                            {isLead && task.status === 'review' && (
                               <button
-                                onClick={() => handleApproveTask(task.id)}
+                                onClick={() => handleOpenReviewModal(task, 'approve')}
                                 disabled={isActionLoading || !!reviewBlockedReason(task)}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                                title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems trực tiếp'}
+                                title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems'}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
                               >
                                 <Check className="w-3 h-3" />
                                 <span>Duyệt</span>
                               </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {colTasks.length === 0 && (
-                    <div className="h-28 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl text-[11px] text-slate-400">
-                      Không có task nào
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* 4B. VIEW MODE: TABLE LIST VIEW */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3">Mã & Tiêu Đề Công Việc</th>
-                  <th className="px-4 py-3">Dự Án / Chiến Dịch</th>
-                  <th className="px-4 py-3">Ban</th>
-                  <th className="px-4 py-3">Trạng Thái</th>
-                  <th className="px-4 py-3">Ưu Tiên</th>
-                  <th className="px-4 py-3">Người Phụ Trách</th>
-                  <th className="px-4 py-3">Hạn Chót</th>
-                  <th className="px-4 py-3">Gems</th>
-                  <th className="px-4 py-3 text-right">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredTasks.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <FolderGit2 className="w-8 h-8 text-slate-300" />
-                        <span className="text-xs font-semibold">Chưa có công việc nào trong danh sách</span>
-                        {isLead && (
-                          <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                          >
-                            + Giao Công Việc Mới
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTasks.map(task => {
-                    const overdue = getTaskOverdueInfo(task);
-                    const statusMap = {
-                      todo: { label: 'Cần Làm', bg: 'bg-slate-100 text-slate-700' },
-                      in_progress: { label: 'Đang Làm', bg: 'bg-blue-100 text-blue-800' },
-                      review: { label: 'Chờ Duyệt', bg: 'bg-amber-100 text-amber-800 font-bold' },
-                      done: { label: 'Hoàn Thành', bg: 'bg-emerald-100 text-emerald-800' },
-                    };
-                    const st = statusMap[task.status];
-
-                    return (
-                      <tr 
-                        key={task.id} 
-                        onClick={() => setDetailModalTask(task)}
-                        className={`transition-colors cursor-pointer select-none ${
-                          overdue.isOverdue ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-slate-50/80'
-                        }`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="font-mono-code font-bold text-slate-400 text-[10px]">
-                              {task.id.length > 8 ? `${task.id.slice(0, 8)}...` : task.id}
-                            </span>
-                            {task.level === 'BCN_TO_LEAD' ? (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
-                                👑 BCN → LEAD
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
-                                ⚡ LEAD → MEMBER
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                            {task.title}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">
-                            {task.project}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-mono-code font-bold uppercase text-slate-700">
-                          {task.banId}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[11px] ${st.bg}`}>
-                            {st.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`font-semibold ${task.priority === 'Cao' ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
-                            {task.priority}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-700 font-medium truncate max-w-[130px]">
-                          {task.assignee}
-                        </td>
-                        <td className="px-4 py-3 font-mono-code">
-                          {overdue.isOverdue ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-rose-700 font-bold flex items-center gap-1 text-[11px]">
-                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-pulse" />
-                                {formatDateToDDMMYYYY(task.deadline)}
-                              </span>
-                              <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md w-fit">
-                                Quá hạn {overdue.daysOverdue} ngày
-                              </span>
                             </div>
-                          ) : (
-                            <span className="text-slate-500 font-medium">
-                              {formatDateToDDMMYYYY(task.deadline)}
+                          )}
+
+                          {/* Member awaiting review chip */}
+                          {isAssignee && task.status === 'review' && (
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold">
+                              Chờ duyệt
                             </span>
                           )}
-                        </td>
-                        <td className="px-4 py-3 font-bold text-amber-700 font-mono-code">
-                          💎 {task.gems}
-                        </td>
-                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* View detail button */}
-                            <button
-                              onClick={() => setDetailModalTask(task)}
-                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                              title="Xem chi tiết công việc"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
 
-                            {!boardReadOnly && task.status === 'todo' && (
-                              <button
-                                onClick={() => handleChangeStatus(task.id, 'in_progress')}
-                                className="px-2 py-1 bg-blue-50 text-blue-700 font-bold text-[10px] rounded hover:bg-blue-100 cursor-pointer"
-                              >
-                                Bắt đầu
-                              </button>
-                            )}
-                            {!boardReadOnly && (task.status === 'in_progress' || task.status === 'todo') && (
-                              <button
-                                onClick={() => setSubmitModalTask(task)}
-                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer"
-                              >
-                                Submit
-                              </button>
-                            )}
-                            {isLead && task.status === 'review' && (
-                              <>
-                                <button
-                                  onClick={() => handleRejectTask(task.id)}
-                                  disabled={isActionLoading || !!reviewBlockedReason(task)}
-                                  title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
-                                  className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[11px] rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                  Sửa lại
-                                </button>
-                                <button
-                                  onClick={() => handleApproveTask(task.id)}
-                                  disabled={isActionLoading || !!reviewBlockedReason(task)}
-                                  title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems'}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                  Duyệt
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          {/* Completed chip */}
+                          {task.status === 'done' && (
+                            <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">
+                              Đã duyệt
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* Member Submit Modal */}
       {submitModalTask && (
@@ -1196,6 +1115,136 @@ export const TaskBoard: React.FC = () => {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
               >
                 {isActionLoading ? 'Đang gửi...' : 'Gửi Báo Cáo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal (Approve / Reject with feedback note) */}
+      {reviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border-2 border-slate-900 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className={`p-2 rounded-xl ${
+                  reviewModal.type === 'approve' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {reviewModal.type === 'approve' ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-amber-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {reviewModal.type === 'approve' ? 'Phê Duyệt Nhiệm Vụ & Cấp Gems' : 'Yêu Cầu Chỉnh Sửa Nhiệm Vụ'}
+                  </h3>
+                  <p className="text-xs text-slate-500 truncate max-w-xs sm:max-w-sm">
+                    Task: <strong className="text-slate-800">{reviewModal.task.title}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setReviewModal(null);
+                  setReviewFeedback('');
+                  setReviewError(null);
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                title="Đóng modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Submission preview if available */}
+            {reviewModal.task.submissionProof && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 truncate">
+                  <Link2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="text-slate-600 truncate">{reviewModal.task.submissionProof}</span>
+                </div>
+                <a
+                  href={reviewModal.task.submissionProof}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 hover:text-blue-800 font-bold shrink-0 text-[11px] underline flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Xem bài nộp
+                </a>
+              </div>
+            )}
+
+            {/* Error in review modal */}
+            {reviewError && (
+              <div className="p-3 bg-red-50 text-red-900 border border-red-300 rounded-xl flex items-center gap-2 text-xs font-bold animate-fadeIn">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{reviewError}</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-800">
+                {reviewModal.type === 'approve' 
+                  ? 'Ghi chú / Nhận xét động viên thành viên (Tùy chọn)' 
+                  : 'Nội dung phản hồi / Điểm cần sửa đổi bổ sung *'}
+              </label>
+              <textarea
+                rows={3}
+                placeholder={
+                  reviewModal.type === 'approve'
+                    ? 'VD: Làm rất tốt, tiến độ nhanh và chất lượng bài nộp đạt chuẩn!'
+                    : 'VD: Thiếu slide thuyết trình mục 3, vui lòng cập nhật lại trước 18h hôm nay...'
+                }
+                value={reviewFeedback}
+                onChange={(e) => setReviewFeedback(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white resize-none"
+              />
+              <p className="text-[11px] text-slate-400">
+                {reviewModal.type === 'approve' 
+                  ? `Khi phê duyệt, thành viên sẽ được tự động cộng +${reviewModal.task.gems} Gems vào ví.` 
+                  : 'Task sẽ được chuyển lại trạng thái "Đang làm" để thành viên tiếp tục cập nhật và nộp lại.'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setReviewModal(null);
+                  setReviewFeedback('');
+                  setReviewError(null);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReview}
+                disabled={isActionLoading || (reviewModal.type === 'reject' && !reviewFeedback.trim())}
+                className={`px-5 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 ${
+                  reviewModal.type === 'approve'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isActionLoading ? (
+                  'Đang xử lý...'
+                ) : reviewModal.type === 'approve' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Xác Nhận Phê Duyệt (+{reviewModal.task.gems} Gems)</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Gửi Yêu Cầu Sửa Lại</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -1432,13 +1481,16 @@ export const TaskBoard: React.FC = () => {
       {detailModalTask && (() => {
         const detailOverdue = getTaskOverdueInfo(detailModalTask);
         const statusConfig = {
-          todo: { label: 'Cần Làm (To Do)', bg: 'bg-slate-100 text-slate-700 border-slate-200' },
           in_progress: { label: 'Đang Làm (In Progress)', bg: 'bg-blue-100 text-blue-800 border-blue-200' },
           review: { label: 'Chờ Duyệt (In Review)', bg: 'bg-amber-100 text-amber-800 border-amber-200' },
           done: { label: 'Hoàn Thành (Done)', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-        }[detailModalTask.status];
+        }[detailModalTask.status] || { label: 'Đang Làm', bg: 'bg-blue-100 text-blue-800 border-blue-200' };
 
         const banFullName = BAN_NAMES[detailModalTask.banId] || detailModalTask.banId.toUpperCase();
+        const isAssignee = Boolean(user?.id && detailModalTask.assigneeUserIds.includes(user.id));
+        const isCreator = Boolean(user?.id && (detailModalTask.creatorId === user.id || detailModalTask.assignedBy === user.name));
+        const canSubmit = !boardReadOnly && isAssignee && detailModalTask.status === 'in_progress';
+        const canReview = !boardReadOnly && detailModalTask.status === 'review' && (isCreator || isOrgAdmin) && !isAssignee;
 
         return (
           <div 
@@ -1549,6 +1601,17 @@ export const TaskBoard: React.FC = () => {
                     </span>
                     <p className="font-bold text-slate-900 truncate" title={banFullName}>
                       {banFullName}
+                    </p>
+                  </div>
+
+                  {/* Assigner / Creator */}
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <User className="w-3 h-3 text-purple-500" />
+                      Người Giao Việc
+                    </span>
+                    <p className="font-bold text-slate-900 truncate" title={detailModalTask.creatorName || detailModalTask.assignedBy}>
+                      {detailModalTask.creatorName || detailModalTask.assignedBy || 'Ban Quản Trị'}
                     </p>
                   </div>
 
@@ -1670,6 +1733,19 @@ export const TaskBoard: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Assigner Feedback / Note */}
+                {detailModalTask.feedback && (
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-900 mb-1.5 flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Ghi Chú / Phản Hồi Từ Người Giao:</span>
+                    </h4>
+                    <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-amber-900 leading-relaxed text-xs">
+                      {detailModalTask.feedback}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Modal Footer Actions */}
@@ -1683,23 +1759,8 @@ export const TaskBoard: React.FC = () => {
                 </button>
 
                 <div className="flex items-center gap-2">
-                  {/* Start Button */}
-                  {!boardReadOnly && detailModalTask.status === 'todo' && (
-                    <button
-                      onClick={() => {
-                        handleChangeStatus(detailModalTask.id, 'in_progress');
-                        setDetailModalTask(prev => prev ? { ...prev, status: 'in_progress' } : null);
-                      }}
-                      disabled={isActionLoading}
-                      className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Play className="w-3 h-3 fill-blue-600 text-blue-600" />
-                      <span>Bắt Đầu Làm</span>
-                    </button>
-                  )}
-
-                  {/* Submit Button */}
-                  {!boardReadOnly && (detailModalTask.status === 'in_progress' || detailModalTask.status === 'todo') && (
+                  {/* Assignee only: Submit Button */}
+                  {canSubmit && (
                     <button
                       onClick={() => {
                         const target = detailModalTask;
@@ -1713,13 +1774,12 @@ export const TaskBoard: React.FC = () => {
                     </button>
                   )}
 
-                  {/* Lead Reject & Approve Buttons */}
-                  {isLead && detailModalTask.status === 'review' && (
+                  {/* Assigner / BCN only: Reject & Approve Buttons */}
+                  {canReview && (
                     <>
                       <button
                         onClick={() => {
-                          handleRejectTask(detailModalTask.id);
-                          setDetailModalTask(prev => prev ? { ...prev, status: 'in_progress' } : null);
+                          handleOpenReviewModal(detailModalTask, 'reject');
                         }}
                         disabled={isActionLoading || !!reviewBlockedReason(detailModalTask)}
                         className="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1730,8 +1790,7 @@ export const TaskBoard: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          handleApproveTask(detailModalTask.id);
-                          setDetailModalTask(prev => prev ? { ...prev, status: 'done' } : null);
+                          handleOpenReviewModal(detailModalTask, 'approve');
                         }}
                         disabled={isActionLoading || !!reviewBlockedReason(detailModalTask)}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1741,6 +1800,13 @@ export const TaskBoard: React.FC = () => {
                         <span>Phê Duyệt & Tặng Gems</span>
                       </button>
                     </>
+                  )}
+
+                  {/* Assignee awaiting review notice */}
+                  {isAssignee && detailModalTask.status === 'review' && (
+                    <span className="px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold">
+                      Đang chờ người giao phê duyệt...
+                    </span>
                   )}
                 </div>
               </div>

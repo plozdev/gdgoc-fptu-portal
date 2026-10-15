@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { eventsApi } from '../../api/events.api';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -568,8 +569,17 @@ export const AssetHub: React.FC = () => {
               )}
             </div>
 
-            {/* Quick Switch Button */}
+            {/* Quick Switch & Add Event Buttons */}
             <div className="flex items-center gap-2 shrink-0">
+              <Link
+                to="/app/events"
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                title="Tạo sự kiện mới tại trang Quản Lý Sự Kiện"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm Sự Kiện</span>
+              </Link>
+
               {eventNavMode === 'CURRENT_YEAR' ? (
                 <button
                   onClick={() => setEventNavMode('ARCHIVE_ROOT')}
@@ -711,6 +721,17 @@ export const AssetHub: React.FC = () => {
                       ? 'Không tìm thấy sự kiện nào khớp với từ khóa tìm kiếm.' 
                       : 'Các sự kiện được tạo ở mục Quản Lý Sự Kiện sẽ tự động hiển thị thư mục tại đây.'}
                   </p>
+                  {!eventSearch && (
+                    <div className="pt-2">
+                      <Link
+                        to="/app/events"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Đến Trang Quản Lý Sự Kiện Để Tạo Mới</span>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

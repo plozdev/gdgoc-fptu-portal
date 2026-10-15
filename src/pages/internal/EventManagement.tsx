@@ -49,6 +49,7 @@ const blank: CreateEventDto = {
   isPublic: false,
   registrationUrl: "",
   description: "",
+  driveFolderUrl: "",
 };
 
 const EVENT_TYPES = [
@@ -146,6 +147,7 @@ export const EventManagement: React.FC = () => {
         endTime: new Date(form.endTime).toISOString(),
       };
       if (!dto.registrationUrl) delete dto.registrationUrl;
+      if (!dto.driveFolderUrl) delete dto.driveFolderUrl;
       if (editId) await eventsApi.updateEvent(editId, dto);
       else await eventsApi.createEvent(dto);
       setForm(null);
@@ -461,6 +463,7 @@ export const EventManagement: React.FC = () => {
                             contributionGems: event.contributionGems,
                             registrationUrl: event.registrationUrl || "",
                             isPublic: event.isPublic,
+                            driveFolderUrl: event.driveFolderUrl || "",
                           });
                         }}
                         className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
@@ -748,6 +751,22 @@ export const EventManagement: React.FC = () => {
                     setForm({ ...form, registrationUrl: e.target.value })
                   }
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Link Thư Mục Google Drive Của Sự Kiện</label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/drive/folders/... (Tùy chọn)"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500 font-mono-code"
+                  value={form.driveFolderUrl || ""}
+                  onChange={(e) =>
+                    setForm({ ...form, driveFolderUrl: e.target.value })
+                  }
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Thư mục Google Drive lưu trữ tài nguyên, slide, ảnh (sẽ hiển thị trực tiếp trong Kho Sự Kiện - Smart Assets Hub).
+                </p>
               </div>
 
               <div>

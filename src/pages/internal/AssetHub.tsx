@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import { eventsApi } from '../../api/events.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { BAN_NAMES, BanId } from '../../types/auth';
 import { 
@@ -44,27 +42,9 @@ interface DriveAsset {
   category: string;
   accessLevel: string;
   department?: { id: string; name: string; code: string };
-  tenure?: { id: string; name: string; genLabel: string };
+  tenure?: { id: string; name: string; genLabel: string; isArchived?: boolean };
   createdAt?: string;
   uploadedById?: string;
-}
-
-interface EventItem {
-  id: string;
-  title: string;
-  description?: string;
-  type: string;
-  location: string;
-  startTime: string;
-  endTime: string;
-  status?: string;
-  driveFolderUrl?: string | null;
-  tenureId?: string;
-  tenure?: { id: string; name: string; genLabel: string; isArchived: boolean };
-  tenureName?: string;
-  tenureGen?: string;
-  semesterId?: string;
-  semester?: { id: string; name: string; isClosed: boolean };
 }
 
 const CATEGORIES = [
@@ -131,9 +111,9 @@ export const AssetHub: React.FC = () => {
   };
 
   // ==========================================
-  // SECTION 1: EVENTS DIRECTORY (Cây thư mục sự kiện)
+  // SECTION 1: EVENTS DIRECTORY (Cây thư mục sự kiện - Drive Folders)
   // ==========================================
-  const [events, setEvents] = useState<EventItem[]>([]);
+  const [eventFolders, setEventFolders] = useState<DriveAsset[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
 
@@ -144,91 +124,162 @@ export const AssetHub: React.FC = () => {
   const [eventNavMode, setEventNavMode] = useState<'CURRENT_YEAR' | 'ARCHIVE_ROOT' | 'ARCHIVE_YEAR'>('CURRENT_YEAR');
   const [selectedArchiveYear, setSelectedArchiveYear] = useState<string>('');
 
-  // Modal gắn / sửa link Google Drive của Sự kiện
-  const [editingDriveEvent, setEditingDriveEvent] = useState<EventItem | null>(null);
-  const [eventDriveUrlInput, setEventDriveUrlInput] = useState('');
-  const [isUpdatingEventDrive, setIsUpdatingEventDrive] = useState(false);
+  // Modal Thêm / Chỉnh Sửa Thư Mục Sự Kiện
+  const [isEventFolderModalOpen, setIsEventFolderModalOpen] = useState(false);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [eventFolderForm, setEventFolderForm] = useState({
+    name: '',
+    driveUrl: '',
+    description: '',
+    accessLevel: 'INTERNAL_MEMBER',
+    tenureId: '',
+  });
+  const [availableTenures, setAvailableTenures] = useState<{ id: string; name: string; isArchived: boolean }[]>([]);
+  const [isSubmittingFolder, setIsSubmittingFolder] = useState(false);
 
-  const loadEvents = useCallback(async () => {
+  // Tải danh sách nhiệm kỳ từ cấu hình
+  const loadTenures = useCallback(async () => {
+    try {
+      const res: any = await api.get('/api/config/generation');
+      const list: { id: string; name: string; isArchived: boolean }[] = [];
+      if (res?.currentTenure) {
+        list.push({
+          id: res.currentTenure.id,
+          name: res.currentTenure.name,
+          isArchived: false,
+        });
+      }
+      if (Array.isArray(res?.archivedTenures)) {
+        res.archivedTenures.forEach((item: any) => {
+          if (item.tenure && !list.some(t => t.id === item.tenure.id)) {
+            list.push({
+              id: item.tenure.id,
+              name: item.tenure.name,
+              isArchived: true,
+            });
+          }
+        });
+      }
+      setAvailableTenures(list);
+    } catch (e) {
+      console.error('Không thể tải danh sách nhiệm kỳ:', e);
+    }
+  }, []);
+
+  // Tải danh sách thư mục sự kiện (category = EVENT_FOLDER)
+  const loadEventFolders = useCallback(async () => {
     setIsEventsLoading(true);
     try {
-      const res: any = await eventsApi.getEvents();
-      const rawEvents: EventItem[] = Array.isArray(res) ? res : res?.data || [];
-      setEvents(rawEvents);
+      const res: any = await api.get('/api/assets?category=EVENT_FOLDER&limit=100');
+      const items: DriveAsset[] = res?.items || (Array.isArray(res) ? res : []);
+      setEventFolders(items);
     } catch (err: any) {
-      console.error('Lỗi khi tải danh sách sự kiện:', err);
-      showToast('Không thể tải danh sách sự kiện', 'error');
+      console.error('Lỗi khi tải danh sách thư mục sự kiện:', err);
+      showToast('Không thể tải danh sách thư mục sự kiện', 'error');
     } finally {
       setIsEventsLoading(false);
     }
   }, []);
 
-  // Phân loại Events theo Năm học / Nhiệm kỳ
-  const { currentYearEvents, currentYearLabel, archivedYearsMap, archivedYearsList } = useMemo(() => {
-    // Current year events: events where tenure.isArchived === false
-    // or fallback to latest events
-    const current = events.filter(e => e.tenure ? !e.tenure.isArchived : true);
-    const label = current.length > 0 && (current[0].tenure?.name || current[0].tenureName)
-      ? (current[0].tenure?.name || current[0].tenureName || '2026 - 2027')
-      : '2026 - 2027';
+  // Phân loại Event Folders theo Năm học / Nhiệm kỳ
+  const { currentYearFolders, currentYearLabel, archivedYearsMap, archivedYearsList } = useMemo(() => {
+    const currentTenure = availableTenures.find(t => !t.isArchived);
+    const activeLabel = currentTenure?.name || '2026 - 2027';
 
-    // Archived events: tenure.isArchived === true
-    const archived = events.filter(e => e.tenure?.isArchived);
-    const map: Record<string, EventItem[]> = {};
+    const current = eventFolders.filter(f => f.tenure ? !f.tenure.isArchived : true);
+    const archived = eventFolders.filter(f => f.tenure?.isArchived);
+    const map: Record<string, DriveAsset[]> = {};
 
-    archived.forEach(e => {
-      const year = e.tenure?.name || e.tenureName || '2025 - 2026';
+    archived.forEach(f => {
+      const year = f.tenure?.name || 'Archive';
       if (!map[year]) map[year] = [];
-      map[year].push(e);
+      map[year].push(f);
     });
 
     const yearsList = Object.keys(map).sort((a, b) => b.localeCompare(a));
 
     return {
-      currentYearEvents: current,
-      currentYearLabel: label,
+      currentYearFolders: current,
+      currentYearLabel: activeLabel,
       archivedYearsMap: map,
       archivedYearsList: yearsList,
     };
-  }, [events]);
+  }, [eventFolders, availableTenures]);
 
-  // Handle open modal update event drive link
-  const handleOpenEditEventDrive = (e: React.MouseEvent, event: EventItem) => {
-    e.stopPropagation();
-    setEditingDriveEvent(event);
-    setEventDriveUrlInput(event.driveFolderUrl || '');
+  // Handlers mở modal tạo / sửa
+  const handleOpenCreateFolderModal = () => {
+    const defaultTenure = availableTenures.find(t => !t.isArchived);
+    setEditingFolderId(null);
+    setEventFolderForm({
+      name: '',
+      driveUrl: '',
+      description: '',
+      accessLevel: 'INTERNAL_MEMBER',
+      tenureId: defaultTenure?.id || '',
+    });
+    setIsEventFolderModalOpen(true);
   };
 
-  // Submit update event drive link
-  const handleSaveEventDriveUrl = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingDriveEvent) return;
+  const handleOpenEditFolderModal = (e: React.MouseEvent, folder: DriveAsset) => {
+    e.stopPropagation();
+    setEditingFolderId(folder.id);
+    setEventFolderForm({
+      name: folder.name,
+      driveUrl: folder.driveUrl,
+      description: folder.description || '',
+      accessLevel: folder.accessLevel || 'INTERNAL_MEMBER',
+      tenureId: folder.tenure?.id || '',
+    });
+    setIsEventFolderModalOpen(true);
+  };
+
+  const handleDeleteFolder = async (e: React.MouseEvent, folderId: string, folderName: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa thư mục sự kiện "${folderName}" không?`)) return;
 
     try {
-      setIsUpdatingEventDrive(true);
-      const trimmedUrl = eventDriveUrlInput.trim();
-      if (trimmedUrl && !safeDriveUrl(trimmedUrl)) {
-        showToast('Vui lòng nhập đường dẫn Google Drive hợp lệ (https://...)', 'error');
-        return;
+      await api.delete(`/api/assets/${folderId}`);
+      showToast(`Đã xóa thư mục "${folderName}" thành công!`, 'success');
+      await loadEventFolders();
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể xóa thư mục', 'error');
+    }
+  };
+
+  const handleSaveEventFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventFolderForm.name.trim() || !eventFolderForm.driveUrl.trim()) return;
+
+    try {
+      setIsSubmittingFolder(true);
+      const safe = safeDriveUrl(eventFolderForm.driveUrl.trim());
+      if (!safe) throw new Error('Vui lòng nhập đường dẫn Google Drive hợp lệ (https://drive.google.com/...)');
+
+      const payload = {
+        name: eventFolderForm.name.trim(),
+        driveUrl: eventFolderForm.driveUrl.trim(),
+        description: eventFolderForm.description.trim() || undefined,
+        category: 'EVENT_FOLDER',
+        accessLevel: eventFolderForm.accessLevel,
+        driveFileId: 'manual_entry',
+        tenureId: eventFolderForm.tenureId || undefined,
+      };
+
+      if (editingFolderId) {
+        await api.patch(`/api/assets/${editingFolderId}`, payload);
+        showToast('Cập nhật thư mục sự kiện thành công!', 'success');
+      } else {
+        await api.post('/api/assets', payload);
+        showToast('Tạo thư mục sự kiện mới thành công!', 'success');
       }
 
-      await eventsApi.updateEvent(editingDriveEvent.id, {
-        driveFolderUrl: trimmedUrl || null,
-      } as any);
-
-      // Cập nhật state local
-      setEvents(prev => prev.map(item => 
-        item.id === editingDriveEvent.id ? { ...item, driveFolderUrl: trimmedUrl || null } : item
-      ));
-
-      showToast(`Đã lưu liên kết Google Drive cho ${editingDriveEvent.title}!`, 'success');
-      setEditingDriveEvent(null);
-      setEventDriveUrlInput('');
+      setIsEventFolderModalOpen(false);
+      setEditingFolderId(null);
+      await loadEventFolders();
     } catch (err: any) {
-      console.error('Lỗi khi cập nhật link Google Drive:', err);
-      showToast(err?.message || 'Không thể cập nhật liên kết Drive', 'error');
+      showToast(err?.message || 'Không thể lưu thư mục sự kiện', 'error');
     } finally {
-      setIsUpdatingEventDrive(false);
+      setIsSubmittingFolder(false);
     }
   };
 
@@ -278,7 +329,9 @@ export const AssetHub: React.FC = () => {
       });
       const response = await api.get<{ items: DriveAsset[]; totalPages: number }>('/api/assets?' + query.toString());
       if (version !== requestVersion.current) return;
-      setAssets(response?.items || []);
+      const rawItems = response?.items || [];
+      // Tách biệt hoàn toàn: Danh mục dùng chung không hiển thị EVENT_FOLDER
+      setAssets(rawItems.filter(item => item.category !== 'EVENT_FOLDER'));
     } catch (err: any) {
       if (version !== requestVersion.current) return;
       setAssets([]);
@@ -289,9 +342,10 @@ export const AssetHub: React.FC = () => {
   }, [assetSearch, selectedCategory]);
 
   useEffect(() => {
-    void loadEvents();
+    void loadTenures();
+    void loadEventFolders();
     void loadAssets();
-  }, [loadEvents, loadAssets]);
+  }, [loadTenures, loadEventFolders, loadAssets]);
 
   const handleCreateAsset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,23 +407,22 @@ export const AssetHub: React.FC = () => {
     }
   };
 
-  // Filtered Events based on search
-  const displayedEvents = useMemo(() => {
-    let sourceEvents: EventItem[] = [];
+  // Filtered Event Folders based on search
+  const displayedFolders = useMemo(() => {
+    let sourceFolders: DriveAsset[] = [];
     if (eventNavMode === 'CURRENT_YEAR') {
-      sourceEvents = currentYearEvents;
+      sourceFolders = currentYearFolders;
     } else if (eventNavMode === 'ARCHIVE_YEAR' && selectedArchiveYear) {
-      sourceEvents = archivedYearsMap[selectedArchiveYear] || [];
+      sourceFolders = archivedYearsMap[selectedArchiveYear] || [];
     }
 
-    if (!eventSearch.trim()) return sourceEvents;
-    const q = eventSearch.toLowerCase();
-    return sourceEvents.filter(e => 
-      e.title.toLowerCase().includes(q) || 
-      (e.location && e.location.toLowerCase().includes(q)) ||
-      (e.type && e.type.toLowerCase().includes(q))
+    if (!eventSearch.trim()) return sourceFolders;
+    const q = eventSearch.toLowerCase().trim();
+    return sourceFolders.filter(f => 
+      f.name.toLowerCase().includes(q) || 
+      (f.description && f.description.toLowerCase().includes(q))
     );
-  }, [eventNavMode, selectedArchiveYear, currentYearEvents, archivedYearsMap, eventSearch]);
+  }, [eventNavMode, selectedArchiveYear, currentYearFolders, archivedYearsMap, eventSearch]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto select-none pb-14 animate-fadeIn">
@@ -424,7 +477,7 @@ export const AssetHub: React.FC = () => {
         <div className="flex items-center flex-wrap gap-2 shrink-0">
           <button
             onClick={() => {
-              void loadEvents();
+              void loadEventFolders();
               void loadAssets();
               showToast('Đã làm mới dữ liệu từ server!', 'success');
             }}
@@ -484,7 +537,7 @@ export const AssetHub: React.FC = () => {
           <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold font-mono-code ${
             activeTab === 'EVENTS' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
           }`}>
-            {currentYearEvents.length} năm nay • {events.length - currentYearEvents.length} lưu trữ
+            {currentYearFolders.length} năm nay • {eventFolders.length - currentYearFolders.length} lưu trữ
           </span>
         </button>
 
@@ -569,16 +622,19 @@ export const AssetHub: React.FC = () => {
               )}
             </div>
 
-            {/* Quick Switch & Add Event Buttons */}
+            {/* Quick Switch & Add Event Folder Buttons */}
             <div className="flex items-center gap-2 shrink-0">
-              <Link
-                to="/app/events"
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                title="Tạo sự kiện mới tại trang Quản Lý Sự Kiện"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Thêm Sự Kiện</span>
-              </Link>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={handleOpenCreateFolderModal}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  title="Thêm thư mục sự kiện mới và gắn link Google Drive"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm Thư Mục Sự Kiện</span>
+                </button>
+              )}
 
               {eventNavMode === 'CURRENT_YEAR' ? (
                 <button
@@ -697,129 +753,135 @@ export const AssetHub: React.FC = () => {
               )}
             </div>
           ) : (
-            /* CURRENT_YEAR or ARCHIVE_YEAR: Event Folders Grid (Matching User Screenshot 1 & 3) */
+            /* CURRENT_YEAR or ARCHIVE_YEAR: Event Folders Grid (Matching Google Drive Directory) */
             <div className="space-y-4">
               {/* Year indicator alert */}
               <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border text-xs font-bold bg-white border-slate-200">
                 <div className="flex items-center gap-2">
                   <Folder className="w-4 h-4 text-blue-600" />
                   <span>
-                    Danh sách sự kiện: <strong className="text-slate-900 font-mono-code">{eventNavMode === 'CURRENT_YEAR' ? currentYearLabel : selectedArchiveYear}</strong> ({displayedEvents.length} sự kiện)
+                    Danh sách thư mục sự kiện: <strong className="text-slate-900 font-mono-code">{eventNavMode === 'CURRENT_YEAR' ? currentYearLabel : selectedArchiveYear}</strong> ({displayedFolders.length} thư mục)
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-500 font-normal hidden sm:inline">
-                  Click [Mở Google Drive] để truy cập trực tiếp thư mục Drive của Event
+                  Click vào thư mục để truy cập trực tiếp Google Drive
                 </span>
               </div>
 
-              {displayedEvents.length === 0 ? (
+              {displayedFolders.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-slate-200/80 p-16 text-center text-slate-400 space-y-3">
                   <Folder className="w-12 h-12 mx-auto text-slate-300 opacity-60" />
-                  <h3 className="text-sm font-extrabold text-slate-700">Chưa có sự kiện nào trong thư mục này</h3>
+                  <h3 className="text-sm font-extrabold text-slate-700">Chưa có thư mục sự kiện nào trong năm này</h3>
                   <p className="text-xs text-slate-400 max-w-md mx-auto">
                     {eventSearch 
-                      ? 'Không tìm thấy sự kiện nào khớp với từ khóa tìm kiếm.' 
-                      : 'Các sự kiện được tạo ở mục Quản Lý Sự Kiện sẽ tự động hiển thị thư mục tại đây.'}
+                      ? 'Không tìm thấy thư mục sự kiện nào khớp với từ khóa tìm kiếm.' 
+                      : 'Bấm nút "+ Thêm Thư Mục Sự Kiện" bên trên để tạo thư mục và gắn link Google Drive cho sự kiện hoặc chuỗi sự kiện.'}
                   </p>
-                  {!eventSearch && (
+                  {!eventSearch && canManage && (
                     <div className="pt-2">
-                      <Link
-                        to="/app/events"
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateFolderModal}
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
                       >
                         <Plus className="w-4 h-4" />
-                        <span>Đến Trang Quản Lý Sự Kiện Để Tạo Mới</span>
-                      </Link>
+                        <span>Thêm Thư Mục Sự Kiện Ngay</span>
+                      </button>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {displayedEvents.map((event) => {
-                    const hasDriveUrl = Boolean(event.driveFolderUrl && safeDriveUrl(event.driveFolderUrl));
+                  {displayedFolders.map((folder) => {
+                    const accessBadge = ACCESS_LEVEL_MAP[folder.accessLevel] || ACCESS_LEVEL_MAP.INTERNAL_MEMBER;
+                    const AccessIcon = accessBadge.icon;
 
                     return (
                       <div
-                        key={event.id}
-                        className="bg-white rounded-3xl border border-slate-200/80 hover:border-blue-400 p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group space-y-4"
+                        key={folder.id}
+                        onClick={() => {
+                          const url = safeDriveUrl(folder.driveUrl);
+                          if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                        }}
+                        className="bg-white rounded-3xl border border-slate-200/80 hover:border-blue-400 p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group space-y-4 cursor-pointer"
                       >
                         <div className="space-y-3">
                           {/* Top Badges */}
                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                              <Calendar className="w-3 h-3 text-slate-500" />
-                              <span>{event.type}</span>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${accessBadge.color}`}>
+                              <AccessIcon className="w-3 h-3" />
+                              <span>{accessBadge.label}</span>
                             </span>
 
-                            {event.startTime && (
+                            {folder.createdAt && (
                               <span className="text-[10px] font-semibold text-slate-400 font-mono-code">
-                                {formatEventDate(event.startTime)}
+                                {formatEventDate(folder.createdAt)}
                               </span>
                             )}
                           </div>
 
-                          {/* Event Title */}
+                          {/* Event Folder Title */}
                           <div>
                             <h3 className="text-sm sm:text-base font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors flex items-start gap-2.5">
                               <div className="p-2 bg-blue-50 group-hover:bg-blue-100 rounded-xl text-blue-600 shrink-0 transition-colors">
                                 <Folder className="w-4 h-4 fill-blue-500/20" />
                               </div>
-                              <span className="line-clamp-2 leading-snug">{event.title}</span>
+                              <span className="line-clamp-2 leading-snug">{folder.name}</span>
                             </h3>
 
-                            {event.location && (
-                              <p className="text-xs text-slate-500 mt-1.5 line-clamp-1 flex items-center gap-1">
-                                <span>📍 {event.location}</span>
+                            {folder.description && (
+                              <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                                {folder.description}
                               </p>
                             )}
                           </div>
                         </div>
 
                         {/* Card Footer: Open Drive + Actions */}
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {hasDriveUrl ? (
-                              <>
-                                <a
-                                  href={event.driveFolderUrl!}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 shadow-2xs transition-all cursor-pointer"
-                                  title="Mở thư mục Google Drive của sự kiện"
-                                >
-                                  <HardDrive className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>Mở Google Drive</span>
-                                  <ExternalLink className="w-3 h-3 text-blue-500" />
-                                </a>
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                          <a
+                            href={folder.driveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 shadow-2xs transition-all cursor-pointer"
+                            title="Mở thư mục Google Drive"
+                          >
+                            <HardDrive className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Mở Google Drive</span>
+                            <ExternalLink className="w-3 h-3 text-blue-500" />
+                          </a>
 
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleCopyLink(e, event.driveFolderUrl)}
-                                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                                  title="Sao chép link Google Drive"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-xs text-slate-400 italic flex items-center gap-1">
-                                <span>Chưa gắn link Drive</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Lead / BCN action: Attach or Edit Drive Link */}
-                          {canManage && (
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={(e) => handleOpenEditEventDrive(e, event)}
-                              className="px-2.5 py-1 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                              title="Gắn hoặc cập nhật link Google Drive"
+                              onClick={(e) => handleCopyLink(e, folder.driveUrl)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              title="Sao chép link Google Drive"
                             >
-                              <Edit3 className="w-3 h-3" />
-                              <span>{hasDriveUrl ? 'Sửa link' : 'Gắn link'}</span>
+                              <Copy className="w-3.5 h-3.5" />
                             </button>
-                          )}
+
+                            {canManage && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenEditFolderModal(e, folder)}
+                                  className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Chỉnh sửa thư mục"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteFolder(e, folder.id, folder.name)}
+                                  className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Xóa thư mục sự kiện"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1007,69 +1069,119 @@ export const AssetHub: React.FC = () => {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL 1: GẮN / SỬA LINK GOOGLE DRIVE CỦA SỰ KIỆN */}
+      {/* MODAL 1: THÊM / CHỈNH SỬA THƯ MỤC SỰ KIỆN (GOOGLE DRIVE) */}
       {/* ======================================================== */}
-      {editingDriveEvent && (
+      {isEventFolderModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fadeIn">
           <form
-            onSubmit={handleSaveEventDriveUrl}
+            onSubmit={handleSaveEventFolder}
             className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-lg space-y-4 shadow-2xl border border-slate-200"
           >
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-                <HardDrive className="w-5 h-5 text-blue-600" />
-                <span>Cập Nhật Thư Mục Google Drive Sự Kiện</span>
+                <Folder className="w-5 h-5 text-blue-600 fill-blue-500/20" />
+                <span>{editingFolderId ? 'Chỉnh Sửa Thư Mục Sự Kiện' : 'Thêm Thư Mục Sự Kiện Mới'}</span>
               </h2>
               <button
                 type="button"
-                onClick={() => setEditingDriveEvent(null)}
+                onClick={() => setIsEventFolderModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Sự kiện</p>
-                <p className="text-sm font-bold text-slate-900">{editingDriveEvent.title}</p>
-                {editingDriveEvent.location && (
-                  <p className="text-slate-500">📍 {editingDriveEvent.location}</p>
-                )}
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">
+                  Tên Sự Kiện / Chuỗi Sự Kiện *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Techverse 2026, Cloud Study Jam Series, Workshop AI..."
+                  value={eventFolderForm.name}
+                  onChange={(e) => setEventFolderForm({ ...eventFolderForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
+                />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">
+                <label className="block font-bold text-slate-800 mb-1">
                   Đường Dẫn Thư Mục Google Drive (URL) *
                 </label>
                 <input
                   type="url"
                   required
                   placeholder="https://drive.google.com/drive/folders/..."
-                  value={eventDriveUrlInput}
-                  onChange={(e) => setEventDriveUrlInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono-code text-slate-900 focus:outline-none focus:border-blue-500"
+                  value={eventFolderForm.driveUrl}
+                  onChange={(e) => setEventFolderForm({ ...eventFolderForm, driveUrl: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono-code text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Dán link thư mục Google Drive của sự kiện (thư mục Media, Slide, Minh chứng...). Thành viên sẽ được mở trực tiếp khi bấm vào.
+                  Dán link thư mục Google Drive của sự kiện hoặc chuỗi sự kiện. Thành viên click vào sẽ mở thẳng Google Drive.
                 </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">Mô Tả / Ghi Chú Tài Nguyên (Tùy chọn)</label>
+                <textarea
+                  rows={2}
+                  placeholder="VD: Chứa slide bài giảng, ảnh recap, video và file thiết kế truyền thông..."
+                  value={eventFolderForm.description}
+                  onChange={(e) => setEventFolderForm({ ...eventFolderForm, description: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Nhiệm Kỳ (Năm Học)</label>
+                  <select
+                    value={eventFolderForm.tenureId}
+                    onChange={(e) => setEventFolderForm({ ...eventFolderForm, tenureId: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500"
+                  >
+                    {availableTenures.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} {t.isArchived ? '(Archive)' : '(Hiện tại)'}
+                      </option>
+                    ))}
+                    {availableTenures.length === 0 && (
+                      <option value="">Nhiệm kỳ hiện tại (2026 - 2027)</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Cấp Độ Phân Quyền</label>
+                  <select
+                    value={eventFolderForm.accessLevel}
+                    onChange={(e) => setEventFolderForm({ ...eventFolderForm, accessLevel: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="INTERNAL_MEMBER">Toàn CLB (Thành viên)</option>
+                    <option value="PUBLIC">Công Khai (Tất cả mọi người)</option>
+                    {isLevelOne && <option value="EXECUTIVE_ONLY">Ban Chủ Nhiệm / Ban Tổ Chức</option>}
+                  </select>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setEditingDriveEvent(null)}
+                onClick={() => setIsEventFolderModalOpen(false)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Hủy Bỏ
               </button>
               <button
                 type="submit"
-                disabled={isUpdatingEventDrive}
-                className="px-5 py-2 bg-[#4285F4] hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                disabled={isSubmittingFolder}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                {isUpdatingEventDrive ? 'Đang Lưu...' : 'Lưu Liên Kết Drive'}
+                {isSubmittingFolder ? 'Đang Lưu...' : editingFolderId ? 'Lưu Thay Đổi' : 'Tạo Thư Mục'}
               </button>
             </div>
           </form>

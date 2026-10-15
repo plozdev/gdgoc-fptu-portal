@@ -1,6 +1,6 @@
 import { api } from './client';
 export interface QueryEventsParams { tenureId?: string; isPublic?: boolean; type?: string; status?: string; search?: string; }
-export interface CreateEventDto { title: string; description?: string; type: string; location: string; startTime: string; endTime: string; contributionGems?: number; status?: string; isPublic?: boolean; bannerImageUrl?: string; registrationUrl?: string; tenureId?: string; driveFolderUrl?: string; }
+export interface CreateEventDto { title: string; description?: string; type: string; location: string; startTime: string; endTime: string; contributionGems?: number; status?: string; isPublic?: boolean; bannerImageUrl?: string; registrationUrl?: string; tenureId?: string; }
 export interface EventContributor { id: string; userId: string; roleInEvent?: string; notes?: string; isGemsGranted: boolean; user: { id: string; fullName: string; mssv: string; email: string }; }
 export const eventsApi = {
   getMyContributionCount: () => api.get<{count:number}>('/api/events/contributions/mine/count'),

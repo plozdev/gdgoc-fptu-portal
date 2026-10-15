@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { subscribeSync } from '../../sync/subscriptions';
+import { MemberProfileLink } from '../../components/members/MemberProfileLink';
 import {
   eventsApi,
   EventContributor,
@@ -49,7 +50,6 @@ const blank: CreateEventDto = {
   isPublic: false,
   registrationUrl: "",
   description: "",
-  driveFolderUrl: "",
 };
 
 const EVENT_TYPES = [
@@ -147,7 +147,6 @@ export const EventManagement: React.FC = () => {
         endTime: new Date(form.endTime).toISOString(),
       };
       if (!dto.registrationUrl) delete dto.registrationUrl;
-      if (!dto.driveFolderUrl) delete dto.driveFolderUrl;
       if (editId) await eventsApi.updateEvent(editId, dto);
       else await eventsApi.createEvent(dto);
       setForm(null);
@@ -463,7 +462,6 @@ export const EventManagement: React.FC = () => {
                             contributionGems: event.contributionGems,
                             registrationUrl: event.registrationUrl || "",
                             isPublic: event.isPublic,
-                            driveFolderUrl: event.driveFolderUrl || "",
                           });
                         }}
                         className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
@@ -582,11 +580,11 @@ export const EventManagement: React.FC = () => {
                       className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
+                        <MemberProfileLink id={c.userId} className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs">
                           {c.user?.fullName?.charAt(0) || "U"}
-                        </div>
+                        </MemberProfileLink>
                         <div>
-                          <p className="font-bold text-xs text-slate-900">{c.user?.fullName}</p>
+                          <p className="font-bold text-xs text-slate-900"><MemberProfileLink id={c.userId}>{c.user?.fullName}</MemberProfileLink></p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[11px] text-blue-600 font-medium">
                               {c.roleInEvent || "Thành viên ban tổ chức"}
@@ -751,22 +749,6 @@ export const EventManagement: React.FC = () => {
                     setForm({ ...form, registrationUrl: e.target.value })
                   }
                 />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Link Thư Mục Google Drive Của Sự Kiện</label>
-                <input
-                  type="url"
-                  placeholder="https://drive.google.com/drive/folders/... (Tùy chọn)"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-blue-500 font-mono-code"
-                  value={form.driveFolderUrl || ""}
-                  onChange={(e) =>
-                    setForm({ ...form, driveFolderUrl: e.target.value })
-                  }
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Thư mục Google Drive lưu trữ tài nguyên, slide, ảnh (sẽ hiển thị trực tiếp trong Kho Sự Kiện - Smart Assets Hub).
-                </p>
               </div>
 
               <div>

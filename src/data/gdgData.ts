@@ -27,7 +27,7 @@ export const CHAPTER_INFO = {
 //   -> Các nút sẽ đổi thành "Gia Nhập Gen 4.0 Ngay", form tuyển quân sẽ mở nhận hồ sơ.
 // =============================================================================
 export const RECRUITMENT_CONFIG = {
-  isOpen: true, // 👈 [BẬT / TẮT ĐỢT TUYỂN TẠI ĐÂY] true: Mở nhận đơn | false: Đang cập nhật
+  isOpen: false, // 👈 [BẬT / TẮT ĐỢT TUYỂN TẠI ĐÂY] true: Mở nhận đơn | false: Đang cập nhật
   batch: "Gen 4.0",
   term: "Kỳ Fall 2026",
   statusBadge: "ĐANG CẬP NHẬT",

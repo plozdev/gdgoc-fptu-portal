@@ -21,7 +21,16 @@ import {
   Play,
   RotateCcw,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  ExternalLink,
+  Copy,
+  Calendar,
+  X,
+  Eye,
+  Flame,
+  FileText,
+  Tag
 } from 'lucide-react';
 import { BAN_NAMES, BanId } from '../../types/auth';
 import { DateInput } from '../../components/common/DateInput';
@@ -91,6 +100,41 @@ const parseDDMMYYYYtoIso = (str: string): string => {
   }
   return new Date(Date.now() + 7 * 86400000).toISOString();
 };
+
+export const getTaskDeadlineDate = (deadline?: string | Date | null): Date | null => {
+  if (!deadline) return null;
+  if (deadline instanceof Date) return deadline;
+  const str = String(deadline).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    const [d, m, y] = str.split('/');
+    return new Date(Number(y), Number(m) - 1, Number(d), 23, 59, 59, 999);
+  }
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      parsed.setHours(23, 59, 59, 999);
+    }
+    return parsed;
+  }
+  return null;
+};
+
+export const getTaskOverdueInfo = (task: Task) => {
+  if (task.status === 'done' || !task.deadline) {
+    return { isOverdue: false, daysOverdue: 0, deadlineDate: null };
+  }
+  const d = getTaskDeadlineDate(task.deadline);
+  if (!d) return { isOverdue: false, daysOverdue: 0, deadlineDate: null };
+
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  if (diffMs > 0) {
+    const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    return { isOverdue: true, daysOverdue: days, deadlineDate: d };
+  }
+  return { isOverdue: false, daysOverdue: 0, deadlineDate: d };
+};
+
 
 const mapBackendTaskToFrontend = (item: any): Task => {
   const deptCode = item.department?.code || '';
@@ -229,6 +273,7 @@ export const TaskBoard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
   // Modals
+  const [detailModalTask, setDetailModalTask] = useState<Task | null>(null);
   const [submitModalTask, setSubmitModalTask] = useState<Task | null>(null);
   const [submissionLink, setSubmissionLink] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -732,150 +777,199 @@ export const TaskBoard: React.FC = () => {
 
                 {/* Column Tasks Container */}
                 <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1 custom-scrollbar">
-                  {colTasks.map(task => (
-                    <div 
-                      key={task.id}
-                      className="bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all space-y-2.5 group"
-                    >
-                      {/* Project Tag, Hierarchy Badge & Priority */}
-                      <div className="flex items-center justify-between gap-1 text-[10px]">
-                        <div className="flex items-center gap-1 min-w-0">
-                          {task.level === 'BCN_TO_LEAD' ? (
-                            <span className="font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
-                              👑 BCN → LEAD
-                            </span>
-                          ) : (
-                            <span className="font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 shrink-0">
-                              ⚡ LEAD → MEMBER
-                            </span>
-                          )}
-                          <span className="font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 truncate max-w-[110px]" title={task.project}>
-                            {task.project}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className={`font-bold px-1.5 py-0.2 rounded ${
-                            task.priority === 'Cao' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {task.priority}
-                          </span>
-                          <span className="font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 flex items-center gap-0.5">
-                            💎 {task.gems}
-                          </span>
-                        </div>
-                      </div>
+                  {colTasks.map(task => {
+                    const overdue = getTaskOverdueInfo(task);
+                    return (
+                      <div 
+                        key={task.id}
+                        onClick={() => setDetailModalTask(task)}
+                        className={`relative bg-white p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer space-y-2.5 group select-none ${
+                          overdue.isOverdue
+                            ? 'border-rose-300 ring-1 ring-rose-200/70 bg-gradient-to-b from-rose-50/25 to-white hover:border-rose-400 hover:shadow-md shadow-xs'
+                            : task.status === 'done'
+                            ? 'border-emerald-200/80 hover:border-emerald-400 hover:shadow-md'
+                            : 'border-slate-200 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5'
+                        }`}
+                      >
+                        {/* Overdue Top Accent Stripe */}
+                        {overdue.isOverdue && (
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 rounded-t-2xl" />
+                        )}
 
-                      {/* Title & Desc */}
-                      <div>
-                        <div className="flex items-start justify-between gap-1.5">
-                          <h4 className="text-xs font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
+                        {/* Row 1: Hierarchy / Department (Left) & Priority / Gems (Right) */}
+                        <div className="flex items-center justify-between gap-1.5 text-[10px]">
+                          <div className="flex items-center gap-1 min-w-0">
+                            {task.level === 'BCN_TO_LEAD' ? (
+                              <span className="font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/80 shrink-0">
+                                👑 BCN → LEAD
+                              </span>
+                            ) : (
+                              <span className="font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 shrink-0">
+                                ⚡ LEAD → MEMBER
+                              </span>
+                            )}
+                            <span className="font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200/80 font-mono-code uppercase shrink-0">
+                              {task.banId}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className={`font-bold px-1.5 py-0.5 rounded-md border text-[10px] flex items-center gap-0.5 ${
+                              task.priority === 'Cao'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : task.priority === 'Trung bình'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}>
+                              {task.priority === 'Cao' && <Flame className="w-2.5 h-2.5 text-rose-600 shrink-0" />}
+                              <span>{task.priority}</span>
+                            </span>
+                            <span className="font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/80 flex items-center gap-0.5 font-mono-code shadow-2xs">
+                              💎 {task.gems}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Campaign / Project Badge */}
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                          <FolderGit2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="truncate">{task.project}</span>
+                        </div>
+
+                        {/* Row 3: Title & Desc */}
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
                             {task.title}
                           </h4>
+                          {task.description && (
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                              {task.description}
+                            </p>
+                          )}
                         </div>
-                        {task.description && (
-                          <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{task.description}</p>
-                        )}
-                      </div>
 
-                      {/* Deadline & Ban badge */}
-                      <div className="flex items-center justify-between text-[10px] text-slate-400">
-                        {isOrgAdmin && (
-                          <span className="font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 uppercase font-mono-code">
-                            {task.banId}
-                          </span>
+                        {/* Submission Link Preview if any */}
+                        {task.submissionProof && (
+                          <div 
+                            onClick={(e) => e.stopPropagation()} 
+                            className="p-1.5 rounded-lg bg-blue-50/60 border border-blue-200/60 text-[11px] text-blue-700 truncate flex items-center gap-1.5"
+                          >
+                            <Link2 className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                            <a 
+                              href={task.submissionProof} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="truncate hover:underline font-medium"
+                            >
+                              {task.submissionProof}
+                            </a>
+                          </div>
                         )}
+
+                        {/* Row 4: Deadline & Overdue Warning */}
                         {task.deadline && (
-                          <span className="flex items-center gap-1 font-mono-code">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>Hạn: {formatDateToDDMMYYYY(task.deadline)}</span>
-                          </span>
+                          overdue.isOverdue ? (
+                            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-rose-100/90 text-rose-800 border border-rose-300/80 text-[11px] font-bold">
+                              <span className="flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-pulse" />
+                                <span>Quá hạn {overdue.daysOverdue} ngày</span>
+                              </span>
+                              <span className="font-mono-code text-[10px] text-rose-700">
+                                {formatDateToDDMMYYYY(task.deadline)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Hạn chót:</span>
+                              </span>
+                              <span className="font-mono-code font-semibold text-slate-700">
+                                {formatDateToDDMMYYYY(task.deadline)}
+                              </span>
+                            </div>
+                          )
                         )}
-                      </div>
 
-                      {/* Submission Link Preview if any */}
-                      {task.submissionProof && (
-                        <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[10px] text-blue-600 truncate flex items-center gap-1">
-                          <Link2 className="w-3 h-3 shrink-0 text-slate-400" />
-                          <a href={task.submissionProof} target="_blank" rel="noreferrer" className="truncate hover:underline">
-                            {task.submissionProof}
-                          </a>
-                        </div>
-                      )}
+                        {/* Row 5: Assignee & Action Buttons */}
+                        <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
+                          <div className="flex items-center gap-1.5 min-w-0" title={`Người nhận: ${task.assignee}`}>
+                            <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 uppercase">
+                              {task.assignee ? task.assignee.trim()[0] : '?'}
+                            </div>
+                            <span className="text-slate-700 font-semibold truncate max-w-[105px]">
+                              {task.assignee}
+                            </span>
+                          </div>
 
-                      {/* Assignee & Action Buttons */}
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
-                        <span className="text-slate-500 truncate max-w-[110px] font-medium" title={task.assignee}>
-                          👤 {task.assignee}
-                        </span>
+                          {/* ACTIONS BASED ON ROLE & STATUS */}
+                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {/* Todo: Button to start task */}
+                            {!boardReadOnly && task.status === 'todo' && (
+                              <button
+                                onClick={() => handleChangeStatus(task.id, 'in_progress')}
+                                disabled={isActionLoading}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] rounded-lg border border-blue-200 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Bắt đầu thực hiện task"
+                              >
+                                <Play className="w-2.5 h-2.5 fill-blue-600 text-blue-600" />
+                                <span>Bắt đầu</span>
+                              </button>
+                            )}
 
-                        {/* ACTIONS BASED ON ROLE & STATUS */}
-                        <div className="flex items-center gap-1">
-                          {/* Todo: Button to start task */}
-                          {!boardReadOnly && task.status === 'todo' && (
-                            <button
-                              onClick={() => handleChangeStatus(task.id, 'in_progress')}
-                              disabled={isActionLoading}
-                              className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] rounded border border-blue-200 transition-colors cursor-pointer flex items-center gap-0.5"
-                              title="Bắt đầu thực hiện task"
-                            >
-                              <Play className="w-2.5 h-2.5 fill-blue-600 text-blue-600" />
-                              <span>Bắt đầu</span>
-                            </button>
-                          )}
+                            {/* In Progress: Move back to Todo */}
+                            {!boardReadOnly && task.status === 'in_progress' && (
+                              <button
+                                onClick={() => handleChangeStatus(task.id, 'todo')}
+                                disabled={isActionLoading}
+                                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                title="Chuyển lại về To Do"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                              </button>
+                            )}
 
-                          {/* In Progress: Move back to Todo */}
-                          {!boardReadOnly && task.status === 'in_progress' && (
-                            <button
-                              onClick={() => handleChangeStatus(task.id, 'todo')}
-                              disabled={isActionLoading}
-                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                              title="Chuyển lại về To Do"
-                            >
-                              <RotateCcw className="w-2.5 h-2.5" />
-                            </button>
-                          )}
+                            {/* Member Action: Submit Button */}
+                            {!boardReadOnly && (task.status === 'in_progress' || task.status === 'todo') && (
+                              <button
+                                onClick={() => setSubmitModalTask(task)}
+                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+                              >
+                                <Send className="w-2.5 h-2.5" />
+                                <span>Submit</span>
+                              </button>
+                            )}
 
-                          {/* Member Action: Submit Button */}
-                          {!boardReadOnly && (task.status === 'in_progress' || task.status === 'todo') && (
-                            <button
-                              onClick={() => setSubmitModalTask(task)}
-                              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded-md shadow-xs flex items-center gap-1 transition-colors cursor-pointer"
-                            >
-                              <Send className="w-2.5 h-2.5" />
-                              <span>Submit</span>
-                            </button>
-                          )}
+                            {/* Lead Action: Reject / Request Fix */}
+                            {isLead && task.status === 'review' && (
+                              <button
+                                onClick={() => handleRejectTask(task.id)}
+                                disabled={isActionLoading || !!reviewBlockedReason(task)}
+                                className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
+                              >
+                                <XCircle className="w-3 h-3 text-amber-700" />
+                                <span>Sửa lại</span>
+                              </button>
+                            )}
 
-                          {/* Lead Action: Reject / Request Fix */}
-                          {isLead && task.status === 'review' && (
-                            <button
-                              onClick={() => handleRejectTask(task.id)}
-                              disabled={isActionLoading || !!reviewBlockedReason(task)}
-                              className="px-1.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-[10px] rounded-md shadow-xs flex items-center gap-0.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={reviewBlockedReason(task) || 'Yêu cầu sửa lại'}
-                            >
-                              <XCircle className="w-3 h-3 text-amber-700" />
-                              <span>Sửa lại</span>
-                            </button>
-                          )}
-
-                          {/* Lead Action: Approve Button */}
-                          {isLead && task.status === 'review' && (
-                            <button
-                              onClick={() => handleApproveTask(task.id)}
-                              disabled={isActionLoading || !!reviewBlockedReason(task)}
-                              className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-md shadow-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems trực tiếp'}
-                            >
-                              <Check className="w-3 h-3" />
-                              <span>Duyệt</span>
-                            </button>
-                          )}
-
+                            {/* Lead Action: Approve Button */}
+                            {isLead && task.status === 'review' && (
+                              <button
+                                onClick={() => handleApproveTask(task.id)}
+                                disabled={isActionLoading || !!reviewBlockedReason(task)}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg shadow-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={reviewBlockedReason(task) || 'Duyệt kết quả và cấp Gems trực tiếp'}
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Duyệt</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {colTasks.length === 0 && (
                     <div className="h-28 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl text-[11px] text-slate-400">
@@ -925,6 +1019,7 @@ export const TaskBoard: React.FC = () => {
                   </tr>
                 ) : (
                   filteredTasks.map(task => {
+                    const overdue = getTaskOverdueInfo(task);
                     const statusMap = {
                       todo: { label: 'Cần Làm', bg: 'bg-slate-100 text-slate-700' },
                       in_progress: { label: 'Đang Làm', bg: 'bg-blue-100 text-blue-800' },
@@ -934,23 +1029,31 @@ export const TaskBoard: React.FC = () => {
                     const st = statusMap[task.status];
 
                     return (
-                      <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr 
+                        key={task.id} 
+                        onClick={() => setDetailModalTask(task)}
+                        className={`transition-colors cursor-pointer select-none ${
+                          overdue.isOverdue ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-slate-50/80'
+                        }`}
+                      >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 mb-1">
                             <span className="font-mono-code font-bold text-slate-400 text-[10px]">
                               {task.id.length > 8 ? `${task.id.slice(0, 8)}...` : task.id}
                             </span>
                             {task.level === 'BCN_TO_LEAD' ? (
-                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
                                 👑 BCN → LEAD
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
                                 ⚡ LEAD → MEMBER
                               </span>
                             )}
                           </div>
-                          <span className="font-bold text-slate-900">{task.title}</span>
+                          <span className="font-bold text-slate-900 hover:text-blue-600 transition-colors">
+                            {task.title}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">
@@ -966,21 +1069,44 @@ export const TaskBoard: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`font-semibold ${task.priority === 'Cao' ? 'text-red-600' : 'text-slate-600'}`}>
+                          <span className={`font-semibold ${task.priority === 'Cao' ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
                             {task.priority}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-slate-700 font-medium truncate max-w-[130px]">
                           {task.assignee}
                         </td>
-                        <td className="px-4 py-3 font-mono-code text-slate-500">
-                          {formatDateToDDMMYYYY(task.deadline)}
+                        <td className="px-4 py-3 font-mono-code">
+                          {overdue.isOverdue ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-rose-700 font-bold flex items-center gap-1 text-[11px]">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 animate-pulse" />
+                                {formatDateToDDMMYYYY(task.deadline)}
+                              </span>
+                              <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md w-fit">
+                                Quá hạn {overdue.daysOverdue} ngày
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 font-medium">
+                              {formatDateToDDMMYYYY(task.deadline)}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-bold text-amber-700 font-mono-code">
                           💎 {task.gems}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">
+                            {/* View detail button */}
+                            <button
+                              onClick={() => setDetailModalTask(task)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title="Xem chi tiết công việc"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+
                             {!boardReadOnly && task.status === 'todo' && (
                               <button
                                 onClick={() => handleChangeStatus(task.id, 'in_progress')}
@@ -1302,6 +1428,327 @@ export const TaskBoard: React.FC = () => {
           </form>
         </div>
       )}
+      {/* 4D. TASK DETAIL MODAL */}
+      {detailModalTask && (() => {
+        const detailOverdue = getTaskOverdueInfo(detailModalTask);
+        const statusConfig = {
+          todo: { label: 'Cần Làm (To Do)', bg: 'bg-slate-100 text-slate-700 border-slate-200' },
+          in_progress: { label: 'Đang Làm (In Progress)', bg: 'bg-blue-100 text-blue-800 border-blue-200' },
+          review: { label: 'Chờ Duyệt (In Review)', bg: 'bg-amber-100 text-amber-800 border-amber-200' },
+          done: { label: 'Hoàn Thành (Done)', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+        }[detailModalTask.status];
+
+        const banFullName = BAN_NAMES[detailModalTask.banId] || detailModalTask.banId.toUpperCase();
+
+        return (
+          <div 
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+            onClick={() => setDetailModalTask(null)}
+          >
+            <div 
+              className="bg-white rounded-3xl max-w-xl w-full border-2 border-slate-900 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Overdue accent bar or normal bar */}
+              <div className={`h-1.5 w-full ${
+                detailOverdue.isOverdue 
+                  ? 'bg-gradient-to-r from-rose-500 to-red-500' 
+                  : detailModalTask.status === 'done' 
+                  ? 'bg-emerald-500' 
+                  : detailModalTask.status === 'in_progress'
+                  ? 'bg-blue-500'
+                  : 'bg-slate-400'
+              }`} />
+
+              {/* Modal Header */}
+              <div className="p-6 pb-4 border-b border-slate-200/80">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {detailModalTask.level === 'BCN_TO_LEAD' ? (
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                        👑 BCN → LEAD
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
+                        ⚡ LEAD → MEMBER
+                      </span>
+                    )}
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono-code uppercase">
+                      {detailModalTask.banId}
+                    </span>
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusConfig.bg}`}>
+                      {statusConfig.label}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => setDetailModalTask(null)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+                    title="Đóng modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-2.5 leading-snug">
+                  {detailModalTask.title}
+                </h3>
+
+                <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500 font-mono-code">
+                  <span>Mã task: #{detailModalTask.id.slice(0, 8)}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(detailModalTask.id);
+                      showToast('Đã sao chép mã Task ID!', 'success');
+                    }}
+                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer font-sans text-[11px] font-semibold"
+                    title="Sao chép toàn bộ Task ID"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Sao chép ID</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Overdue Alert Banner if overdue */}
+              {detailOverdue.isOverdue && (
+                <div className="mx-6 mt-4 p-3.5 bg-rose-50 border border-rose-300 rounded-2xl flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5 animate-pulse" />
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-rose-900">
+                      Nhiệm vụ này đã quá hạn {detailOverdue.daysOverdue} ngày!
+                    </p>
+                    <p className="text-[11px] text-rose-700 leading-relaxed">
+                      Hạn chót ban đầu: <strong className="font-mono-code">{formatDateToDDMMYYYY(detailModalTask.deadline)}</strong>. 
+                      Vui lòng khẩn trương hoàn thành nộp bài báo cáo hoặc liên hệ Trưởng Ban để được hỗ trợ/gia hạn.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Body: Scrollable Details */}
+              <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar text-xs">
+                {/* Info Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {/* Campaign */}
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <FolderGit2 className="w-3 h-3 text-blue-500" />
+                      Chiến Dịch / Dự Án
+                    </span>
+                    <p className="font-bold text-slate-900 truncate" title={detailModalTask.project}>
+                      {detailModalTask.project}
+                    </p>
+                  </div>
+
+                  {/* Department */}
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Tag className="w-3 h-3 text-purple-500" />
+                      Ban Phụ Trách
+                    </span>
+                    <p className="font-bold text-slate-900 truncate" title={banFullName}>
+                      {banFullName}
+                    </p>
+                  </div>
+
+                  {/* Assignee */}
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <UserCheck className="w-3 h-3 text-emerald-500" />
+                      Người Thực Hiện
+                    </span>
+                    <p className="font-bold text-slate-900 truncate" title={detailModalTask.assignee}>
+                      {detailModalTask.assignee}
+                    </p>
+                  </div>
+
+                  {/* Priority */}
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-rose-500" />
+                      Độ Ưu Tiên
+                    </span>
+                    <p className={`font-bold ${
+                      detailModalTask.priority === 'Cao' ? 'text-rose-600' : 'text-slate-800'
+                    }`}>
+                      {detailModalTask.priority}
+                    </p>
+                  </div>
+
+                  {/* Gems Reward */}
+                  <div className="p-3 bg-amber-50/60 border border-amber-200/80 rounded-xl space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      Gems Thưởng
+                    </span>
+                    <p className="font-extrabold text-amber-800 font-mono-code text-sm">
+                      💎 +{detailModalTask.gems} Gems
+                    </p>
+                  </div>
+
+                  {/* Deadline */}
+                  <div className={`p-3 border rounded-xl space-y-1 ${
+                    detailOverdue.isOverdue 
+                      ? 'bg-rose-50 border-rose-200' 
+                      : 'bg-slate-50 border-slate-200/80'
+                  }`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                      detailOverdue.isOverdue ? 'text-rose-600' : 'text-slate-400'
+                    }`}>
+                      <Clock className="w-3 h-3" />
+                      Hạn Chót
+                    </span>
+                    <p className={`font-bold font-mono-code ${
+                      detailOverdue.isOverdue ? 'text-rose-700' : 'text-slate-900'
+                    }`}>
+                      {formatDateToDDMMYYYY(detailModalTask.deadline)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Full Description */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Yêu Cầu & Mô Tả Chi Tiết:</span>
+                  </h4>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
+                    {detailModalTask.description ? (
+                      detailModalTask.description
+                    ) : (
+                      <span className="text-slate-400 italic">Nhiệm vụ này không có mô tả bổ sung.</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submission Proof Section */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Minh Chứng / Báo Cáo Nộp Bài:</span>
+                  </h4>
+                  {detailModalTask.submissionProof ? (
+                    <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Link2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <a 
+                          href={detailModalTask.submissionProof} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-blue-700 hover:text-blue-900 font-bold truncate underline text-xs"
+                        >
+                          {detailModalTask.submissionProof}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(detailModalTask.submissionProof || '');
+                            showToast('Đã sao chép liên kết minh chứng!', 'success');
+                          }}
+                          className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 text-[11px] cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Sao chép</span>
+                        </button>
+                        <a
+                          href={detailModalTask.submissionProof}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1 text-[11px]"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Mở link</span>
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-400 italic text-[11px] flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>Chưa có báo cáo minh chứng nào được nộp cho công việc này.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="p-4 px-6 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDetailModalTask(null)}
+                  className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                >
+                  Đóng
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {/* Start Button */}
+                  {!boardReadOnly && detailModalTask.status === 'todo' && (
+                    <button
+                      onClick={() => {
+                        handleChangeStatus(detailModalTask.id, 'in_progress');
+                        setDetailModalTask(prev => prev ? { ...prev, status: 'in_progress' } : null);
+                      }}
+                      disabled={isActionLoading}
+                      className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Play className="w-3 h-3 fill-blue-600 text-blue-600" />
+                      <span>Bắt Đầu Làm</span>
+                    </button>
+                  )}
+
+                  {/* Submit Button */}
+                  {!boardReadOnly && (detailModalTask.status === 'in_progress' || detailModalTask.status === 'todo') && (
+                    <button
+                      onClick={() => {
+                        const target = detailModalTask;
+                        setDetailModalTask(null);
+                        setSubmitModalTask(target);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Nộp Báo Cáo</span>
+                    </button>
+                  )}
+
+                  {/* Lead Reject & Approve Buttons */}
+                  {isLead && detailModalTask.status === 'review' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          handleRejectTask(detailModalTask.id);
+                          setDetailModalTask(prev => prev ? { ...prev, status: 'in_progress' } : null);
+                        }}
+                        disabled={isActionLoading || !!reviewBlockedReason(detailModalTask)}
+                        className="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={reviewBlockedReason(detailModalTask) || 'Yêu cầu sửa lại'}
+                      >
+                        <XCircle className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Yêu Cầu Sửa Lại</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleApproveTask(detailModalTask.id);
+                          setDetailModalTask(prev => prev ? { ...prev, status: 'done' } : null);
+                        }}
+                        disabled={isActionLoading || !!reviewBlockedReason(detailModalTask)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={reviewBlockedReason(detailModalTask) || 'Duyệt kết quả và cấp Gems'}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Phê Duyệt & Tặng Gems</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
+

@@ -5,13 +5,12 @@ import { api, ApiError } from '../api/client';
 import { CHAPTER_INFO, RECRUITMENT_CONFIG } from '../data/gdgData';
 
 interface JoinModalProps { isOpen: boolean; onClose: () => void; defaultDepartment?: string; }
-type Fields = Record<'fullName' | 'email' | 'phone' | 'studentId' | 'major' | 'semester' | 'facebookUrl' | 'nv1' | 'nv2' | 'portfolioUrl' | 'techStack' | 'nonTechSkills' | 'projectHighlight' | 'goals' | 'commitment' | 'message' | 'website', string>;
-const emptyFields: Fields = { fullName: '', email: '', phone: '', studentId: '', major: '', semester: '', facebookUrl: '', nv1: '', nv2: '', portfolioUrl: '', techStack: '', nonTechSkills: '', projectHighlight: '', goals: '', commitment: '', message: '', website: '' };
+type Fields = Record<'fullName' | 'email' | 'phone' | 'studentId' | 'major' | 'semester' | 'facebookUrl' | 'nv1' | 'nv2' | 'portfolioUrl' | 'techStack' | 'nonTechSkills' | 'projectHighlight' | 'goals' | 'message' | 'website', string>;
+const emptyFields: Fields = { fullName: '', email: '', phone: '', studentId: '', major: '', semester: '', facebookUrl: '', nv1: '', nv2: '', portfolioUrl: '', techStack: '', nonTechSkills: '', projectHighlight: '', goals: '', message: '', website: '' };
 const departments = ['AI', 'Cloud', 'Web Development', 'Research', 'Media', 'HR & Event'];
 const majors = [['SE', 'Kỹ thuật phần mềm (SE)'], ['IA', 'An toàn thông tin (IA)'], ['AI', 'Trí tuệ nhân tạo (AI)'], ['GD', 'Thiết kế mỹ thuật số (GD)'], ['MC', 'Truyền thông đa phương tiện (MC)'], ['IB', 'Quản trị kinh doanh (IB)'], ['OTHER', 'Ngành khác']];
 const semesters = [['FRESHMAN', 'Tân sinh viên'], ['SEM_1_3', 'Kỳ 1–3'], ['SEM_4_6', 'Kỳ 4–6'], ['SEM_7_PLUS', 'Kỳ 7+']];
-const commitments = [['5_8_HOURS', 'Có thể dành tối thiểu 5–8 tiếng/tuần cho CLB'], ['WILL_ARRANGE', 'Lịch học khá bận nhưng sẽ cố gắng sắp xếp'], ['LIMITED', 'Khó đảm bảo thời gian thường xuyên']];
-const steps = ['Thông tin cá nhân', 'Nguyện vọng', 'Năng lực', 'Cam kết'];
+const steps = ['Thông tin cá nhân', 'Nguyện vọng', 'Năng lực', 'Hoàn tất'];
 const inputClass = 'w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100';
 
 function guessDepartment(name = '') {
@@ -276,7 +275,6 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
                 {step === 3 && (
                   <>
                     {textField('goals', 'Mục tiêu lớn nhất khi gia nhập GDGoC FPTU?', { area: true, minLength: 10, maxLength: 5000, placeholder: 'Bạn muốn học gì, phát triển ra sao và cùng đồng đội làm điều gì?' })}
-                    <div className="sm:col-span-2"><p id="commitment-label" className="mb-2 text-sm font-bold">Mức độ cam kết thời gian <span className="text-red-600">*</span></p><div role="radiogroup" aria-labelledby="commitment-label" className="space-y-2">{commitments.map(([value, label]) => <label key={value} className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 p-3 text-sm"><input type="radio" name="commitment" required value={value} checked={fields.commitment === value} onChange={() => change('commitment', value)} className="mt-0.5" /><span>{label}</span></label>)}</div></div>
                     {textField('message', 'Câu hỏi hoặc lời nhắn dành cho CLB', { area: true, optional: true })}
                     <label className="flex items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" required checked={consent} onChange={event => { setConsent(event.target.checked); requestId.current = ''; }} className="mt-1" /><span>Tôi xác nhận thông tin đúng và đồng ý để CLB lưu hồ sơ, liên hệ phục vụ tuyển thành viên.</span></label>
                   </>

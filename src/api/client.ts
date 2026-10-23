@@ -22,25 +22,84 @@ export class ApiError extends Error {
   }
 }
 
+export interface RequestOptions extends RequestInit {
+  ttl?: number;         // Time to live in ms (default: 60s for CMS, 15s for general GET)
+  skipCache?: boolean;   // Set true to bypass cache and fetch fresh
+}
+
+const memoryCache = new Map<string, { data: any; expiresAt: number }>();
+const inFlightRequests = new Map<string, Promise<any>>();
+
+export function clearApiCache(filterPrefix?: string) {
+  if (!filterPrefix) {
+    memoryCache.clear();
+    return;
+  }
+  for (const key of memoryCache.keys()) {
+    if (key.includes(filterPrefix)) {
+      memoryCache.delete(key);
+    }
+  }
+}
+
 export async function request<T = any>(
   url: string,
-  options: RequestInit = {},
+  options: RequestOptions = {},
   unwrapData = true,
 ): Promise<T> {
-  // Bound background reads, including response-body parsing. Mutations keep their
-  // existing semantics: timing out a write does not imply the write was rejected.
-  if ((options.method || 'GET') !== 'GET') return performRequest<T>(url, options, unwrapData);
+  const method = (options.method || 'GET').toUpperCase();
+
+  // If mutation, execute request and clear GET cache so UI stays consistent
+  if (method !== 'GET') {
+    const res = await performRequest<T>(url, options, unwrapData);
+    clearApiCache();
+    return res;
+  }
+
+  // 1. Check in-memory cache for GET
+  const cacheKey = `${url}:${unwrapData}`;
+  const now = Date.now();
+  if (!options.skipCache) {
+    const cached = memoryCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.data as T;
+    }
+
+    // 2. In-flight request deduplication (avoid multiple identical requests at once)
+    const inFlight = inFlightRequests.get(cacheKey);
+    if (inFlight) {
+      return inFlight as Promise<T>;
+    }
+  }
+
   const controller = new AbortController();
   const abort = () => controller.abort(options.signal?.reason);
   if (options.signal?.aborted) abort();
   else options.signal?.addEventListener('abort', abort, { once: true });
   const timeout = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), 20_000);
-  try {
-    return await performRequest<T>(url, { ...options, cache: 'no-store', signal: controller.signal }, unwrapData);
-  } finally {
-    clearTimeout(timeout);
-    options.signal?.removeEventListener('abort', abort);
+
+  const fetchPromise = (async () => {
+    try {
+      const data = await performRequest<T>(url, { ...options, signal: controller.signal }, unwrapData);
+      
+      // Cache successful response
+      const ttl = options.ttl ?? (url.includes('/api/cms/') || url.includes('/recruitment/status') ? 60_000 : 15_000);
+      if (ttl > 0 && !options.skipCache) {
+        memoryCache.set(cacheKey, { data, expiresAt: Date.now() + ttl });
+      }
+      return data;
+    } finally {
+      clearTimeout(timeout);
+      options.signal?.removeEventListener('abort', abort);
+      inFlightRequests.delete(cacheKey);
+    }
+  })();
+
+  if (!options.skipCache) {
+    inFlightRequests.set(cacheKey, fetchPromise);
   }
+
+  return fetchPromise;
 }
 
 async function performRequest<T>(
@@ -94,32 +153,34 @@ async function performRequest<T>(
 
 export const api = {
   // Task pagination includes sibling items/data/total fields. Keep the envelope.
-  getPage: <T = any>(url: string, options?: RequestInit) =>
+  getPage: <T = any>(url: string, options?: RequestOptions) =>
     request<T>(url, { ...options, method: 'GET' }, false),
-  get: <T = any>(url: string, options?: RequestInit) =>
+  get: <T = any>(url: string, options?: RequestOptions) =>
     request<T>(url, { ...options, method: 'GET' }),
 
-  post: <T = any>(url: string, body?: any, options?: RequestInit) =>
+  post: <T = any>(url: string, body?: any, options?: RequestOptions) =>
     request<T>(url, {
       ...options,
       method: 'POST',
       body: body instanceof FormData ? body : JSON.stringify(body),
     }),
 
-  put: <T = any>(url: string, body?: any, options?: RequestInit) =>
+  put: <T = any>(url: string, body?: any, options?: RequestOptions) =>
     request<T>(url, {
       ...options,
       method: 'PUT',
       body: body instanceof FormData ? body : JSON.stringify(body),
     }),
 
-  patch: <T = any>(url: string, body?: any, options?: RequestInit) =>
+  patch: <T = any>(url: string, body?: any, options?: RequestOptions) =>
     request<T>(url, {
       ...options,
       method: 'PATCH',
       body: body instanceof FormData ? body : JSON.stringify(body),
     }),
 
-  delete: <T = any>(url: string, options?: RequestInit) =>
+  delete: <T = any>(url: string, options?: RequestOptions) =>
     request<T>(url, { ...options, method: 'DELETE' }),
+
+  clearCache: (filterPrefix?: string) => clearApiCache(filterPrefix),
 };

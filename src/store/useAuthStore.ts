@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { UserSession, Tier, BanId, BAN_NAMES } from '../types/auth';
-import { authApi, LoginDto } from '../api';
+import { api, authApi, LoginDto } from '../api';
 
 export function mapBackendUserToSession(raw: any): UserSession | null {
   if (!raw) return null;
@@ -86,6 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // ignore
     } finally {
+      api.clearCache();
       set({ user: null });
     }
   },

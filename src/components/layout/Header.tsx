@@ -1,14 +1,16 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { ExternalLink, ChevronRight, Lock, Sliders } from 'lucide-react';
+import { ExternalLink, ChevronRight, Lock, Sliders, Calendar } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import { NotificationCenter } from '../common/NotificationCenter';
+import { MeetingSetupModal } from '../meetings/MeetingSetupModal';
 
 export const Header: React.FC = () => {
   const location = useLocation();
   const { user } = useAuthStore();
   const { currentGen, currentSemester } = useGenerationStore();
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = React.useState(false);
 
   const getPageTitle = (pathname: string) => {
     if (pathname.includes('/app/settings/generation')) return 'Cấu Hình Niên Khóa & Chuyển Kỳ';
@@ -25,6 +27,7 @@ export const Header: React.FC = () => {
   };
 
   const isOrgAdmin = !user?.readOnly && user?.tier === 'ORG_ADMIN';
+  const canDispatchMeeting = !user?.readOnly && (user?.tier === 'ORG_ADMIN' || user?.tier === 'BAN_LEAD' || user?.tier === 'ADVISOR');
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-xs select-none shrink-0">
@@ -62,6 +65,20 @@ export const Header: React.FC = () => {
           </div>
         )}
 
+        {/* Meeting Dispatcher for Leaders */}
+        {canDispatchMeeting && (
+          <button
+            type="button"
+            onClick={() => setIsMeetingModalOpen(true)}
+            title="Thiết lập lịch họp nhanh và phát lời mời tới thành viên CLB"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Lên Lịch Họp</span>
+            <span className="sm:hidden">Họp</span>
+          </button>
+        )}
+
         {/* View Public Site */}
         <Link
           to="/"
@@ -76,6 +93,14 @@ export const Header: React.FC = () => {
         {/* Real-time Notifications Center */}
         <NotificationCenter />
       </div>
+
+      {/* Meeting Setup Modal */}
+      {isMeetingModalOpen && (
+        <MeetingSetupModal
+          isOpen={isMeetingModalOpen}
+          onClose={() => setIsMeetingModalOpen(false)}
+        />
+      )}
     </header>
   );
 };

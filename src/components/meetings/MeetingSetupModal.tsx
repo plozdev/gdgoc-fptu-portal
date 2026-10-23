@@ -62,6 +62,10 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
   const [meetingUrl, setMeetingUrl] = useState('');
   const [location, setLocation] = useState('Google Meet');
   const [description, setDescription] = useState('');
+  const [autoGenerateMeet, setAutoGenerateMeet] = useState(true);
+  const [isGeneratingMeet, setIsGeneratingMeet] = useState(false);
+  const [scheduleMeetLater, setScheduleMeetLater] = useState(false);
+  const [meetGenNotice, setMeetGenNotice] = useState<string | null>(null);
 
   // Attendee selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -94,6 +98,71 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
       setEndTime(newEndTime);
     } catch {
       // Fallback
+    }
+  };
+
+  // 1-Click Google Calendar Generator with prefilled title, date, and selected guests
+  const openGoogleCalendarTemplate = () => {
+    try {
+      const startD = new Date(`${date}T${startTime}:00`);
+      const endD = new Date(`${date}T${endTime}:00`);
+      const formatGCal = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const datesParam = `${formatGCal(startD)}/${formatGCal(endD)}`;
+
+      const selectedEmails = availableMembers
+        .filter((m) => selectedIds.has(m.id) && m.email)
+        .map((m) => m.email);
+
+      const url = new URL('https://calendar.google.com/calendar/render');
+      url.searchParams.set('action', 'TEMPLATE');
+      url.searchParams.set('text', title.trim() || 'Lịch Họp GDGoC');
+      url.searchParams.set('dates', datesParam);
+      if (description.trim()) url.searchParams.set('details', description.trim());
+      url.searchParams.set('location', 'Google Meet');
+      if (selectedEmails.length > 0) {
+        url.searchParams.set('add', selectedEmails.join(','));
+      }
+      window.open(url.toString(), '_blank');
+    } catch (err) {
+      console.warn('Error opening Google Calendar:', err);
+    }
+  };
+
+  // Automated Google Meet generation from Backend
+  const handleAutoGenerateMeet = async () => {
+    if (!title.trim()) {
+      setError('Vui lòng nhập tiêu đề cuộc họp trước khi tạo link Meet.');
+      return;
+    }
+    setIsGeneratingMeet(true);
+    setMeetGenNotice(null);
+    setError(null);
+
+    const startIso = new Date(`${date}T${startTime}:00`).toISOString();
+    const endIso = new Date(`${date}T${endTime}:00`).toISOString();
+    const selectedEmails = availableMembers
+      .filter((m) => selectedIds.has(m.id) && m.email)
+      .map((m) => m.email);
+
+    try {
+      const res = await meetingsApi.generateMeet({
+        title: title.trim(),
+        startTime: startIso,
+        endTime: endIso,
+        description: description.trim() || undefined,
+        attendeeEmails: selectedEmails,
+      });
+
+      if (res.success && res.meetingUrl) {
+        setMeetingUrl(res.meetingUrl);
+        setMeetGenNotice('✅ Đã tạo link Google Meet chính thức thành công!');
+      } else {
+        setMeetGenNotice(res.message || 'Chưa cấu hình Google Calendar API.');
+      }
+    } catch (err: any) {
+      setMeetGenNotice('Chưa cấu hình Google Calendar API trong backend. Bạn có thể bấm "Mở Google Calendar 1-Click" bên dưới để lấy link nhanh.');
+    } finally {
+      setIsGeneratingMeet(false);
     }
   };
 
@@ -225,18 +294,23 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
         title: title.trim(),
         startTime: startIso,
         endTime: endIso,
-        location: location.trim() || (format === 'ONLINE' ? 'Google Meet' : 'Chưa xác định'),
-        meetingUrl: format !== 'OFFLINE' ? meetingUrl.trim() || undefined : undefined,
+        location: scheduleMeetLater
+          ? 'Google Meet (Link sẽ gửi trước giờ họp)'
+          : location.trim() || (format === 'ONLINE' ? 'Google Meet' : 'Chưa xác định'),
+        meetingUrl: scheduleMeetLater
+          ? undefined
+          : (format !== 'OFFLINE' ? meetingUrl.trim() || undefined : undefined),
         description: description.trim() || undefined,
         targetType: isAllHands ? 'ALL' : 'CUSTOM',
         targetUserIds,
+        autoGenerateMeet: format !== 'OFFLINE' && !scheduleMeetLater && autoGenerateMeet && !meetingUrl.trim(),
       });
 
       setSuccessData({
         recipientCount: res.recipientCount || targetUserIds.length,
         title: title.trim(),
         time: `${startTime} - ${endTime}, ngày ${date.split('-').reverse().join('/')}`,
-        meetUrl: format !== 'OFFLINE' ? meetingUrl.trim() : undefined,
+        meetUrl: res.meetingUrl || (format !== 'OFFLINE' && !scheduleMeetLater ? meetingUrl.trim() : undefined),
       });
     } catch (err: any) {
       setError(err?.message || 'Có lỗi xảy ra khi thiết lập lịch họp.');
@@ -486,33 +560,105 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* Online: Google Meet link */}
+              {/* Online: Google Meet Section with Automated Generation */}
               {format !== 'OFFLINE' && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-slate-700">
-                      Link Google Meet
+                <div className="space-y-2.5 bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Video className="w-4 h-4 text-blue-600" />
+                      <span>Link Google Meet</span>
                     </label>
-                    <a
-                      href="https://meet.google.com/new"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1"
+
+                    <button
+                      type="button"
+                      onClick={handleAutoGenerateMeet}
+                      disabled={isGeneratingMeet}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs hover:shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                      title="Gọi Google Calendar API để tạo phòng Meet ngay lập tức"
                     >
-                      <span>Tạo nhanh link Meet mới</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                      {isGeneratingMeet ? (
+                        <>
+                          <div className="w-2.5 h-2.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+                          <span>Đang sinh link...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>⚡ Tự động sinh link Meet</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                  <div className="relative">
-                    <Video className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="url"
-                      value={meetingUrl}
-                      onChange={(e) => setMeetingUrl(e.target.value)}
-                      placeholder="https://meet.google.com/abc-defg-hij"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono-code"
-                    />
+
+                  {!scheduleMeetLater && (
+                    <div className="relative">
+                      <Video className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="url"
+                        value={meetingUrl}
+                        onChange={(e) => setMeetingUrl(e.target.value)}
+                        placeholder={autoGenerateMeet ? "Để trống để tự tạo link qua Google API, hoặc dán link tại đây..." : "https://meet.google.com/abc-defg-hij"}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono-code bg-white"
+                      />
+                    </div>
+                  )}
+
+                  {/* Mode Toggles */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 font-medium select-none">
+                      <input
+                        type="checkbox"
+                        checked={autoGenerateMeet && !scheduleMeetLater}
+                        onChange={(e) => setAutoGenerateMeet(e.target.checked)}
+                        disabled={scheduleMeetLater}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Tự động sinh link Meet qua Google Calendar API khi phát thông báo</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 font-medium select-none">
+                      <input
+                        type="checkbox"
+                        checked={scheduleMeetLater}
+                        onChange={(e) => {
+                          setScheduleMeetLater(e.target.checked);
+                          if (e.target.checked) setMeetingUrl('');
+                        }}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Lên lịch trước, bổ sung link Meet sau (Gửi trước buổi họp)</span>
+                    </label>
                   </div>
+
+                  {/* Notice & 1-Click Google Calendar Helper */}
+                  {meetGenNotice && (
+                    <div className="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5 animate-fadeIn">
+                      <p className="font-medium text-slate-700">{meetGenNotice}</p>
+                      <button
+                        type="button"
+                        onClick={openGoogleCalendarTemplate}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Mở Google Calendar 1-Click (Đã điền sẵn khách & sinh Meet)</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {!meetGenNotice && !meetingUrl && (
+                    <div className="flex items-center justify-between text-[11px] pt-0.5 text-slate-500">
+                      <span>Hoặc mở trực tiếp Google Calendar:</span>
+                      <button
+                        type="button"
+                        onClick={openGoogleCalendarTemplate}
+                        className="font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Mở Google Calendar với toàn bộ email thành viên đã chọn được điền sẵn"
+                      >
+                        <span>Mở Google Calendar 1-Click</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

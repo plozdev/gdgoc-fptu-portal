@@ -13,12 +13,15 @@ import {
   Award, 
 } from 'lucide-react';
 import { BanId } from '../../types/auth';
+import { MeetingSetupModal } from '../../components/meetings/MeetingSetupModal';
 
 export const DashboardOverview: React.FC = () => {
   const { user } = useAuthStore();
   const { members } = useMemberStore();
   const isOrgAdmin = user?.tier === 'ORG_ADMIN';
+  const canDispatch = !user?.readOnly && (user?.tier === 'ORG_ADMIN' || user?.tier === 'BAN_LEAD' || user?.tier === 'ADVISOR');
 
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [backendEvents, setBackendEvents] = useState<any[]>([]);
 
@@ -98,23 +101,36 @@ export const DashboardOverview: React.FC = () => {
       {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-md border border-slate-700/60 relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-              GDGoC FPTU OS • Gen 4.0
-            </span>
-            <span className="text-xs text-slate-400">|</span>
-            <span className="text-xs text-slate-300 font-mono-code">Kỳ Fall 2026</span>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                GDGoC FPTU OS • Gen 4.0
+              </span>
+              <span className="text-xs text-slate-400">|</span>
+              <span className="text-xs text-slate-300 font-mono-code">Kỳ Fall 2026</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Xin chào, {user?.name}! 👋
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+              {isOrgAdmin 
+                ? 'Bạn đang đăng nhập với quyền Ban Chủ Nhiệm (Toàn quyền hệ thống). Bạn có thể xem toàn bộ 6 ban và đổi niên khóa.'
+                : `Không gian làm việc ${user?.banName || 'Ban chuyên môn'} • Cùng kết nối và hoàn thành các mục tiêu trong kỳ!`
+              }
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Xin chào, {user?.name}! 👋
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-            {isOrgAdmin 
-              ? 'Bạn đang đăng nhập với quyền Ban Chủ Nhiệm (Toàn quyền hệ thống). Bạn có thể xem toàn bộ 6 ban và đổi niên khóa.'
-              : `Không gian làm việc ${user?.banName || 'Ban chuyên môn'} • Cùng kết nối và hoàn thành các mục tiêu trong kỳ!`
-            }
-          </p>
+
+          {canDispatch && (
+            <button
+              type="button"
+              onClick={() => setIsMeetingModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer shrink-0 border border-blue-400/30 self-start sm:self-auto"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Thiết Lập Lịch Họp Nhanh</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -233,6 +249,14 @@ export const DashboardOverview: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Meeting Dispatcher Modal for Leaders */}
+      {isMeetingModalOpen && (
+        <MeetingSetupModal
+          isOpen={isMeetingModalOpen}
+          onClose={() => setIsMeetingModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

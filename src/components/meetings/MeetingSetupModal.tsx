@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Calendar, 
@@ -314,8 +315,11 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-sm animate-fadeIn">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
       <div 
         className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-5xl h-[90vh] max-h-[850px] flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
@@ -949,6 +953,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

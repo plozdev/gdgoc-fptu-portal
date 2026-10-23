@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   Copy,
   Building,
-  UserCheck
+  ClipboardPaste,
+  ShieldAlert
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore, Member } from '../../store/useMemberStore';
@@ -62,10 +63,8 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
   const [meetingUrl, setMeetingUrl] = useState('');
   const [location, setLocation] = useState('Google Meet');
   const [description, setDescription] = useState('');
-  const [autoGenerateMeet, setAutoGenerateMeet] = useState(true);
-  const [isGeneratingMeet, setIsGeneratingMeet] = useState(false);
   const [scheduleMeetLater, setScheduleMeetLater] = useState(false);
-  const [meetGenNotice, setMeetGenNotice] = useState<string | null>(null);
+  const [copiedMeet, setCopiedMeet] = useState(false);
 
   // Attendee selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -79,10 +78,11 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
     recipientCount: number;
     title: string;
     time: string;
+    location: string;
     meetUrl?: string;
   } | null>(null);
 
-  // Active / probation members list (excludes alumni unless explicitly picked)
+  // Active / probation members list
   const availableMembers = useMemo(() => {
     return members.filter((m) => m.status !== 'ALUMNI');
   }, [members]);
@@ -101,7 +101,27 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
     }
   };
 
-  // 1-Click Google Calendar Generator with prefilled title, date, and selected guests
+  // Open Google Meet in new tab to grab a meeting room
+  const handleOpenGoogleMeetNew = () => {
+    window.open('https://meet.google.com/new', '_blank');
+  };
+
+  // Quick paste from clipboard
+  const handlePasteClipboard = async () => {
+    try {
+      if (navigator.clipboard) {
+        const text = await navigator.clipboard.readText();
+        if (text && (text.includes('meet.google.com') || text.startsWith('http'))) {
+          setMeetingUrl(text.trim());
+          setScheduleMeetLater(false);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  // 1-Click Google Calendar Generator
   const openGoogleCalendarTemplate = () => {
     try {
       const startD = new Date(`${date}T${startTime}:00`);
@@ -118,51 +138,13 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
       url.searchParams.set('text', title.trim() || 'Lịch Họp GDGoC');
       url.searchParams.set('dates', datesParam);
       if (description.trim()) url.searchParams.set('details', description.trim());
-      url.searchParams.set('location', 'Google Meet');
+      url.searchParams.set('location', meetingUrl.trim() || location.trim() || 'Google Meet');
       if (selectedEmails.length > 0) {
         url.searchParams.set('add', selectedEmails.join(','));
       }
       window.open(url.toString(), '_blank');
     } catch (err) {
       console.warn('Error opening Google Calendar:', err);
-    }
-  };
-
-  // Automated Google Meet generation from Backend
-  const handleAutoGenerateMeet = async () => {
-    if (!title.trim()) {
-      setError('Vui lòng nhập tiêu đề cuộc họp trước khi tạo link Meet.');
-      return;
-    }
-    setIsGeneratingMeet(true);
-    setMeetGenNotice(null);
-    setError(null);
-
-    const startIso = new Date(`${date}T${startTime}:00`).toISOString();
-    const endIso = new Date(`${date}T${endTime}:00`).toISOString();
-    const selectedEmails = availableMembers
-      .filter((m) => selectedIds.has(m.id) && m.email)
-      .map((m) => m.email);
-
-    try {
-      const res = await meetingsApi.generateMeet({
-        title: title.trim(),
-        startTime: startIso,
-        endTime: endIso,
-        description: description.trim() || undefined,
-        attendeeEmails: selectedEmails,
-      });
-
-      if (res.success && res.meetingUrl) {
-        setMeetingUrl(res.meetingUrl);
-        setMeetGenNotice('✅ Đã tạo link Google Meet chính thức thành công!');
-      } else {
-        setMeetGenNotice(res.message || 'Chưa cấu hình Google Calendar API.');
-      }
-    } catch (err: any) {
-      setMeetGenNotice('Chưa cấu hình Google Calendar API trong backend. Bạn có thể bấm "Mở Google Calendar 1-Click" bên dưới để lấy link nhanh.');
-    } finally {
-      setIsGeneratingMeet(false);
     }
   };
 
@@ -239,17 +221,15 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
     });
   };
 
-  // Filtered members by search query and ban filter
+  // Filtered members
   const filteredMembers = useMemo(() => {
     return availableMembers.filter((m) => {
-      // Ban filter
       if (activeBanFilter === 'BCN') {
         if (m.tier !== 'ORG_ADMIN' && m.tier !== 'ADVISOR') return false;
       } else if (activeBanFilter !== 'ALL') {
         if (m.banId !== activeBanFilter) return false;
       }
 
-      // Search query
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
       const matchName = m.name?.toLowerCase().includes(q);
@@ -275,7 +255,6 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
       return;
     }
 
-    // Combine date + time into ISO strings
     const startIso = new Date(`${date}T${startTime}:00`).toISOString();
     const endIso = new Date(`${date}T${endTime}:00`).toISOString();
 
@@ -290,27 +269,31 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
       const targetUserIds: string[] = Array.from(selectedIds);
       const isAllHands = selectedIds.size >= availableMembers.length;
 
+      const finalLocation = scheduleMeetLater
+        ? 'Google Meet (Link sẽ gửi trước giờ họp)'
+        : (location.trim() || (format === 'ONLINE' ? 'Google Meet' : 'Chưa xác định'));
+
+      const finalMeetingUrl = (format !== 'OFFLINE' && !scheduleMeetLater)
+        ? (meetingUrl.trim() || undefined)
+        : undefined;
+
       const res = await meetingsApi.dispatchMeeting({
         title: title.trim(),
         startTime: startIso,
         endTime: endIso,
-        location: scheduleMeetLater
-          ? 'Google Meet (Link sẽ gửi trước giờ họp)'
-          : location.trim() || (format === 'ONLINE' ? 'Google Meet' : 'Chưa xác định'),
-        meetingUrl: scheduleMeetLater
-          ? undefined
-          : (format !== 'OFFLINE' ? meetingUrl.trim() || undefined : undefined),
+        location: finalLocation,
+        meetingUrl: finalMeetingUrl,
         description: description.trim() || undefined,
         targetType: isAllHands ? 'ALL' : 'CUSTOM',
         targetUserIds,
-        autoGenerateMeet: format !== 'OFFLINE' && !scheduleMeetLater && autoGenerateMeet && !meetingUrl.trim(),
       });
 
       setSuccessData({
         recipientCount: res.recipientCount || targetUserIds.length,
         title: title.trim(),
         time: `${startTime} - ${endTime}, ngày ${date.split('-').reverse().join('/')}`,
-        meetUrl: res.meetingUrl || (format !== 'OFFLINE' && !scheduleMeetLater ? meetingUrl.trim() : undefined),
+        location: finalLocation,
+        meetUrl: finalMeetingUrl,
       });
     } catch (err: any) {
       setError(err?.message || 'Có lỗi xảy ra khi thiết lập lịch họp.');
@@ -323,6 +306,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
     setTitle('');
     setDescription('');
     setMeetingUrl('');
+    setScheduleMeetLater(false);
     setSelectedIds(new Set());
     setError(null);
     setSuccessData(null);
@@ -331,9 +315,9 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-sm animate-fadeIn">
       <div 
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden relative"
+        className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-5xl h-[90vh] max-h-[850px] flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Google 4-Color Accent Line */}
@@ -345,18 +329,18 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
         </div>
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200/60 shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200/60 shadow-xs">
               <Calendar className="w-5 h-5 text-[#4285F4]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                   Thiết Lập Lịch Họp (Meeting Dispatcher)
                 </h2>
-                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100/70 text-blue-700 border border-blue-200 uppercase tracking-wider">
-                  Leader Tool
+                <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wider">
+                  Leader Portal
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -366,90 +350,125 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             title="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Body content */}
+        {/* Content Body */}
         {successData ? (
-          /* SUCCESS SCREEN */
-          <div className="p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-5 animate-scaleUp overflow-y-auto">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border-4 border-emerald-100">
-              <CheckCircle2 className="w-9 h-9" />
-            </div>
-
-            <div className="max-w-md">
-              <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
-                Đã Thiết Lập & Phát Lịch Họp Thành Công!
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
-                Hệ thống đã gửi thông báo in-app và email thư mời có đính kèm file Google Calendar (<code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-mono-code text-[11px]">invite.ics</code>) đến{' '}
-                <strong className="text-blue-600 font-bold">{successData.recipientCount} thành viên</strong>.
-              </p>
-            </div>
-
-            {/* Meeting Summary Card */}
-            <div className="w-full max-w-md bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2.5 text-xs text-slate-700 shadow-xs">
-              <div className="font-bold text-sm text-slate-900 border-b border-slate-200 pb-2 flex items-center justify-between">
-                <span>{successData.title}</span>
-                <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Đã phát
-                </span>
+          /* SUCCESS SCREEN - Spacious & High-Taste */
+          <div className="flex-1 p-6 sm:p-10 flex flex-col items-center justify-center overflow-y-auto bg-slate-50/40">
+            <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200/90 p-8 shadow-sm text-center space-y-6 animate-scaleUp">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-4 border-emerald-100 shadow-xs">
+                <CheckCircle2 className="w-9 h-9" />
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>{successData.time}</span>
+
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Đã Lên Lịch & Phát Thông Báo Thành Công!
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                  Hệ thống đã gửi thông báo in-app và gửi email kèm file lịch Google Calendar (<code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px]">invite.ics</code>) đến{' '}
+                  <strong className="text-blue-600 font-bold">{successData.recipientCount} thành viên</strong>.
+                </p>
               </div>
-              {successData.meetUrl && (
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-2 truncate">
-                    <Video className="w-4 h-4 text-blue-500 shrink-0" />
-                    <span className="truncate text-blue-600 font-mono-code">{successData.meetUrl}</span>
-                  </div>
-                  <a
-                    href={successData.meetUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                    title="Mở link Meet"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+
+              {/* Meeting Card Details */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 text-left space-y-3 text-xs text-slate-700">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                  <span className="font-extrabold text-sm text-slate-900">{successData.title}</span>
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Đã phát
+                  </span>
                 </div>
-              )}
-            </div>
 
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
-              >
-                Tạo lịch họp khác
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
-              >
-                Hoàn tất & Đóng
-              </button>
+                <div className="flex items-center gap-2.5 text-slate-700">
+                  <Clock className="w-4 h-4 text-blue-500 shrink-0" />
+                  <span className="font-semibold">{successData.time}</span>
+                </div>
+
+                <div className="flex items-center gap-2.5 text-slate-700">
+                  <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>{successData.location}</span>
+                </div>
+
+                {successData.meetUrl && (
+                  <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-blue-600 font-mono-code truncate">
+                      <Video className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{successData.meetUrl}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(successData.meetUrl || '');
+                          setCopiedMeet(true);
+                          setTimeout(() => setCopiedMeet(false), 2000);
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center gap-1 transition-colors"
+                      >
+                        {copiedMeet ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedMeet ? 'Đã copy' : 'Copy link'}</span>
+                      </button>
+                      <a
+                        href={successData.meetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-1 transition-colors"
+                      >
+                        <span>Vào Meet</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  Tạo lịch họp khác
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+                >
+                  Hoàn tất & Đóng
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          /* FORM BODY */
-          <form onSubmit={handleDispatch} className="flex-1 overflow-y-auto flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200">
-            {/* Left Panel: Meeting Details */}
-            <div className="p-5 sm:p-6 space-y-4 md:w-1/2 flex flex-col shrink-0">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
-                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                <span>1. Thông Tin Buổi Họp</span>
+          /* FORM BODY - 2 Full-Height Spacious Columns */
+          <form onSubmit={handleDispatch} className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            {/* Left Column: Meeting Details (50%) */}
+            <div className="md:w-1/2 p-5 sm:p-6 overflow-y-auto space-y-4 flex flex-col border-b md:border-b-0 md:border-r border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                  <span>1. Thông Tin Buổi Họp</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={openGoogleCalendarTemplate}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                  title="Mở Google Calendar với toàn bộ thông tin và danh sách khách đã điền sẵn"
+                >
+                  <span>Mở Google Calendar</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
               </div>
 
-              {/* Title */}
+              {/* Meeting Title */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Tiêu đề cuộc họp <span className="text-red-500">*</span>
@@ -460,7 +479,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="vd: Họp Ban Web & AI tuần 4 - Review MVP"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold"
                 />
               </div>
 
@@ -518,7 +537,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                     key={d.label}
                     type="button"
                     onClick={() => addDurationMinutes(d.mins)}
-                    className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 border border-slate-200/80 transition-colors"
+                    className="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 border border-slate-200/80 transition-colors cursor-pointer"
                   >
                     {d.label}
                   </button>
@@ -546,9 +565,9 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                           setFormat(item.id as any);
                           if (item.id === 'ONLINE') setLocation('Google Meet');
                         }}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold border transition-all ${
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-xs'
+                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs font-extrabold'
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
@@ -560,109 +579,72 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* Online: Google Meet Section with Automated Generation */}
+              {/* Google Meet Panel (Thủ công & Tiện lợi) */}
               {format !== 'OFFLINE' && (
-                <div className="space-y-2.5 bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/80">
+                <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                       <Video className="w-4 h-4 text-blue-600" />
                       <span>Link Google Meet</span>
                     </label>
 
+                    {/* Prominent Helper Button: Open Google Meet in 1-Click */}
                     <button
                       type="button"
-                      onClick={handleAutoGenerateMeet}
-                      disabled={isGeneratingMeet}
-                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs hover:shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                      title="Gọi Google Calendar API để tạo phòng Meet ngay lập tức"
+                      onClick={handleOpenGoogleMeetNew}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-2xs transition-all cursor-pointer"
+                      title="Mở meet.google.com/new để lấy link cuộc họp mới"
                     >
-                      {isGeneratingMeet ? (
-                        <>
-                          <div className="w-2.5 h-2.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
-                          <span>Đang sinh link...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          <span>⚡ Tự động sinh link Meet</span>
-                        </>
-                      )}
+                      <span>⚡ Mở Google Meet lấy link</span>
+                      <ExternalLink className="w-3 h-3" />
                     </button>
                   </div>
 
-                  {!scheduleMeetLater && (
-                    <div className="relative">
-                      <Video className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  {/* Input with Paste Helper */}
+                  {!scheduleMeetLater ? (
+                    <div className="relative flex items-center">
+                      <Video className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="url"
                         value={meetingUrl}
                         onChange={(e) => setMeetingUrl(e.target.value)}
-                        placeholder={autoGenerateMeet ? "Để trống để tự tạo link qua Google API, hoặc dán link tại đây..." : "https://meet.google.com/abc-defg-hij"}
-                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono-code bg-white"
+                        placeholder="Dán link Meet vào đây: https://meet.google.com/abc-defg-hij"
+                        className="w-full pl-9 pr-14 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono-code bg-white"
                       />
-                    </div>
-                  )}
-
-                  {/* Mode Toggles */}
-                  <div className="space-y-1.5 pt-0.5">
-                    <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 font-medium select-none">
-                      <input
-                        type="checkbox"
-                        checked={autoGenerateMeet && !scheduleMeetLater}
-                        onChange={(e) => setAutoGenerateMeet(e.target.checked)}
-                        disabled={scheduleMeetLater}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>Tự động sinh link Meet qua Google Calendar API khi phát thông báo</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 font-medium select-none">
-                      <input
-                        type="checkbox"
-                        checked={scheduleMeetLater}
-                        onChange={(e) => {
-                          setScheduleMeetLater(e.target.checked);
-                          if (e.target.checked) setMeetingUrl('');
-                        }}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span>Lên lịch trước, bổ sung link Meet sau (Gửi trước buổi họp)</span>
-                    </label>
-                  </div>
-
-                  {/* Notice & 1-Click Google Calendar Helper */}
-                  {meetGenNotice && (
-                    <div className="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5 animate-fadeIn">
-                      <p className="font-medium text-slate-700">{meetGenNotice}</p>
                       <button
                         type="button"
-                        onClick={openGoogleCalendarTemplate}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                        onClick={handlePasteClipboard}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                        title="Dán từ Clipboard"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Mở Google Calendar 1-Click (Đã điền sẵn khách & sinh Meet)</span>
+                        <ClipboardPaste className="w-3 h-3" />
+                        <span>Dán</span>
                       </button>
+                    </div>
+                  ) : (
+                    <div className="px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Đã chọn lên lịch trước. Link Google Meet sẽ được gửi bổ sung trước giờ họp.</span>
                     </div>
                   )}
 
-                  {!meetGenNotice && !meetingUrl && (
-                    <div className="flex items-center justify-between text-[11px] pt-0.5 text-slate-500">
-                      <span>Hoặc mở trực tiếp Google Calendar:</span>
-                      <button
-                        type="button"
-                        onClick={openGoogleCalendarTemplate}
-                        className="font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
-                        title="Mở Google Calendar với toàn bộ email thành viên đã chọn được điền sẵn"
-                      >
-                        <span>Mở Google Calendar 1-Click</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Schedule Later Toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-medium select-none pt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={scheduleMeetLater}
+                      onChange={(e) => {
+                        setScheduleMeetLater(e.target.checked);
+                        if (e.target.checked) setMeetingUrl('');
+                      }}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>Chưa có link Meet ngay (Lên lịch trước, bổ sung link sau)</span>
+                  </label>
                 </div>
               )}
 
-              {/* Offline: Location & Presets */}
+              {/* Offline Location */}
               {format !== 'ONLINE' && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -684,7 +666,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                         key={preset}
                         type="button"
                         onClick={() => setLocation(preset)}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                        className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
                       >
                         {preset}
                       </button>
@@ -703,23 +685,28 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="vd: 1. Review tiến độ các tính năng tuần qua&#10;2. Q&A và giải đáp thắc mắc&#10;3. Phân công task tuần tới"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none font-medium"
                 />
               </div>
             </div>
 
-            {/* Right Panel: Attendees Selection */}
-            <div className="p-5 sm:p-6 md:w-1/2 flex flex-col space-y-3.5 bg-slate-50/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
-                  <Users className="w-3.5 h-3.5 text-blue-500" />
-                  <span>2. Chọn Người Tham Gia ({selectedIds.size})</span>
+            {/* Right Column: Attendees Selection (50%) */}
+            <div className="md:w-1/2 p-5 sm:p-6 flex flex-col bg-slate-50/50 overflow-hidden">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                    2. Chọn Người Tham Gia
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                    {selectedIds.size} / {availableMembers.length}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={selectAll}
-                    className="text-[11px] font-bold text-blue-600 hover:underline"
+                    className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                   >
                     Chọn tất cả
                   </button>
@@ -727,35 +714,35 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                   <button
                     type="button"
                     onClick={deselectAll}
-                    className="text-[11px] font-bold text-slate-500 hover:underline"
+                    className="text-xs font-bold text-slate-500 hover:underline cursor-pointer"
                   >
                     Bỏ chọn
                   </button>
                 </div>
               </div>
 
-              {/* Quick Select Presets (Click to toggle whole department) */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-500">Chọn nhanh theo nhóm:</span>
+              {/* Quick Select Presets */}
+              <div className="py-3 space-y-1.5 shrink-0">
+                <div className="text-[11px] font-bold text-slate-500">Chọn nhanh theo nhóm:</div>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     onClick={selectAll}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-2xs"
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-2xs cursor-pointer"
                   >
                     Toàn CLB (All-Hands)
                   </button>
                   <button
                     type="button"
                     onClick={toggleSelectBcn}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 transition-colors"
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-200 transition-colors cursor-pointer"
                   >
                     + BCN
                   </button>
                   <button
                     type="button"
                     onClick={toggleSelectLeads}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors"
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors cursor-pointer"
                   >
                     + Tất cả Leads
                   </button>
@@ -764,7 +751,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                       key={b.id}
                       type="button"
                       onClick={() => toggleSelectBan(b.id)}
-                      className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-colors ${b.badge} hover:brightness-95`}
+                      className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${b.badge} hover:brightness-95`}
                     >
                       + {b.short}
                     </button>
@@ -772,16 +759,16 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* Search Bar & Filter tabs */}
-              <div className="space-y-2">
+              {/* Search & Filter Tabs */}
+              <div className="space-y-2 pb-2 shrink-0">
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm theo tên, MSSV, ban..."
-                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                    placeholder="Tìm nhanh theo tên, MSSV, ban..."
+                    className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
                   />
                   {searchQuery && (
                     <button
@@ -794,12 +781,12 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                   )}
                 </div>
 
-                {/* Filter tabs */}
+                {/* Filter Tabs */}
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] font-bold no-scrollbar">
                   <button
                     type="button"
                     onClick={() => setActiveBanFilter('ALL')}
-                    className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition-colors ${
+                    className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
                       activeBanFilter === 'ALL'
                         ? 'bg-slate-800 text-white'
                         : 'bg-white text-slate-600 hover:bg-slate-200/60 border border-slate-200'
@@ -810,7 +797,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                   <button
                     type="button"
                     onClick={() => setActiveBanFilter('BCN')}
-                    className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition-colors ${
+                    className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
                       activeBanFilter === 'BCN'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-white text-slate-600 hover:bg-slate-200/60 border border-slate-200'
@@ -823,7 +810,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                       key={b.id}
                       type="button"
                       onClick={() => setActiveBanFilter(b.id)}
-                      className={`px-2 py-1 rounded-lg whitespace-nowrap transition-colors ${
+                      className={`px-2 py-1 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
                         activeBanFilter === b.id
                           ? 'bg-blue-600 text-white'
                           : 'bg-white text-slate-600 hover:bg-slate-200/60 border border-slate-200'
@@ -835,10 +822,10 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                 </div>
               </div>
 
-              {/* Members Scroll List */}
-              <div className="flex-1 min-h-[220px] max-h-[300px] overflow-y-auto border border-slate-200 rounded-xl bg-white p-1 space-y-1 divide-y divide-slate-100">
+              {/* Members Scroll List - Expanded & Breathable */}
+              <div className="flex-1 overflow-y-auto border border-slate-200 rounded-2xl bg-white p-1.5 space-y-1 divide-y divide-slate-100 min-h-0">
                 {filteredMembers.length === 0 ? (
-                  <div className="py-10 text-center text-xs text-slate-400">
+                  <div className="py-12 text-center text-xs text-slate-400">
                     Không tìm thấy thành viên phù hợp
                   </div>
                 ) : (
@@ -850,11 +837,11 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                       <div
                         key={m.id}
                         onClick={() => toggleMember(m.id)}
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors select-none ${
+                        className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-colors select-none ${
                           isChecked ? 'bg-blue-50/70 text-slate-900' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0">
                           {/* Checkbox */}
                           <div
                             className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
@@ -867,17 +854,17 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                           </div>
 
                           {/* Avatar */}
-                          <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200 shrink-0 border border-slate-200">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 border border-slate-200/80">
                             {m.avatar ? (
                               <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-slate-600 uppercase">
+                              <div className="w-full h-full flex items-center justify-center text-[11px] font-black text-slate-600 uppercase">
                                 {m.name ? m.name.charAt(0) : 'U'}
                               </div>
                             )}
                           </div>
 
-                          {/* Name and MSSV */}
+                          {/* Member Info */}
                           <div className="min-w-0">
                             <div className="text-xs font-bold text-slate-800 truncate flex items-center gap-1.5">
                               <span>{m.name}</span>
@@ -898,7 +885,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                           </div>
                         </div>
 
-                        {/* Ban badge */}
+                        {/* Ban Badge */}
                         <div className="shrink-0 ml-2">
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
@@ -913,23 +900,11 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                   })
                 )}
               </div>
-
-              {/* Selected Pills Summary */}
-              <div className="text-[11px] text-slate-500 flex items-center justify-between">
-                <span>
-                  Đã chọn: <strong className="text-blue-600 font-bold">{selectedIds.size}</strong> / {availableMembers.length} thành viên
-                </span>
-                {selectedIds.size > 0 && (
-                  <span className="text-[10px] text-slate-400">
-                    Sẽ gửi thông báo & Email Calendar
-                  </span>
-                )}
-              </div>
             </div>
           </form>
         )}
 
-        {/* Footer with Error & Actions */}
+        {/* Footer */}
         {!successData && (
           <div className="px-6 py-3.5 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
             {error ? (
@@ -938,7 +913,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                 <span>{error}</span>
               </div>
             ) : (
-              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+              <div className="text-xs text-slate-500 flex items-center gap-1">
                 <span>🔔 Tự động đồng bộ lịch Google Calendar qua Email và In-App Notification.</span>
               </div>
             )}
@@ -948,7 +923,7 @@ export const MeetingSetupModal: React.FC<MeetingSetupModalProps> = ({ isOpen, on
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Hủy bỏ
               </button>

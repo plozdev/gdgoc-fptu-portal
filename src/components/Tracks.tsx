@@ -194,7 +194,7 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
                     title={`Xem JD ${dept.name}`}
                   >
                     <BookOpen className="w-3.5 h-3.5 text-[#4285F4]" />
-                    <span>Xem JD & Yêu Cầu</span>
+                    <span>Xem Chi Tiết JD</span>
                   </button>
 
                   <button

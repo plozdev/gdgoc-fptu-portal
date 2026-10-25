@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, ArrowRight, CheckCircle2, ShieldAlert, Award, FileText, Sparkles, Layers } from 'lucide-react';
+import { X, ArrowRight, CheckCircle2, Award, FileText, Sparkles } from 'lucide-react';
 import { Department } from '../types';
 
 interface TrackDetailModalProps {
@@ -95,12 +95,20 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Requirements */}
+          {/* Preferred Qualifications / Tiêu chí ưu tiên */}
           <div className="space-y-3">
-            <h4 className="font-extrabold text-base text-[#1E1E1E] flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-[#EA4335]" />
-              Yêu Cầu Tuyển Dụng (Requirements)
-            </h4>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h4 className="font-extrabold text-base text-[#1E1E1E] flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#4285F4]" />
+                Tiêu Chí Ưu Tiên & Điểm Cộng (Preferred)
+              </h4>
+              <span className="px-2.5 py-0.5 bg-[#E8F0FE] text-[#4285F4] border border-[#1E1E1E] rounded-full text-[11px] font-mono-code font-bold">
+                Cộng đồng học tập • Không bắt buộc biết hết
+              </span>
+            </div>
+            <p className="text-xs text-[#1E1E1E]/75 leading-relaxed font-normal">
+              GDGoC là môi trường cộng đồng cùng học hỏi và phát triển. Bạn không nhất thiết phải thành thạo mọi thứ ngay từ đầu — tinh thần trách nhiệm, chủ động và đam mê công nghệ mới là điều quan trọng nhất!
+            </p>
             <div className="space-y-2">
               {department.jd.requirements.map((req, i) => (
                 <div

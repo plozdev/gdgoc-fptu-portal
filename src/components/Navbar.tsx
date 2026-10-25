@@ -22,7 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
       setIsScrolled(window.scrollY > 20);
 
       // Scrollspy detection
-      const sections = ['about', 'departments', 'impact', 'events', 'organizers'];
+      const sections = ['about', 'departments', 'timeline', 'impact', 'events', 'organizers'];
       const scrollPosition = window.scrollY + 180;
 
       for (const sectionId of sections) {
@@ -52,6 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
   const navLinks = [
     { name: 'Giới Thiệu', href: '#about' },
     { name: 'Ban Chuyên Môn', href: '#departments' },
+    { name: 'Lộ Trình Tuyển Dụng', href: '#timeline' },
     { name: 'Số Liệu Summer', href: '#impact' },
     { name: 'Sự Kiện', href: '#events' },
     { name: 'Core Team', href: '#organizers' },

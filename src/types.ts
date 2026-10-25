@@ -97,4 +97,28 @@ export interface OrganizerMember {
   portfolioUrl?: string;
 }
 
+export interface RecruitmentPhase {
+  id: string;
+  phaseNumber: number;
+  phaseLabel: string;
+  title: string;
+  subtitle: string;
+  dateRange: string;
+  startDate: string;
+  endDate: string;
+  status: 'COMPLETED' | 'ACTIVE' | 'UPCOMING';
+  statusBadge: string;
+  accentColor: string;
+  pastelColor: string;
+  tagBg: string;
+  isRoundOne?: boolean;
+  highlightActionText?: string;
+  milestones: {
+    date?: string;
+    title: string;
+    desc: string;
+    isKeyMilestone?: boolean;
+  }[];
+}
+
 

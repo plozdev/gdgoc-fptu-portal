@@ -24,7 +24,7 @@ export const Events: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#C3ECF6] border-[2.5px] border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#1E1E1E]">
-              <span>{'//'} 04. HOẠT ĐỘNG & SỰ KIỆN</span>
+              <span>{'//'} 05. HOẠT ĐỘNG & SỰ KIỆN</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight">
               Sự Kiện & Chương Trình Trọng Điểm

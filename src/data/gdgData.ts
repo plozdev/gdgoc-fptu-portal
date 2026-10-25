@@ -1,4 +1,4 @@
-import { Department, LeadRole } from '../types';
+import { Department, LeadRole, RecruitmentPhase } from '../types';
 
 export const CHAPTER_INFO = {
   name: "Google Developer Groups on Campus FPT University HCMC",
@@ -24,18 +24,21 @@ export const CHAPTER_INFO = {
 // - Khi ĐANG CẬP NHẬT / TẠM ĐÓNG: Giữ `isOpen: false`
 //   -> Toàn bộ nút CTA, thẻ vé và thông báo trên Landing Page tự động chuyển sang "Đang cập nhật".
 // - Khi CHÍNH THỨC MỞ ĐƠN: Đổi `isOpen: true`
-//   -> Các nút sẽ đổi thành "Gia Nhập Gen 4.0 Ngay", form tuyển quân sẽ mở nhận hồ sơ.
+//   -> Các nút sẽ đổi thành "Ứng Tuyển Vòng 1 Ngay", form tuyển quân sẽ mở nhận hồ sơ.
 // =============================================================================
 export const RECRUITMENT_CONFIG = {
   isOpen: true, // 👈 [BẬT / TẮT ĐỢT TUYỂN TẠI ĐÂY] true: Mở nhận đơn | false: Đang cập nhật
   batch: "Gen 4.0",
   term: "Kỳ Fall 2026",
-  statusBadge: "ĐANG CẬP NHẬT",
-  buttonText: "Ứng Tuyển (Đang Cập Nhật)",
-  openButtonText: "Gia Nhập Gen 4.0 Ngay",
-  headerTag: "CỔNG TUYỂN SINH • ĐANG CẬP NHẬT",
-  openHeaderTag: "CỔNG TUYỂN SINH Gen 4.0 • KỲ FALL 2026",
-  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 hiện đang được cập nhật và chuẩn bị mở trong thời gian tới. Các bạn sinh viên hãy theo dõi Fanpage CLB để nhận thông báo sớm nhất!",
+  round: "Vòng 1 (Vòng Đơn)",
+  roundPeriod: "25/10 – 08/11/2026",
+  deadlineTime: "23:59 ngày 08/11/2026",
+  statusBadge: "ĐANG MỞ ĐƠN",
+  buttonText: "Ứng Tuyển Ngay",
+  openButtonText: "Ứng Tuyển Vòng 1 Ngay",
+  headerTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 ĐANG MỞ",
+  openHeaderTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 (25/10 – 08/11)",
+  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 Vòng 1 chính thức mở từ ngày 25/10 đến 23:59 ngày 08/11/2026. Hãy nhanh tay nộp hồ sơ để đồng hành cùng GDGoC FPT University HCMC!",
 };
 
 export const DEPARTMENTS_DATA: Department[] = [
@@ -394,6 +397,166 @@ export const VALUES_PILLARS = [
     pastelColor: "#F8D8D8",
     iconName: "Sparkles",
     description: "Lan tỏa giá trị tích cực bằng những dòng code thật, giải quyết bài toán thực tế cho cộng đồng sinh viên và xã hội."
+  }
+];
+
+export const RECRUITMENT_MASTER_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1s2MfrpnqK4F02LFokPACVBFJbfXPnZVOYb71EI3lERg/edit?gid=0#gid=0";
+
+export const RECRUITMENT_TIMELINE_STAGES: RecruitmentPhase[] = [
+  {
+    id: "phase-1",
+    phaseNumber: 1,
+    phaseLabel: "PHASE 01",
+    title: "Khởi Động & Teasing",
+    subtitle: "Công bố đề án tuyển dụng và khởi động nhận diện chiến dịch Fall 2026",
+    dateRange: "13/10 – 24/10/2026",
+    startDate: "2026-10-13",
+    endDate: "2026-10-24",
+    status: "COMPLETED",
+    statusBadge: "Đã Hoàn Thành",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5",
+    tagBg: "bg-[#CCF6C5] text-[#1E1E1E]",
+    milestones: [
+      {
+        date: "13/10 – 17/10",
+        title: "Ra mắt bộ nhận diện chiến dịch",
+        desc: "Công bố Key Visual Neo-brutalism và khung avatar tuyển sinh Gen 4.0."
+      },
+      {
+        date: "20/10 – 24/10",
+        title: "Chuỗi bài Teasing & Mở cổng thông tin",
+        desc: "Khuấy động cộng đồng sinh viên FPTU và giới thiệu chủ đề Take Target Together."
+      }
+    ]
+  },
+  {
+    id: "phase-2",
+    phaseNumber: 2,
+    phaseLabel: "PHASE 02 • TRỌNG TÂM",
+    title: "VÒNG 1: MỞ ĐƠN & GIAN HÀNG CLUB DAY",
+    subtitle: "Chính thức mở cổng nhận đơn trực tuyến cho 6 Ban và ngày hội Club Day tại Campus",
+    dateRange: "25/10 – 08/11/2026",
+    startDate: "2026-10-25",
+    endDate: "2026-11-08",
+    status: "ACTIVE",
+    statusBadge: "ĐANG MỞ ĐƠN",
+    accentColor: "#4285F4",
+    pastelColor: "#C3ECF6",
+    tagBg: "bg-[#4285F4] text-[#FFFFFF]",
+    isRoundOne: true,
+    highlightActionText: "Nộp Đơn Ứng Tuyển Vòng 1 Ngay",
+    milestones: [
+      {
+        date: "25/10/2026",
+        title: "Mở Cổng Nhận Đơn Trực Tuyến",
+        desc: "Tiếp nhận hồ sơ ứng tuyển online cho 6 Ban chuyên môn, cho phép đăng ký 2 nguyện vọng.",
+        isKeyMilestone: true
+      },
+      {
+        date: "01/11/2026",
+        title: "Gian Hàng Trải Nghiệm Club Day",
+        desc: "Gặp gỡ trực tiếp tại sảnh FPTU, trải nghiệm demo AI tương tác và nhận 200+ Sticker Google độc quyền.",
+        isKeyMilestone: true
+      },
+      {
+        date: "23:59 • 08/11/2026",
+        title: "Đóng Cổng Nhận Đơn Vòng 1",
+        desc: "Hạn chót tiếp nhận hồ sơ. Hệ thống sẽ chính thức khóa cổng đúng 23:59 ngày 08/11.",
+        isKeyMilestone: true
+      }
+    ]
+  },
+  {
+    id: "phase-3",
+    phaseNumber: 3,
+    phaseLabel: "PHASE 03",
+    title: "SÀNG LỌC V1 & ĐÓNG BĂNG THI KỲ FE",
+    subtitle: "Công bố kết quả Vòng 1 và tạm ngưng hoạt động CLB để sinh viên tập trung thi cử",
+    dateRange: "09/11 – 15/11/2026",
+    startDate: "2026-11-09",
+    endDate: "2026-11-15",
+    status: "UPCOMING",
+    statusBadge: "Sắp Diễn Ra",
+    accentColor: "#FBBC04",
+    pastelColor: "#FFE7A5",
+    tagBg: "bg-[#FFE7A5] text-[#1E1E1E]",
+    milestones: [
+      {
+        date: "10/11 – 11/11",
+        title: "Thông Báo Kết Quả V1 & Chọn Ca Phỏng Vấn",
+        desc: "Gửi email thông báo kết quả Vòng 1 kèm liên kết đặt ca phỏng vấn phù hợp lịch cá nhân."
+      },
+      {
+        date: "12/11 – 15/11",
+        title: "Đóng Băng Hoạt Động (Freeze Tuần Thi Final Exam)",
+        desc: "Tạm dừng hoạt động CLB để toàn thể ứng viên và Ban tổ chức yên tâm ôn tập và thi tốt kỳ thi cuối kỳ.",
+        isKeyMilestone: true
+      }
+    ]
+  },
+  {
+    id: "phase-4",
+    phaseNumber: 4,
+    phaseLabel: "PHASE 04",
+    title: "VÒNG 2: PHỎNG VẤN & GỬI OFFER",
+    subtitle: "Đối thoại chuyên môn trực tiếp tại Campus và công bố danh sách trúng tuyển",
+    dateRange: "16/11 – 21/11/2026",
+    startDate: "2026-11-16",
+    endDate: "2026-11-21",
+    status: "UPCOMING",
+    statusBadge: "Sắp Diễn Ra",
+    accentColor: "#EA4335",
+    pastelColor: "#F8D8D8",
+    tagBg: "bg-[#F8D8D8] text-[#1E1E1E]",
+    milestones: [
+      {
+        date: "16/11 – 18/11",
+        title: "Phỏng Vấn Trực Tiếp (Offline) Tại Campus",
+        desc: "Phỏng vấn trực tiếp tại Đại học FPT TP.HCM (khoảng 15-20 phút/ứng viên).",
+        isKeyMilestone: true
+      },
+      {
+        date: "19/11/2026",
+        title: "Phỏng Vấn Trực Tuyến (Google Meet)",
+        desc: "Dành riêng cho các bạn có lịch trình đặc biệt hoặc kẹt lịch đột xuất."
+      },
+      {
+        date: "21/11/2026",
+        title: "Chính Thức Gửi Thư Mời Gia Nhập (Offer Letter)",
+        desc: "Phát hành Offer Letter và hướng dẫn tiếp nhận không gian làm việc của GDGoC.",
+        isKeyMilestone: true
+      }
+    ]
+  },
+  {
+    id: "phase-5",
+    phaseNumber: 5,
+    phaseLabel: "PHASE 05",
+    title: "FIRST MEETING & ONBOARDING",
+    subtitle: "Chào đón thành viên mới, phân công dự án và chính thức khởi động học kỳ Fall 2026",
+    dateRange: "05/12 – 06/12/2026",
+    startDate: "2026-12-05",
+    endDate: "2026-12-06",
+    status: "UPCOMING",
+    statusBadge: "Sắp Diễn Ra",
+    accentColor: "#34A853",
+    pastelColor: "#CCF6C5",
+    tagBg: "bg-[#CCF6C5] text-[#1E1E1E]",
+    milestones: [
+      {
+        date: "05/12/2026",
+        title: "First Meeting Chào Đón Thành Viên Mới",
+        desc: "Buổi gặp mặt offline đầu tiên, kết nối văn hóa và gắn kết giữa các thế hệ thành viên.",
+        isKeyMilestone: true
+      },
+      {
+        date: "06/12/2026",
+        title: "Bàn Giao Tài Nguyên & Kick-off Dự Án",
+        desc: "Cấp quyền truy cập hệ sinh thái Google Cloud, GitHub, và bắt đầu các dự án thực tế."
+      }
+    ]
   }
 ];
 

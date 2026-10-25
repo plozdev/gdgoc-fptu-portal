@@ -25,7 +25,7 @@ export const Timeline: React.FC<TimelineProps> = ({ onOpenJoinModal }) => {
       <div className="absolute inset-0 bg-dot-pattern opacity-30 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* =====================================================================
             1. SECTION HEADER: Chuẩn hóa, không chứa tài liệu nội bộ / sổ tay lẻ
             ===================================================================== */}
@@ -48,7 +48,7 @@ export const Timeline: React.FC<TimelineProps> = ({ onOpenJoinModal }) => {
             2. TRUE LINEAR ROADMAP (Trục thời gian 5 chặng xuyên suốt)
             ===================================================================== */}
         <div className="relative">
-          
+
           {/* ===================================================================
               PROGRESS TRACK: Đường ray chạy ngang kết nối các chặng (Desktop)
               Nằm ở tầng z-0, kết nối liền mạch qua các khe hở giữa 5 khối card
@@ -62,7 +62,7 @@ export const Timeline: React.FC<TimelineProps> = ({ onOpenJoinModal }) => {
 
           {/* 5-Stage Linear Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch relative z-10">
-            
+
             {/* =================================================================
                 CHẶNG 1: ĐANG MỞ ĐƠN & CLUB DAY (TÂM ĐIỂM CHIẾM 4 CỘT)
                 Trạng thái: ACTIVE • Google Blue Card • CTA chính trang web
@@ -96,7 +96,7 @@ export const Timeline: React.FC<TimelineProps> = ({ onOpenJoinModal }) => {
 
                 <div className="space-y-1 mb-4">
                   <span className="font-mono-code text-xs font-bold text-[#4285F4] block">
-                    25/10 – 08/11/2026
+                    26/10 – 08/11/2026
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black text-[#1E1E1E] tracking-tight">
                     Mở Đơn & Ngày Hội Club Day
@@ -138,7 +138,7 @@ export const Timeline: React.FC<TimelineProps> = ({ onOpenJoinModal }) => {
                 Chia đều 4 thẻ cột, bổ sung micro-elements để xóa khoảng trống thừa
                 ================================================================= */}
             <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              
+
               {/* CHẶNG 2: KẾT QUẢ VÒNG ĐƠN */}
               <div className="bg-[#FFFFFF] border-[2px] border-[#1E1E1E]/40 hover:border-[#1E1E1E] rounded-2xl p-5 brutal-shadow-sm transition-all flex flex-col justify-between">
                 <div>

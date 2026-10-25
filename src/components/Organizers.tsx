@@ -22,7 +22,7 @@ export const Organizers: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-[#FFE7A5] border-[2.5px] border-[#1E1E1E] rounded-full text-xs font-mono-code font-bold text-[#1E1E1E]">
-              <span>{'//'} 05. BAN ĐIỀU HÀNH & CORE LEADS</span>
+              <span>{'//'} 06. BAN ĐIỀU HÀNH & CORE LEADS</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight">
               Ban Chủ Nhiệm & Trưởng Ban Điều Hành

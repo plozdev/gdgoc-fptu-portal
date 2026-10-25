@@ -9,6 +9,7 @@ import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { About } from './components/About';
 import { Tracks } from './components/Tracks';
+import { Timeline } from './components/Timeline';
 import { Impact } from './components/Impact';
 import { Events } from './components/Events';
 import { Organizers } from './components/Organizers';
@@ -91,6 +92,10 @@ function LandingPage() {
         <Tracks
           onSelectDepartment={handleSelectDepartment}
           onOpenJoinModal={(deptName) => handleOpenJoinModal(deptName)}
+        />
+        <Timeline
+          onOpenJoinModal={() => handleOpenJoinModal()}
+          onOpenJdHandbook={handleOpenJdHandbook}
         />
         <Impact />
         <Events />

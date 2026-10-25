@@ -31,14 +31,14 @@ export const RECRUITMENT_CONFIG = {
   batch: "Gen 4.0",
   term: "Kỳ Fall 2026",
   round: "Vòng 1 (Vòng Đơn)",
-  roundPeriod: "25/10 – 08/11/2026",
+  roundPeriod: "26/10 – 08/11/2026",
   deadlineTime: "23:59 ngày 08/11/2026",
   statusBadge: "ĐANG MỞ ĐƠN",
   buttonText: "Ứng Tuyển Ngay",
   openButtonText: "Ứng Tuyển Vòng 1 Ngay",
   headerTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 ĐANG MỞ",
-  openHeaderTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 (25/10 – 08/11)",
-  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 Vòng 1 chính thức mở từ ngày 25/10 đến 23:59 ngày 08/11/2026. Hãy nhanh tay nộp hồ sơ để đồng hành cùng GDGoC FPT University HCMC!",
+  openHeaderTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 (26/10 – 08/11)",
+  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 Vòng 1 chính thức mở từ ngày 26/10 đến 23:59 ngày 08/11/2026. Hãy nhanh tay nộp hồ sơ để đồng hành cùng GDGoC FPT University HCMC!",
 };
 
 export const DEPARTMENTS_DATA: Department[] = [
@@ -437,7 +437,7 @@ export const RECRUITMENT_TIMELINE_STAGES: RecruitmentPhase[] = [
     phaseLabel: "PHASE 02 • TRỌNG TÂM",
     title: "VÒNG 1: MỞ ĐƠN & GIAN HÀNG CLUB DAY",
     subtitle: "Chính thức mở cổng nhận đơn trực tuyến cho 6 Ban và ngày hội Club Day tại Campus",
-    dateRange: "25/10 – 08/11/2026",
+    dateRange: "26/10 – 08/11/2026",
     startDate: "2026-10-25",
     endDate: "2026-11-08",
     status: "ACTIVE",
@@ -449,7 +449,7 @@ export const RECRUITMENT_TIMELINE_STAGES: RecruitmentPhase[] = [
     highlightActionText: "Nộp Đơn Ứng Tuyển Vòng 1 Ngay",
     milestones: [
       {
-        date: "25/10/2026",
+        date: "26/10/2026",
         title: "Mở Cổng Nhận Đơn Trực Tuyến",
         desc: "Tiếp nhận hồ sơ ứng tuyển online cho 6 Ban chuyên môn, cho phép đăng ký 2 nguyện vọng.",
         isKeyMilestone: true

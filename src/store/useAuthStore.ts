@@ -38,6 +38,8 @@ export function mapBackendUserToSession(raw: any): UserSession | null {
     tier,
     banId,
     banName,
+    avatarUrl: raw.avatarUrl || raw.avatar || undefined,
+    avatar: raw.avatarUrl || raw.avatar || undefined,
     readOnly: raw.readOnly === true || !['ACTIVE', 'PROBATION'].includes(currentTenure?.status),
   };
 }

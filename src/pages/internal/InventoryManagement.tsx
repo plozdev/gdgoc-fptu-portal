@@ -34,8 +34,15 @@ export const InventoryManagement: React.FC = () => {
     fetchMembers();
   }, [fetchItems, fetchMembers]);
 
-  // 🚨 CRITICAL RULE: Chỉ Ban Chủ Nhiệm (Chapter Lead & Co-Chapter Lead) mới có quyền truy cập.
-  if (user?.readOnly || user?.tier !== 'ORG_ADMIN') {
+  // Quyền hạn:
+  // - Ban Chủ Nhiệm (ORG_ADMIN / ADVISOR): Toàn quyền thêm, sửa, xóa vật tư.
+  // - Trưởng Ban (BAN_LEAD): Quyền xem danh sách, người giữ, số lượng và bộ lọc (chỉ đọc).
+  const isOrgAdmin = !user?.readOnly && (user?.tier === 'ORG_ADMIN' || user?.tier === 'ADVISOR');
+  const isBanLead = !user?.readOnly && user?.tier === 'BAN_LEAD';
+  const canAccess = isOrgAdmin || isBanLead;
+  const canEdit = isOrgAdmin;
+
+  if (!canAccess) {
     return <Navigate to="/app/dashboard" replace />;
   }
 
@@ -58,6 +65,7 @@ export const InventoryManagement: React.FC = () => {
   const [itemNotes, setItemNotes] = useState('');
 
   const handleOpenAdd = () => {
+    if (!canEdit) return;
     setItemToEdit(null);
     setItemName('');
     setItemCategory('Asset');
@@ -69,6 +77,7 @@ export const InventoryManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (item: InventoryItem) => {
+    if (!canEdit) return;
     setItemToEdit(item);
     setItemName(item.name);
     setItemCategory(item.category);
@@ -93,7 +102,7 @@ export const InventoryManagement: React.FC = () => {
 
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemName.trim() || itemQuantity <= 0) return;
+    if (!canEdit || !itemName.trim() || itemQuantity <= 0) return;
 
     let holderName = '';
     let holderStudentId: string | undefined = undefined;
@@ -148,14 +157,13 @@ export const InventoryManagement: React.FC = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (itemToDelete) {
-      setIsSubmitting(true);
-      try {
-        await deleteItem(itemToDelete.id);
-        setItemToDelete(null);
-      } finally {
-        setIsSubmitting(false);
-      }
+    if (!canEdit || !itemToDelete) return;
+    setIsSubmitting(true);
+    try {
+      await deleteItem(itemToDelete.id);
+      setItemToDelete(null);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -192,12 +200,21 @@ export const InventoryManagement: React.FC = () => {
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono-code">
               INVENTORY MANAGEMENT
             </span>
             <span className="text-xs text-slate-400">•</span>
             <span className="text-xs text-slate-500 font-medium">Lưu trữ phân tán giữa các thành viên</span>
+            {!canEdit && (
+              <>
+                <span className="text-xs text-slate-400">•</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-mono-code flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  CHẾ ĐỘ XEM (CHỈ ĐỌC)
+                </span>
+              </>
+            )}
           </div>
           <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
             <span>Quản Lý Vật Tư & Quà Tặng CLB</span>
@@ -206,17 +223,26 @@ export const InventoryManagement: React.FC = () => {
             </span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Do CLB không có kho lưu trữ cố định, hệ thống theo dõi trực tiếp thành viên nào đang giữ vật tư gì.
+            {canEdit
+              ? 'Do CLB không có kho lưu trữ cố định, hệ thống theo dõi trực tiếp thành viên nào đang giữ vật tư gì.'
+              : 'Quyền xem danh mục và người nắm giữ vật tư dành cho Trưởng Ban để phối hợp sự kiện. Mọi điều phối/thay đổi vui lòng liên hệ BCN.'}
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
-        >
-          <PackagePlus className="w-4 h-4" />
-          <span>Thêm Vật Tư Mới</span>
-        </button>
+        {canEdit ? (
+          <button
+            onClick={handleOpenAdd}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <PackagePlus className="w-4 h-4" />
+            <span>Thêm Vật Tư Mới</span>
+          </button>
+        ) : (
+          <div className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold flex items-center gap-2 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>Quyền hạn: Xem danh mục</span>
+          </div>
+        )}
       </div>
 
       {/* Main Table Card */}
@@ -280,13 +306,13 @@ export const InventoryManagement: React.FC = () => {
                 <th className="px-4 py-3">Số Lượng</th>
                 <th className="px-4 py-3">Người Đang Giữ Vật Tư</th>
                 <th className="px-4 py-3">Ngày Giao & Ghi Chú</th>
-                <th className="px-4 py-3 text-right">Thao Tác</th>
+                {canEdit && <th className="px-4 py-3 text-right">Thao Tác</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={canEdit ? 5 : 4} className="px-4 py-8 text-center text-slate-400">
                     Không tìm thấy vật tư nào phù hợp.
                   </td>
                 </tr>
@@ -346,25 +372,27 @@ export const InventoryManagement: React.FC = () => {
                         </p>
                       </td>
 
-                      {/* Thao Tác */}
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEdit(item)}
-                            title="Chỉnh sửa vật tư hoặc đổi người giữ"
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setItemToDelete(item)}
-                            title="Xóa vật phẩm"
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      {/* Thao Tác (Chỉ hiển thị cho Ban Chủ Nhiệm) */}
+                      {canEdit && (
+                        <td className="px-4 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleOpenEdit(item)}
+                              title="Chỉnh sửa vật tư hoặc đổi người giữ"
+                              className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setItemToDelete(item)}
+                              title="Xóa vật phẩm"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -375,7 +403,7 @@ export const InventoryManagement: React.FC = () => {
       </div>
 
       {/* Add / Edit Item Modal */}
-      {showItemModal && createPortal(
+      {canEdit && showItemModal && createPortal(
         <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <div className="bg-white max-w-lg w-full rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -506,7 +534,7 @@ export const InventoryManagement: React.FC = () => {
       )}
 
       {/* Delete Confirm Modal */}
-      {itemToDelete && createPortal(
+      {canEdit && itemToDelete && createPortal(
         <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop">
           <div className="bg-white max-w-sm w-full rounded-2xl p-6 shadow-2xl border border-slate-200 text-center space-y-3">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">

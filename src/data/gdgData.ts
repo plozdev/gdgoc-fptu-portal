@@ -176,12 +176,12 @@ export const DEPARTMENTS_DATA: Department[] = [
     }
   },
 
-  // --- KHỐI NON-TECH ---
+  // --- KHỐI COMMUNITY & EVENTS ---
   {
     id: "nontech-media",
     name: "Media",
     vietnameseName: "Ban Truyền Thông & Thiết Kế",
-    division: "NON-TECH",
+    division: "COMMUNITY & EVENTS",
     coreColor: "#FF7DAF", // Accent Pink/Red
     pastelColor: "#FCE7F3",
     halftoneColor: "#F472B6",
@@ -214,7 +214,7 @@ export const DEPARTMENTS_DATA: Department[] = [
     id: "nontech-hr-event",
     name: "HR & Event",
     vietnameseName: "Ban Nhân Sự & Tổ Chức Sự Kiện",
-    division: "NON-TECH",
+    division: "COMMUNITY & EVENTS",
     coreColor: "#34A853", // Green
     pastelColor: "#CCF6C5",
     halftoneColor: "#5CDB6D",
@@ -331,7 +331,7 @@ export const LEAD_ROLES_DATA: LeadRole[] = [
     id: "lead-media",
     role: "Lead Media (Trưởng Ban Truyền Thông & Thiết Kế)",
     departmentId: "nontech-media",
-    division: "KHỐI NON-TECH",
+    division: "KHỐI COMMUNITY & EVENTS",
     badge: "Open for Application / Tuyển chọn nội bộ",
     accentColor: "#FF7DAF",
     pastelColor: "#FCE7F3",
@@ -351,7 +351,7 @@ export const LEAD_ROLES_DATA: LeadRole[] = [
     id: "lead-hr-event",
     role: "Lead HR & Event (Trưởng Ban Nhân Sự & Sự Kiện)",
     departmentId: "nontech-hr-event",
-    division: "KHỐI NON-TECH",
+    division: "KHỐI COMMUNITY & EVENTS",
     badge: "Open for Application / Tuyển chọn nội bộ",
     accentColor: "#34A853",
     pastelColor: "#CCF6C5",

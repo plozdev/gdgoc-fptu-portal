@@ -49,7 +49,7 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
                 </div>
                 <div className="flex items-center gap-2 bg-[#FFFFFF]/90 p-2.5 rounded-xl border-[1.5px] border-[#1E1E1E]">
                   <CheckCircle2 className="w-4 h-4 text-[#34A853] shrink-0" />
-                  <span>2 Khối: Tech & Non-Tech (6 Ban)</span>
+                  <span>2 Khối: Tech & Community & Events (6 Ban)</span>
                 </div>
                 <div className="flex items-center gap-2 bg-[#FFFFFF]/90 p-2.5 rounded-xl border-[1.5px] border-[#1E1E1E]">
                   <CheckCircle2 className="w-4 h-4 text-[#34A853] shrink-0" />

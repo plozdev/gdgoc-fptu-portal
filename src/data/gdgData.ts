@@ -27,18 +27,25 @@ export const CHAPTER_INFO = {
 //   -> Các nút sẽ đổi thành "Ứng Tuyển Vòng 1 Ngay", form tuyển quân sẽ mở nhận hồ sơ.
 // =============================================================================
 export const RECRUITMENT_CONFIG = {
-  isOpen: true, // 👈 [BẬT / TẮT ĐỢT TUYỂN TẠI ĐÂY] true: Mở nhận đơn | false: Đang cập nhật
+  manualOverride: null as boolean | null,
+  deadlineISO: "2026-11-09T00:00:00+07:00", // 00:00 ngày 09/11/2026 (GMT+7)
+
+  get isOpen(): boolean {
+    if (this.manualOverride !== null) return this.manualOverride;
+    return Date.now() < new Date(this.deadlineISO).getTime();
+  },
+
   batch: "Gen 4.0",
   term: "Kỳ Fall 2026",
   round: "Vòng 1 (Vòng Đơn)",
   roundPeriod: "26/10 – 08/11/2026",
-  deadlineTime: "23:59 ngày 08/11/2026",
+  deadlineTime: "23:59 ngày 08/11/2026 (00:00 ngày 09/11/2026)",
   statusBadge: "ĐANG MỞ ĐƠN",
   buttonText: "Ứng Tuyển Ngay",
   openButtonText: "Ứng Tuyển Vòng 1 Ngay",
   headerTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 ĐANG MỞ",
   openHeaderTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 (26/10 – 08/11)",
-  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 Vòng 1 chính thức mở từ ngày 26/10 đến 23:59 ngày 08/11/2026. Hãy nhanh tay nộp hồ sơ để đồng hành cùng GDGoC FPT University HCMC!",
+  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 Vòng 1 chính thức mở từ ngày 26/10 đến 23:59 ngày 08/11/2026 (00:00 ngày 09/11/2026). Hãy nhanh tay nộp hồ sơ để đồng hành cùng GDGoC FPT University HCMC!",
 };
 
 export const DEPARTMENTS_DATA: Department[] = [

@@ -223,7 +223,10 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
       return;
     }
 
-    if (!consent || !status?.enabled) return;
+    if (!consent || !status?.enabled || isClosed) {
+      setError('Cổng tuyển thành viên đã chính thức đóng nhận hồ sơ.');
+      return;
+    }
     busyRef.current = true;
     setBusy(true);
     setError('');
@@ -413,13 +416,21 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
             <div className="rounded-2xl border-[2.5px] border-slate-900 bg-[#FFF8E1] p-5 sm:p-6 shadow-[4px_4px_0_#1e293b]">
               <div className="flex items-center gap-2.5 font-mono-code font-bold text-xs uppercase tracking-wider text-amber-800 mb-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                <span>Trạng thái: Tạm Đóng / Đang Cập Nhật</span>
+                <span>
+                  {Date.now() >= new Date(RECRUITMENT_CONFIG.deadlineISO).getTime()
+                    ? 'Trạng thái: Đã Đóng Cổng Tuyển Đơn'
+                    : 'Trạng thái: Tạm Đóng / Đang Cập Nhật'}
+                </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">
-                Cổng Tuyển Thành Viên Hiện Chưa Mở Đăng Ký
+                {Date.now() >= new Date(RECRUITMENT_CONFIG.deadlineISO).getTime()
+                  ? 'Cổng Tuyển Thành Viên Đã Kết Thúc Đợt 1'
+                  : 'Cổng Tuyển Thành Viên Hiện Chưa Mở Đăng Ký'}
               </h3>
               <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                {RECRUITMENT_CONFIG.noticeText}
+                {Date.now() >= new Date(RECRUITMENT_CONFIG.deadlineISO).getTime()
+                  ? `Cổng nhận đơn đợt tuyển ${RECRUITMENT_CONFIG.batch} (${RECRUITMENT_CONFIG.term}) đã chính thức đóng vào lúc 00:00 ngày 09/11/2026. GDGoC FPTU HCMC xin chân thành cảm ơn các bạn đã nộp hồ sơ. Ban Chủ Nhiệm đang tổng hợp và sẽ sớm thông báo kết quả Vòng 1 qua email!`
+                  : RECRUITMENT_CONFIG.noticeText}
               </p>
             </div>
 

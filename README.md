@@ -17,7 +17,7 @@ Cổng thông tin chính thức và hệ sinh thái số của **Google Develope
 
 ### 1. Cổng Thông Tin Công Khai (Landing Page)
 - **Hero & Official Admission Pass:** Giới thiệu sứ mệnh, số liệu nhiệm kỳ và vé số hóa của chapter.
-- **Ban Chuyên Môn (Departments):** 6 ban thuộc 2 khối Tech (AI, Cloud, Web Development, Research) và Non-Tech (Media, HR & Event).
+- **Ban Chuyên Môn (Departments):** 6 ban thuộc 2 khối Tech (AI, Cloud, Web Development, Research) và Community & Events (Media, HR & Event).
 - **Hệ Sinh Thái & Sự Kiện:** Danh sách sự kiện, tài nguyên học tập và kết nối cộng đồng.
 - **Cộng Đồng Chính Thức:** Nút truy cập trực tiếp Google Developer Groups Community (`gdg.community.dev`).
 - **Cổng Tuyển Quân (Recruitment):** Form ứng tuyển nhiều bước được bảo vệ bằng honeypot, validation và chống spam.

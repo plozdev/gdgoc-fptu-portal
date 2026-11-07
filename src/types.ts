@@ -2,7 +2,7 @@ export interface Department {
   id: string;
   name: string;
   vietnameseName: string;
-  division: 'TECH' | 'NON-TECH';
+  division: 'TECH' | 'COMMUNITY & EVENTS';
   coreColor: string;
   pastelColor: string;
   halftoneColor: string;
@@ -22,7 +22,7 @@ export interface LeadRole {
   id: string;
   role: string;
   departmentId: string;
-  division: 'KHỐI TECH' | 'KHỐI NON-TECH';
+  division: 'KHỐI TECH' | 'KHỐI COMMUNITY & EVENTS';
   badge: string; // "Open for Application / Tuyển chọn nội bộ"
   accentColor: string;
   pastelColor: string;
@@ -74,7 +74,7 @@ export interface RegistrationFormData {
   email: string;
   cohort: string;
   major: string;
-  division: 'TECH' | 'NON-TECH';
+  division: 'TECH' | 'COMMUNITY & EVENTS';
   departmentOfInterest: string;
   isApplyingForLead: boolean;
   portfolioUrl: string;

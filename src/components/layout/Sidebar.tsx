@@ -18,11 +18,20 @@ import {
   UserCircle
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useMemberStore } from '../../store/useMemberStore';
 import { useGenerationStore } from '../../store/useGenerationStore';
 import { BAN_NAMES } from '../../types/auth';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuthStore();
+  const memberAvatar = useMemberStore((s) => s.members.find((m) => m.id === user?.id)?.avatar);
+  const avatarUrl = user?.avatarUrl || user?.avatar || memberAvatar;
+  const [avatarError, setAvatarError] = React.useState(false);
+
+  React.useEffect(() => {
+    setAvatarError(false);
+  }, [avatarUrl]);
+
   const { currentGen } = useGenerationStore();
   const navigate = useNavigate();
 
@@ -270,8 +279,8 @@ export const Sidebar: React.FC = () => {
               </span>
             </NavLink>
 
-            {/* Quản lý Vật tư & Quà tặng (Chỉ dành riêng cho Ban Chủ Nhiệm: Chapter Lead & Co-Chapter Lead) */}
-            {isOrgAdmin && (
+            {/* Quản lý Vật tư & Quà tặng (Ban Chủ Nhiệm & Trưởng Ban - Department Leads có quyền xem) */}
+            {(isOrgAdmin || isBanLead) && (
               <NavLink
                 to="/app/inventory"
                 className={({ isActive }) =>
@@ -323,9 +332,18 @@ export const Sidebar: React.FC = () => {
           className="block p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 hover:border-slate-600 mb-2.5 transition-all group"
         >
           <div className="flex items-center gap-2.5 mb-1.5">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white shadow-xs group-hover:scale-105 transition-transform">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
+            {avatarUrl && !avatarError ? (
+              <img
+                src={avatarUrl}
+                alt={user?.name || 'Avatar'}
+                className="w-8 h-8 rounded-full object-cover border border-slate-700 shadow-xs group-hover:scale-105 transition-transform shrink-0"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                {user?.name?.charAt(0) || 'U'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-white truncate group-hover:text-blue-400 transition-colors">{user?.name}</p>
               <p className="text-[10px] text-slate-400 truncate font-mono-code">{user?.email}</p>

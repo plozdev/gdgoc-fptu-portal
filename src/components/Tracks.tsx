@@ -21,7 +21,7 @@ interface TracksProps {
 }
 
 export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinModal }) => {
-  const [activeTab, setActiveTab] = useState<'ALL' | 'TECH' | 'NON-TECH'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'TECH' | 'COMMUNITY & EVENTS'>('ALL');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   const getDeptIcon = (iconName: string, color: string) => {
@@ -44,7 +44,7 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
   };
 
   const techDepts = DEPARTMENTS_DATA.filter((d) => d.division === 'TECH');
-  const nonTechDepts = DEPARTMENTS_DATA.filter((d) => d.division === 'NON-TECH');
+  const nonTechDepts = DEPARTMENTS_DATA.filter((d) => d.division === 'COMMUNITY & EVENTS');
 
   const displayedDepts =
     activeTab === 'ALL'
@@ -54,7 +54,7 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
   return (
     <section id="departments" className="py-20 sm:py-28 bg-[#F8F9FA] relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-6">
           <div className="space-y-2">
@@ -62,7 +62,7 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
               <span>{'//'} 02. CÁC BAN CHUYÊN MÔN</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-[#1E1E1E] tracking-tight">
-              Khối Tech & Khối Non-Tech
+              Khối Tech & Khối Community & Events
             </h2>
             <p className="text-base sm:text-lg text-[#1E1E1E]/85 max-w-2xl">
               Cơ cấu tổ chức thực tế của <strong>GDG on Campus FPT University HCMC</strong> kỳ Fall 2026. Chọn đúng ban đam mê để phát triển năng lực vượt bậc.
@@ -73,33 +73,30 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
           <div className="flex items-center gap-1.5 p-1.5 bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-2xl brutal-shadow-sm self-start sm:self-auto">
             <button
               onClick={() => setActiveTab('ALL')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono-code font-bold transition-all cursor-pointer ${
-                activeTab === 'ALL'
-                  ? 'bg-[#1E1E1E] text-[#FFFFFF]'
-                  : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono-code font-bold transition-all cursor-pointer ${activeTab === 'ALL'
+                ? 'bg-[#1E1E1E] text-[#FFFFFF]'
+                : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
+                }`}
             >
               Tất Cả (6 Ban)
             </button>
             <button
               onClick={() => setActiveTab('TECH')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono-code font-bold transition-all cursor-pointer ${
-                activeTab === 'TECH'
-                  ? 'bg-[#4285F4] text-[#FFFFFF]'
-                  : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono-code font-bold transition-all cursor-pointer ${activeTab === 'TECH'
+                ? 'bg-[#4285F4] text-[#FFFFFF]'
+                : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
+                }`}
             >
               Khối Tech (4)
             </button>
             <button
-              onClick={() => setActiveTab('NON-TECH')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono-code font-bold transition-all cursor-pointer ${
-                activeTab === 'NON-TECH'
-                  ? 'bg-[#34A853] text-[#FFFFFF]'
-                  : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
-              }`}
+              onClick={() => setActiveTab('COMMUNITY & EVENTS')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono-code font-bold transition-all cursor-pointer ${activeTab === 'COMMUNITY & EVENTS'
+                ? 'bg-[#34A853] text-[#FFFFFF]'
+                : 'text-[#1E1E1E] hover:bg-[#F0F0F0]'
+                }`}
             >
-              Khối Non-Tech (2)
+              Khối Community & Events (2)
             </button>
           </div>
         </div>
@@ -114,9 +111,8 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
                 key={dept.id}
                 onMouseEnter={() => setHoveredCard(dept.id)}
                 onMouseLeave={() => setHoveredCard(null)}
-                className={`relative bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] p-6 brutal-shadow transition-all duration-200 flex flex-col justify-between ${
-                  isHovered ? '-translate-y-1' : ''
-                }`}
+                className={`relative bg-[#FFFFFF] border-[2.5px] border-[#1E1E1E] rounded-[24px] p-6 brutal-shadow transition-all duration-200 flex flex-col justify-between ${isHovered ? '-translate-y-1' : ''
+                  }`}
                 style={{
                   boxShadow: isHovered
                     ? '6px 6px 0px #1E1E1E'
@@ -135,11 +131,10 @@ export const Tracks: React.FC<TracksProps> = ({ onSelectDepartment, onOpenJoinMo
                       </div>
                       <div>
                         <span
-                          className={`font-mono-code text-[10px] font-bold px-2 py-0.5 rounded border border-[#1E1E1E] inline-block mb-0.5 ${
-                            dept.division === 'TECH'
-                              ? 'bg-[#C3ECF6] text-[#1E1E1E]'
-                              : 'bg-[#CCF6C5] text-[#1E1E1E]'
-                          }`}
+                          className={`font-mono-code text-[10px] font-bold px-2 py-0.5 rounded border border-[#1E1E1E] inline-block mb-0.5 ${dept.division === 'TECH'
+                            ? 'bg-[#C3ECF6] text-[#1E1E1E]'
+                            : 'bg-[#CCF6C5] text-[#1E1E1E]'
+                            }`}
                         >
                           KHỐI {dept.division}
                         </span>

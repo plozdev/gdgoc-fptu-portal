@@ -6,11 +6,11 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { tasksApi } from '../../api/tasks.api';
 import { eventsApi } from '../../api/events.api';
-import { 
-  Users, 
-  CheckSquare, 
-  Calendar, 
-  Award, 
+import {
+  Users,
+  CheckSquare,
+  Calendar,
+  Award,
 } from 'lucide-react';
 import { BanId } from '../../types/auth';
 import { MeetingSetupModal } from '../../components/meetings/MeetingSetupModal';
@@ -43,10 +43,10 @@ export const DashboardOverview: React.FC = () => {
           const list = Array.isArray(raw)
             ? raw
             : Array.isArray(raw?.items)
-            ? raw.items
-            : Array.isArray(raw?.data)
-            ? raw.data
-            : [];
+              ? raw.items
+              : Array.isArray(raw?.data)
+                ? raw.data
+                : [];
 
           setTasks(list);
         }
@@ -55,8 +55,8 @@ export const DashboardOverview: React.FC = () => {
           const evList = Array.isArray(eventsRes.value)
             ? eventsRes.value
             : Array.isArray(eventsRes.value?.data)
-            ? eventsRes.value.data
-            : [];
+              ? eventsRes.value.data
+              : [];
           setBackendEvents(evList);
         }
         return tasksRes.status === 'fulfilled' && eventsRes.status === 'fulfilled';
@@ -92,8 +92,8 @@ export const DashboardOverview: React.FC = () => {
     { id: 'cloud' as BanId, code: 'TECH_CLOUD', name: 'Ban Điện Toán Đám Mây (Cloud)', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-blue-500' },
     { id: 'web' as BanId, code: 'TECH_WEB', name: 'Ban Phát Triển Web', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-emerald-500' },
     { id: 'research' as BanId, code: 'TECH_RESEARCH', name: 'Ban Nghiên Cứu (Research)', division: 'Khối Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-red-500' },
-    { id: 'media' as BanId, code: 'MEDIA', name: 'Ban Truyền Thông & Media', division: 'Khối Non-Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-pink-500' },
-    { id: 'hr-event' as BanId, code: 'HR_EVENT', name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Non-Tech', defaultLead: 'Chưa cập nhật', color: 'border-l-teal-500' },
+    { id: 'media' as BanId, code: 'MEDIA', name: 'Ban Truyền Thông & Media', division: 'Khối Community & Events', defaultLead: 'Chưa cập nhật', color: 'border-l-pink-500' },
+    { id: 'hr-event' as BanId, code: 'HR_EVENT', name: 'Ban Nhân Sự & Sự Kiện', division: 'Khối Community & Events', defaultLead: 'Chưa cập nhật', color: 'border-l-teal-500' },
   ];
 
   return (
@@ -114,7 +114,7 @@ export const DashboardOverview: React.FC = () => {
               Xin chào, {user?.name}! 👋
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
-              {isOrgAdmin 
+              {isOrgAdmin
                 ? 'Bạn đang đăng nhập với quyền Ban Chủ Nhiệm (Toàn quyền hệ thống). Bạn có thể xem toàn bộ 6 ban và đổi niên khóa.'
                 : `Không gian làm việc ${user?.banName || 'Ban chuyên môn'} • Cùng kết nối và hoàn thành các mục tiêu trong kỳ!`
               }
@@ -202,7 +202,7 @@ export const DashboardOverview: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-extrabold text-slate-800">Tiến Độ Vận Hành 6 Ban Chuyên Môn</h2>
-            <p className="text-xs text-slate-500">Bao gồm 4 Ban Khối Tech & 2 Ban Khối Non-Tech đồng cấp trong kỳ Fall 2026</p>
+            <p className="text-xs text-slate-500">Bao gồm 4 Ban Khối Tech & 2 Ban Khối Community & Events đồng cấp trong kỳ Fall 2026</p>
           </div>
           <span className="text-xs font-bold text-slate-400 font-mono-code">6 Departments</span>
         </div>
@@ -220,11 +220,10 @@ export const DashboardOverview: React.FC = () => {
             const designatedLead = leadMember?.name || ban.defaultLead;
 
             return (
-              <div 
-                key={ban.id} 
-                className={`p-4 rounded-xl border-l-4 ${ban.color} border border-slate-200 hover:border-slate-300 transition-all ${
-                  isUserBan ? 'bg-blue-50/40 ring-1 ring-blue-300' : 'bg-slate-50/50'
-                }`}
+              <div
+                key={ban.id}
+                className={`p-4 rounded-xl border-l-4 ${ban.color} border border-slate-200 hover:border-slate-300 transition-all ${isUserBan ? 'bg-blue-50/40 ring-1 ring-blue-300' : 'bg-slate-50/50'
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600 uppercase">

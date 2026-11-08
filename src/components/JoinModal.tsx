@@ -258,6 +258,17 @@ export const JoinModal: React.FC<JoinModalProps> = ({ isOpen, onClose, defaultDe
       const retryMessage = 'Chưa xác nhận được hồ sơ. Hãy giữ nguyên thông tin và thử gửi lại.';
       if (failure instanceof ApiError && failure.statusCode < 500) {
         const rawMsg = failure.message || '';
+
+        // Xử lý lỗi trùng lặp hồ sơ (409 Conflict: Đã nộp hồ sơ với Email/MSSV này)
+        if (failure.statusCode === 409 || /đã có hồ sơ|trùng|conflict/i.test(rawMsg)) {
+          setError(rawMsg || 'Email hoặc MSSV đã có hồ sơ trong đợt tuyển này. Vui lòng liên hệ CLB nếu cần chỉnh sửa.');
+          setFieldErrors({
+            email: 'Email này đã có hồ sơ trong đợt tuyển.',
+            studentId: 'MSSV này đã có hồ sơ trong đợt tuyển.',
+          });
+          return;
+        }
+
         const serverErrors: Partial<Record<keyof Fields, string>> = {};
 
         if (/goals/i.test(rawMsg)) {

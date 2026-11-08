@@ -40,12 +40,14 @@ export const RECRUITMENT_CONFIG = {
   round: "Vòng 1 (Vòng Đơn)",
   roundPeriod: "26/10 – 08/11/2026",
   deadlineTime: "23:59 ngày 08/11/2026 (00:00 ngày 09/11/2026)",
-  statusBadge: "ĐANG MỞ ĐƠN",
-  buttonText: "Ứng Tuyển Ngay",
+  get statusBadge(): string {
+    return this.isOpen ? "ĐANG MỞ ĐƠN" : "GIAI ĐOẠN 2: LỌC HỒ SƠ";
+  },
+  buttonText: "Theo Dõi Lộ Trình",
   openButtonText: "Ứng Tuyển Vòng 1 Ngay",
-  headerTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 ĐANG MỞ",
+  headerTag: "CỔNG TUYỂN SINH GEN 4.0 • GIAI ĐOẠN 2: SÀNG LỌC HỒ SƠ",
   openHeaderTag: "CỔNG TUYỂN SINH GEN 4.0 • VÒNG 1 (26/10 – 08/11)",
-  noticeText: "Cổng đăng ký tuyển thành viên Gen 4.0 Vòng 1 chính thức mở từ ngày 26/10 đến 23:59 ngày 08/11/2026 (00:00 ngày 09/11/2026). Hãy nhanh tay nộp hồ sơ để đồng hành cùng GDGoC FPT University HCMC!",
+  noticeText: "Cổng nhận đơn Vòng 1 Gen 4.0 đã chính thức đóng lúc 00:00 ngày 09/11/2026. Ban Chủ Nhiệm đang tiến hành tổng hợp, sàng lọc hồ sơ và sẽ sớm công bố kết quả Vòng 1 qua email từ 10/11 – 11/11/2026.",
 };
 
 export const DEPARTMENTS_DATA: Department[] = [
@@ -441,19 +443,19 @@ export const RECRUITMENT_TIMELINE_STAGES: RecruitmentPhase[] = [
   {
     id: "phase-2",
     phaseNumber: 2,
-    phaseLabel: "PHASE 02 • TRỌNG TÂM",
+    phaseLabel: "PHASE 02",
     title: "VÒNG 1: MỞ ĐƠN & GIAN HÀNG CLUB DAY",
     subtitle: "Chính thức mở cổng nhận đơn trực tuyến cho 6 Ban và ngày hội Club Day tại Campus",
     dateRange: "26/10 – 08/11/2026",
     startDate: "2026-10-25",
     endDate: "2026-11-08",
-    status: "ACTIVE",
-    statusBadge: "ĐANG MỞ ĐƠN",
+    status: "COMPLETED",
+    statusBadge: "ĐÃ ĐÓNG ĐƠN",
     accentColor: "#4285F4",
     pastelColor: "#C3ECF6",
     tagBg: "bg-[#4285F4] text-[#FFFFFF]",
     isRoundOne: true,
-    highlightActionText: "Nộp Đơn Ứng Tuyển Vòng 1 Ngay",
+    highlightActionText: "Đã Khép Lại Cổng Đơn",
     milestones: [
       {
         date: "26/10/2026",
@@ -470,7 +472,7 @@ export const RECRUITMENT_TIMELINE_STAGES: RecruitmentPhase[] = [
       {
         date: "23:59 • 08/11/2026",
         title: "Đóng Cổng Nhận Đơn Vòng 1",
-        desc: "Hạn chót tiếp nhận hồ sơ. Hệ thống sẽ chính thức khóa cổng đúng 23:59 ngày 08/11.",
+        desc: "Hạn chót tiếp nhận hồ sơ. Hệ thống đã chính thức khóa cổng lúc 00:00 ngày 09/11.",
         isKeyMilestone: true
       }
     ]
@@ -478,14 +480,14 @@ export const RECRUITMENT_TIMELINE_STAGES: RecruitmentPhase[] = [
   {
     id: "phase-3",
     phaseNumber: 3,
-    phaseLabel: "PHASE 03",
+    phaseLabel: "PHASE 03 • TRỌNG TÂM",
     title: "SÀNG LỌC V1 & ĐÓNG BĂNG THI KỲ FE",
     subtitle: "Công bố kết quả Vòng 1 và tạm ngưng hoạt động CLB để sinh viên tập trung thi cử",
     dateRange: "09/11 – 15/11/2026",
     startDate: "2026-11-09",
     endDate: "2026-11-15",
-    status: "UPCOMING",
-    statusBadge: "Sắp Diễn Ra",
+    status: "ACTIVE",
+    statusBadge: "ĐANG DIỄN RA",
     accentColor: "#FBBC04",
     pastelColor: "#FFE7A5",
     tagBg: "bg-[#FFE7A5] text-[#1E1E1E]",

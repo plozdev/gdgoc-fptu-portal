@@ -131,10 +131,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenJoinModal, onOpenJdHandboo
             </Link>
           )}
           <button
-            onClick={onOpenJoinModal}
+            onClick={() => {
+              if (!RECRUITMENT_CONFIG.isOpen) {
+                const el = document.getElementById('timeline');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                  return;
+                }
+              }
+              onOpenJoinModal();
+            }}
             className="px-3 py-1.5 bg-[#4285F4] text-[#FFFFFF] text-xs font-bold rounded-full border-[2px] border-[#1E1E1E] whitespace-nowrap"
           >
-            Tuyển K22
+            {RECRUITMENT_CONFIG.isOpen ? 'Tuyển K22' : 'Lộ Trình'}
           </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

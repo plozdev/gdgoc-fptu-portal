@@ -64,11 +64,20 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
               {/* Action Buttons */}
               <div className="pt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
                 <button
-                  onClick={onOpenJoinModal}
+                  onClick={() => {
+                    if (!RECRUITMENT_CONFIG.isOpen) {
+                      const el = document.getElementById('timeline');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth' });
+                        return;
+                      }
+                    }
+                    onOpenJoinModal();
+                  }}
                   id="cta-join-now-btn"
                   className="inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-[#4285F4] hover:bg-[#3367D6] text-[#FFFFFF] font-bold text-base rounded-full border-[2.5px] border-[#1E1E1E] brutal-shadow brutal-shadow-hover transition-all cursor-pointer"
                 >
-                  <span>{RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openButtonText : 'Ứng Tuyển (Đang Cập Nhật)'}</span>
+                  <span>{RECRUITMENT_CONFIG.isOpen ? RECRUITMENT_CONFIG.openButtonText : 'Theo Dõi Lộ Trình Tuyển Dụng'}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
 
@@ -90,15 +99,15 @@ export const JoinCTA: React.FC<JoinCTAProps> = ({ onOpenJoinModal, onOpenJdHandb
 
                 <div className="space-y-1">
                   <div className="font-mono-code text-xs font-bold text-[#EA4335] uppercase">
-                    {RECRUITMENT_CONFIG.isOpen ? 'Hạn Chót Đăng Ký Đợt 1' : 'TRẠNG THÁI: ĐANG CẬP NHẬT'}
+                    {RECRUITMENT_CONFIG.isOpen ? 'Hạn Chót Đăng Ký Đợt 1' : 'TRẠNG THÁI: GIAI ĐOẠN 2 - LỌC HỒ SƠ'}
                   </div>
                   <h4 className="font-extrabold text-xl text-[#1E1E1E]">
-                    {RECRUITMENT_CONFIG.isOpen ? 'Kỳ Tuyển Fall 2026' : 'Chuẩn Bị Mở Đơn Tuyển'}
+                    {RECRUITMENT_CONFIG.isOpen ? 'Kỳ Tuyển Fall 2026' : 'Sàng Lọc & Gửi Mail Vòng 1'}
                   </h4>
                   <p className="text-xs text-[#1E1E1E]/80 font-mono-code font-medium">
                     {RECRUITMENT_CONFIG.isOpen
                       ? 'Online form & phỏng vấn trực tiếp tại campus FPTU HCMC'
-                      : 'Cổng đăng ký sẽ sớm mở, theo dõi Fanpage để cập nhật'}
+                      : 'Kết quả Vòng 1 & link chọn ca PV sẽ gửi qua email từ 10/11 – 11/11'}
                   </p>
                 </div>
 

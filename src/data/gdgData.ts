@@ -27,9 +27,8 @@ export const CHAPTER_INFO = {
 //   -> Các nút sẽ đổi thành "Ứng Tuyển Vòng 1 Ngay", form tuyển quân sẽ mở nhận hồ sơ.
 // =============================================================================
 export const RECRUITMENT_CONFIG = {
-  // manualOverride: null as boolean | null,
-  manualOverride: true,
-  deadlineISO: "2026-11-09T00:00:00+07:00", // 00:00 ngày 09/11/2026 (GMT+7)
+  manualOverride: null as boolean | null,
+  deadlineISO: "2026-12-09T00:00:00+07:00", // 00:00 ngày 09/11/2026 (GMT+7)
 
   get isOpen(): boolean {
     if (this.manualOverride !== null) return this.manualOverride;
